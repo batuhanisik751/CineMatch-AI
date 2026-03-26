@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, Float, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cinematch.db.base import Base
@@ -21,7 +21,7 @@ class Rating(Base):
         Integer, ForeignKey("movies.id", ondelete="CASCADE"), nullable=False, index=True
     )
     rating: Mapped[float] = mapped_column(Float, nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
     __table_args__ = (
         UniqueConstraint("user_id", "movie_id", name="uq_user_movie"),
