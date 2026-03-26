@@ -54,6 +54,16 @@ uvicorn cinematch.main:app --reload --host 0.0.0.0 --port 8000
 
 API docs available at http://localhost:8000/docs
 
+### Frontend (separate terminal)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Opens at http://localhost:3000 — connects to the backend API automatically.
+
 ## API Endpoints
 
 | Method | Path | Description |

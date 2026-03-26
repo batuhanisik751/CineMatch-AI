@@ -12,6 +12,7 @@ from cinematch.api.deps import (
     get_content_recommender,
     get_db,
     get_hybrid_recommender,
+    get_llm_service,
     get_movie_service,
     get_rating_service,
 )
@@ -105,6 +106,15 @@ def mock_hybrid_recommender():
 
 
 @pytest.fixture()
+def mock_llm_service():
+    svc = AsyncMock()
+    svc.explain_recommendation.return_value = (
+        "This movie matches your preferences due to shared sci-fi themes."
+    )
+    return svc
+
+
+@pytest.fixture()
 def mock_db():
     return AsyncMock()
 
@@ -115,6 +125,7 @@ def app(
     mock_rating_service,
     mock_content_recommender,
     mock_hybrid_recommender,
+    mock_llm_service,
     mock_db,
 ):
     test_app = create_app()
@@ -124,6 +135,7 @@ def app(
     test_app.dependency_overrides[get_rating_service] = lambda: mock_rating_service
     test_app.dependency_overrides[get_content_recommender] = lambda: mock_content_recommender
     test_app.dependency_overrides[get_hybrid_recommender] = lambda: mock_hybrid_recommender
+    test_app.dependency_overrides[get_llm_service] = lambda: mock_llm_service
 
     return test_app
 

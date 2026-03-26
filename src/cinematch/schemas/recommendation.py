@@ -22,3 +22,12 @@ class RecommendationsResponse(BaseModel):
     user_id: int
     strategy: str
     recommendations: list[RecommendationItem]
+
+
+class RecommendationExplanation(BaseModel):
+    """LLM-generated explanation for a recommendation."""
+
+    movie_id: int
+    title: str
+    explanation: str
+    score: float

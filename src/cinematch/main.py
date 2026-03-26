@@ -98,9 +98,31 @@ async def lifespan(app: FastAPI):
         logger.warning("Redis not available. App will run without caching.")
         app.state.cache_service = None
 
+    # LLM service (optional — app works without it)
+    app.state.llm_service = None
+    if settings.llm_enabled:
+        try:
+            from cinematch.services.llm_service import LLMService
+
+            llm_service = LLMService(
+                base_url=settings.llm_base_url,
+                model_name=settings.llm_model_name,
+            )
+            app.state.llm_service = llm_service
+            logger.info(
+                "LLM service enabled (model=%s, backend=%s).",
+                settings.llm_model_name,
+                settings.llm_backend,
+            )
+        except Exception:
+            logger.warning("Failed to initialize LLM service. App will run without explanations.")
+            app.state.llm_service = None
+
     yield
 
     # Shutdown
+    if getattr(app.state, "llm_service", None) is not None:
+        await app.state.llm_service.close()
     if getattr(app.state, "cache_service", None) is not None:
         await app.state.cache_service.close()
 

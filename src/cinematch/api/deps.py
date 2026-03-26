@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from cinematch.core.cache import CacheService
     from cinematch.services.content_recommender import ContentRecommender
     from cinematch.services.hybrid_recommender import HybridRecommender
+    from cinematch.services.llm_service import LLMService
     from cinematch.services.movie_service import MovieService
     from cinematch.services.rating_service import RatingService
 
@@ -37,3 +38,7 @@ def get_hybrid_recommender(request: Request) -> HybridRecommender:
 
 def get_cache_service(request: Request) -> CacheService | None:
     return getattr(request.app.state, "cache_service", None)
+
+
+def get_llm_service(request: Request) -> LLMService | None:
+    return getattr(request.app.state, "llm_service", None)

@@ -108,3 +108,7 @@ cython_debug/
 
 # Evaluation reports
 evaluation_report.json
+
+# Frontend
+node_modules/
+frontend/dist/
