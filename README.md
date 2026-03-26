@@ -10,7 +10,7 @@ Hybrid movie recommendation system combining content-based filtering (embeddings
 - **Embeddings:** sentence-transformers/all-MiniLM-L6-v2 (384-dim, local)
 - **Collaborative Filtering:** implicit ALS (matrix factorization)
 - **Caching:** Redis
-- **Optional LLM:** Mistral 7B via Ollama (explanations only)
+- **LLM:** Mistral 7B via Ollama (recommendation re-ranking + explanations)
 
 ## Data Sources
 
@@ -25,30 +25,35 @@ After processing: ~29K movies, ~162K users, ~24.7M ratings with 384-dim embeddin
 # 1. Start infrastructure
 docker compose up -d
 
-# 2. Install dependencies
+# 2. Install Ollama + Mistral (required for LLM re-ranking)
+brew install ollama
+ollama serve          # keep running in a separate terminal
+ollama pull mistral
+
+# 3. Install dependencies
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pip install psycopg2-binary   # needed for seed script
 
-# 3. Configure environment
+# 4. Configure environment
 cp .env.example .env
 # Add your KAGGLE_API_TOKEN to .env if using Kaggle CLI
 
-# 4. Run database migrations
+# 5. Run database migrations
 alembic upgrade head
 
-# 5. Download datasets
+# 6. Download datasets
 python scripts/download_data.py
 # For TMDb: either use Kaggle CLI or download manually from Kaggle
 # pip install kaggle && kaggle datasets download -d rounakbanik/the-movies-dataset -p data/raw/tmdb/ --unzip
 
-# 6. Run data pipeline (clean, embed, build FAISS, train ALS — ~10 min)
+# 7. Run data pipeline (clean, embed, build FAISS, train ALS — ~10 min)
 PYTHONPATH=src python scripts/train_models.py
 
-# 7. Seed database (~15 min for 24.7M ratings)
+# 8. Seed database (~15 min for 24.7M ratings)
 PYTHONPATH=src python scripts/seed_db.py
 
-# 8. Start the API server
+# 9. Start the API server
 uvicorn cinematch.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -70,36 +75,41 @@ Opens at http://localhost:3000 — connects to the backend API automatically.
 |--------|------|-------------|
 | GET | `/health` | Health check |
 | GET | `/api/v1/movies/{id}` | Movie details |
-| GET | `/api/v1/movies/search?q=&limit=20` | Search movies by title |
+| GET | `/api/v1/movies/search?q=&limit=20` | Search movies by title (fuzzy/typo-tolerant) |
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/users/{id}` | User details |
 | GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Hybrid recommendations |
-| GET | `/api/v1/users/{id}/recommendations/explain/{movie_id}?score=0.9` | LLM explanation for a recommendation (requires Ollama) |
+| GET | `/api/v1/users/{id}/recommendations/explain/{movie_id}?score=0.9` | LLM explanation for a recommendation |
 | POST | `/api/v1/users/{id}/ratings` | Add/update a rating (body: `{"movie_id": 1, "rating": 4.5}`) |
 | GET | `/api/v1/users/{id}/ratings?offset=0&limit=20` | User's ratings (paginated) |
 
-## LLM Explanations (Optional)
+## LLM Integration (Mistral via Ollama)
 
-The `/explain` endpoint uses Mistral 7B via Ollama to generate natural language explanations for why a movie was recommended. This feature is entirely optional — the app works without it.
+Mistral 7B is used for two features:
+
+- **Recommendation re-ranking:** After hybrid scoring produces candidates, Mistral re-ranks them for thematic diversity and deeper taste matching. Falls back to algorithmic MMR re-ranking if Ollama is unavailable.
+- **Explanations:** The `/explain` endpoint generates natural language explanations for why a movie was recommended.
 
 ```bash
-# Install and start Ollama
+# Install and start Ollama (required)
 brew install ollama
+ollama serve
 ollama pull mistral
-
-# Enable in .env
-CINEMATCH_LLM_ENABLED=true
-
-# Restart the API server, then:
-curl http://localhost:8000/api/v1/users/1/recommendations/explain/603
 ```
+
+If Ollama is not running, the app still works — recommendations use the algorithmic MMR diversity fallback instead of LLM re-ranking.
 
 ## How It Works
 
 1. **Content-Based:** Movie overviews, genres, and keywords are encoded into 384-dim vectors using all-MiniLM-L6-v2. Similar movies are found via cosine similarity (pgvector with FAISS fallback).
 2. **Collaborative:** User-item rating matrix is factorized using ALS. Users with similar taste patterns get similar recommendations.
-3. **Hybrid:** Both scores are min-max normalized to [0,1] and combined: `hybrid = alpha * content + (1 - alpha) * collab` (default alpha=0.5). Cold-start users (not in ALS training data) automatically fall back to content-only (alpha=1.0).
-4. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only).
+3. **Hybrid Scoring:** Both scores are min-max normalized to [0,1] and combined: `hybrid = alpha * content + (1 - alpha) * collab` (default alpha=0.5). Cold-start users (not in ALS training data) automatically fall back to content-only (alpha=1.0).
+4. **Franchise Penalty:** Sequels and franchise entries (e.g., "Cars 2", "Star Wars: Episode V") are detected and penalized to avoid clustering on one series.
+5. **Diverse Seed Selection:** User's top-rated movies are picked to span different genres, not just the N highest ratings.
+6. **LLM Re-ranking:** Top 50 candidates are sent to Mistral, which re-ranks for thematic variety, sequel avoidance, and deeper taste matching. Returns the best 20.
+7. **MMR Fallback:** If the LLM is unavailable, Maximal Marginal Relevance (MMR) with genre Jaccard similarity ensures diversity algorithmically.
+8. **Fuzzy Search:** Movie search uses ILIKE for exact matches, with automatic pg_trgm fuzzy fallback for typos (e.g., "Casr" finds "Cars").
+9. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only).
 
 ## Data Pipeline
 
@@ -152,10 +162,10 @@ src/cinematch/
 │   ├── embedding_service.py      # sentence-transformers wrapper
 │   ├── content_recommender.py    # pgvector + FAISS similarity search
 │   ├── collab_recommender.py     # ALS collaborative filtering
-│   ├── hybrid_recommender.py     # Combined content + collab scoring
-│   ├── movie_service.py          # Movie DB queries (get, search, batch)
-│   ├── rating_service.py         # Rating DB queries (upsert, list)
-│   └── llm_service.py            # Ollama LLM client for explanations
+│   ├── hybrid_recommender.py     # Combined scoring + franchise penalty + MMR + LLM re-ranking
+│   ├── movie_service.py          # Movie DB queries (get, search with fuzzy fallback, batch)
+│   ├── rating_service.py         # Rating DB queries (upsert, list with movie titles)
+│   └── llm_service.py            # Ollama LLM client for re-ranking + explanations
 ├── models/          # SQLAlchemy ORM models
 ├── schemas/         # Pydantic request/response schemas
 ├── pipeline/        # Data processing (cleaner, embedder, FAISS, ALS)

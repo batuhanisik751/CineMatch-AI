@@ -106,6 +106,9 @@ cython_debug/
 # Sentence-transformers model cache
 .cache/
 
+# Ollama models
+.ollama/
+
 # Evaluation reports
 evaluation_report.json
 
