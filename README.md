@@ -68,9 +68,10 @@ API docs available at http://localhost:8000/docs
 
 ## How It Works
 
-1. **Content-Based:** Movie overviews, genres, and keywords are encoded into 384-dim vectors using all-MiniLM-L6-v2. Similar movies are found via cosine similarity (pgvector).
+1. **Content-Based:** Movie overviews, genres, and keywords are encoded into 384-dim vectors using all-MiniLM-L6-v2. Similar movies are found via cosine similarity (pgvector with FAISS fallback).
 2. **Collaborative:** User-item rating matrix is factorized using ALS. Users with similar taste patterns get similar recommendations.
-3. **Hybrid:** Both scores are normalized to [0,1] and combined: `hybrid = alpha * content + (1 - alpha) * collab`. Cold-start users fall back to content-only.
+3. **Hybrid:** Both scores are min-max normalized to [0,1] and combined: `hybrid = alpha * content + (1 - alpha) * collab` (default alpha=0.5). Cold-start users (not in ALS training data) automatically fall back to content-only (alpha=1.0).
+4. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only).
 
 ## Data Pipeline
 
@@ -94,7 +95,11 @@ TMDb Metadata ─────┘
 ```
 src/cinematch/
 ├── api/v1/          # REST endpoints
-├── services/        # Business logic (recommenders, embedding, etc.)
+├── services/        # Recommendation engines
+│   ├── embedding_service.py      # sentence-transformers wrapper
+│   ├── content_recommender.py    # pgvector + FAISS similarity search
+│   ├── collab_recommender.py     # ALS collaborative filtering
+│   └── hybrid_recommender.py     # Combined content + collab scoring
 ├── models/          # SQLAlchemy ORM models
 ├── schemas/         # Pydantic request/response schemas
 ├── pipeline/        # Data processing (cleaner, embedder, FAISS, ALS)
@@ -102,7 +107,7 @@ src/cinematch/
 ├── core/            # Cache, logging, exceptions
 ├── db/              # Database engine, migrations
 ├── config.py        # Environment-based configuration
-└── main.py          # FastAPI app factory
+└── main.py          # FastAPI app factory + service loading
 ```
 
 ## Make Commands

@@ -53,5 +53,6 @@ select = ["E", "F", "I", "N", "W", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 asyncio_mode = "auto"
 filterwarnings = ["ignore::DeprecationWarning"]

@@ -102,3 +102,6 @@ cython_debug/
 
 # Kaggle
 .kaggle/
+
+# Sentence-transformers model cache
+.cache/
