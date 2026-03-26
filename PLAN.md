@@ -61,59 +61,116 @@
 
 ---
 
-## Problem 3: Richer, More Diverse Hybrid Recommendations
+## Problem 3: Richer, More Diverse Hybrid Recommendations + LLM-Powered Re-ranking
 
 **Current state:** The hybrid recommender in `hybrid_recommender.py`:
 - Gets the user's top 10 rated movies
 - For each, fetches 30 similar movies from content recommender (embedding similarity)
 - Averages content scores, normalizes, blends with ALS collab scores
 - **No diversity mechanism exists** — no genre spreading, no franchise dedup, no penalty for sequels
+- **Mistral LLM is optional** and only used for post-hoc explanations, never for the recommendation logic itself
 
-This causes: Rating "Cars" recommends "Cars 2" and "Cars 3" (highest embedding similarity = same franchise). Rating "Star Wars" only gives other Star Wars films.
+This causes: Rating "Cars" recommends "Cars 2" and "Cars 3" (highest embedding similarity = same franchise). Rating "Star Wars" only gives other Star Wars films. The recommendations feel mechanical and lack the nuanced reasoning an LLM could provide.
 
 ### Plan
 
-**A. Genre diversity re-ranking (MMR-style):**
-1. **Add a diversity re-ranker** to `src/cinematch/services/hybrid_recommender.py`:
-   - After computing the final blended scores, apply Maximal Marginal Relevance (MMR) or a greedy genre-coverage algorithm.
+**A. Make Mistral a requirement (not optional):**
+1. **Remove the feature flag** — `CINEMATCH_LLM_ENABLED` defaults to `True` in `src/cinematch/config.py` instead of `False`.
+2. **Always initialize LLMService** in `src/cinematch/main.py` — remove the conditional `if settings.llm_enabled` guard. Keep a graceful fallback: if Ollama is unreachable at startup, log a warning but still start the app (LLM re-ranking degrades gracefully to the existing scoring pipeline).
+3. **Update `.env.example`** — set `CINEMATCH_LLM_ENABLED=true` and add a comment that Mistral is required.
+4. **Update `CLAUDE.md`** — change the "Optional LLM" section to "Required LLM", remove "Optional" wording.
+
+**B. LLM-powered recommendation re-ranking:**
+5. **Add an LLM re-ranking step** to the hybrid pipeline in `src/cinematch/services/hybrid_recommender.py`:
+   - After the standard hybrid scoring produces a candidate list (e.g., top 50 candidates), pass the top candidates to Mistral for intelligent re-ranking.
+   - Build a prompt that gives Mistral: (a) the user's rating history (top-rated movies with genres), (b) the candidate list with titles/genres/overviews, (c) instructions to re-rank based on thematic coherence, variety, and user taste patterns.
+   - Parse Mistral's ranked output and use it as the final ordering.
+   - **Fallback**: if the LLM call fails (timeout, Ollama down), fall back to the existing score-based ranking. The system must never break due to LLM unavailability.
+
+6. **LLM re-ranking prompt design** — add a new method `_llm_rerank()` to `LLMService`:
+   - Input: user's top-rated movies (title + genre + rating), candidate movies (title + genre + overview + score)
+   - Prompt instructs Mistral to:
+     - Consider genre diversity (don't cluster on one genre)
+     - Penalize sequels/franchises (prefer unique films over franchise entries)
+     - Match thematic patterns the user enjoys (not just surface-level genre matching)
+     - Return a JSON array of movie IDs in recommended order
+   - Parse the JSON response, validate movie IDs are from the candidate set
+   - Over-fetch candidates (top 50) so Mistral has a broad pool to re-rank down to `top_k` (default 20)
+
+7. **Add `llm_rerank` method to `LLMService`** in `src/cinematch/services/llm_service.py`:
+   - Accepts: `candidates: list[dict]` (id, title, genres, overview, score), `user_history: list[dict]` (title, genres, rating)
+   - Builds the re-ranking prompt
+   - POSTs to Ollama `/api/generate` with `format: "json"` for structured output
+   - Parses the response as a JSON list of movie IDs
+   - Returns the re-ordered list of movie IDs
+   - Timeout: higher than explanations (e.g., 60s) since re-ranking processes more data
+
+**C. Genre diversity re-ranking (MMR-style fallback):**
+8. **Add a diversity re-ranker** to `src/cinematch/services/hybrid_recommender.py`:
+   - This serves as the non-LLM diversity mechanism AND the fallback when LLM is unavailable.
+   - After computing the final blended scores, apply Maximal Marginal Relevance (MMR).
    - For each slot in the final list, pick the movie that maximizes: `lambda * relevance_score - (1 - lambda) * max_similarity_to_already_selected`.
-   - This ensures the top-K results span multiple genres instead of clustering on one franchise.
+   - Use Jaccard similarity on genre sets as the "similarity to already selected" metric.
    - Use a configurable `diversity_lambda` (e.g., 0.7 = mostly relevance, 0.3 diversity weight).
 
-2. **Implementation approach:**
-   - After scoring all candidates, load their genre data (already in the `movies` table).
-   - Use Jaccard similarity on genre sets as the "similarity to already selected" metric.
-   - Greedily select top_k movies that balance relevance and genre diversity.
-
-**B. Franchise/sequel penalty:**
-3. **Detect franchise duplicates** — movies sharing the same base title (e.g., "Cars", "Cars 2", "Cars 3") or belonging to the same collection.
+**D. Franchise/sequel penalty:**
+9. **Detect franchise duplicates** — movies sharing the same base title (e.g., "Cars", "Cars 2", "Cars 3").
    - Simple heuristic: if a candidate's title starts with the same base words as a seed movie's title, apply a score penalty (e.g., multiply score by 0.5).
-   - More robust: use the `belongs_to_collection` field from TMDb metadata if available in the DB.
+   - Applied BEFORE both LLM re-ranking and MMR, so the LLM also gets pre-penalized scores as a signal.
 
-**C. Broader content candidate pool:**
-4. **Increase seed diversity** — currently uses the user's top 10 movies by rating. Modify to pick top-rated movies that also span different genres:
-   - Instead of just `ORDER BY rating DESC LIMIT 10`, select top movies ensuring genre variety (e.g., pick the top movie from each genre the user has rated).
-   - This prevents all 10 seeds from being the same franchise/genre.
+**E. Broader content candidate pool:**
+10. **Increase seed diversity** — currently uses the user's top 10 movies by rating. Modify to pick top-rated movies spanning different genres:
+    - Instead of just `ORDER BY rating DESC LIMIT 10`, select the top movie from each genre the user has rated.
+    - This prevents all 10 seeds from being the same franchise/genre.
 
-5. **Expand candidate sourcing** — consider adding more candidates:
-   - Increase content candidates per seed from 30 to 50 (broader net).
-   - For collab candidates, increase from 100 to 200.
+11. **Expand candidate sourcing** for LLM re-ranking:
+    - Increase content candidates per seed from 30 to 50.
+    - For collab candidates, increase from 100 to 200.
+    - Over-fetch top 50 scored candidates, send to LLM, return top `top_k`.
 
-**D. Configuration:**
-6. **Add config parameters** to `src/cinematch/config.py`:
-   - `hybrid_diversity_lambda: float = 0.7` — diversity vs relevance tradeoff
-   - `hybrid_sequel_penalty: float = 0.5` — score multiplier for same-franchise movies
+**F. Configuration:**
+12. **Add/update config parameters** in `src/cinematch/config.py`:
+    - `llm_enabled: bool = True` — now defaults to True
+    - `llm_rerank_enabled: bool = True` — separate flag to toggle LLM re-ranking (allows disabling re-ranking while keeping explanations)
+    - `llm_rerank_timeout: float = 60.0` — higher timeout for re-ranking
+    - `llm_rerank_candidates: int = 50` — how many candidates to send to LLM
+    - `hybrid_diversity_lambda: float = 0.7` — MMR diversity tradeoff (used as fallback)
+    - `hybrid_sequel_penalty: float = 0.5` — score multiplier for same-franchise movies
+
+### Pipeline flow (updated)
+
+```
+User request → Hybrid scoring (content + collab blend)
+            → Franchise penalty (score adjustment)
+            → Over-fetch top 50 candidates
+            → LLM re-rank (Mistral picks best 20 from 50, considering diversity + taste)
+            → If LLM fails: MMR diversity re-rank (fallback)
+            → Return top_k results
+```
 
 ### Files to modify
-- `src/cinematch/services/hybrid_recommender.py` — MMR re-ranking, sequel penalty, diverse seed selection
-- `src/cinematch/config.py` — new config parameters
-- `src/cinematch/models/movie.py` — may need to check if `genres` field is easily queryable
-- `tests/test_services/test_hybrid_recommender.py` — tests for diversity and franchise penalty
+- `src/cinematch/config.py` — new config parameters, `llm_enabled` default to `True`
+- `src/cinematch/main.py` — always initialize LLMService (with graceful fallback)
+- `src/cinematch/services/llm_service.py` — add `llm_rerank()` method with re-ranking prompt
+- `src/cinematch/services/hybrid_recommender.py` — franchise penalty, diverse seeds, LLM re-ranking call, MMR fallback
+- `src/cinematch/api/v1/recommendations.py` — pass `llm_service` to hybrid recommender
+- `src/cinematch/api/deps.py` — may need to update dependency injection
+- `.env.example` — update LLM defaults
+- `CLAUDE.md` — update LLM documentation
+- `tests/test_services/test_hybrid_recommender.py` — tests for LLM re-ranking, franchise penalty, MMR, diverse seeds
+- `tests/test_services/test_llm_service.py` — tests for `llm_rerank()` method
 
 ---
 
 ## Implementation Order
 
-1. **Problem 1** (Movie Name in Ratings) — simplest, self-contained backend+frontend change
-2. **Problem 2** (Fuzzy Search) — backend-only, leverages existing pg_trgm infrastructure
-3. **Problem 3** (Richer Recommendations) — most complex, requires careful tuning and testing
+1. ~~**Problem 1** (Movie Name in Ratings)~~ — DONE
+2. ~~**Problem 2** (Fuzzy Search)~~ — DONE
+3. **Problem 3** (Richer Recommendations + LLM Re-ranking) — implement in this order:
+   a. Make Mistral required (config + startup changes)
+   b. Franchise/sequel penalty
+   c. Diverse seed selection
+   d. MMR diversity re-ranking (fallback)
+   e. LLM `llm_rerank()` method
+   f. Integrate LLM re-ranking into hybrid pipeline
+   g. Tests for all new logic

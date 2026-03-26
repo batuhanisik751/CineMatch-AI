@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import re
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -12,6 +14,14 @@ if TYPE_CHECKING:
 
     from cinematch.services.collab_recommender import CollabRecommender
     from cinematch.services.content_recommender import ContentRecommender
+    from cinematch.services.llm_service import LLMService
+
+logger = logging.getLogger(__name__)
+
+# Articles to strip when comparing franchise base titles
+_ARTICLES = re.compile(r"^(the|a|an)\s+", re.IGNORECASE)
+# Trailing sequel markers: numbers, roman numerals, colon+subtitle
+_SEQUEL_SUFFIX = re.compile(r"\s*[:]\s*.*$|\s+\d+$|\s+(II|III|IV|V|VI|VII|VIII|IX|X)$")
 
 
 class HybridRecommender:
@@ -22,10 +32,20 @@ class HybridRecommender:
         content_recommender: ContentRecommender,
         collab_recommender: CollabRecommender,
         alpha: float = 0.5,
+        llm_service: LLMService | None = None,
+        sequel_penalty: float = 0.5,
+        diversity_lambda: float = 0.7,
+        rerank_candidates: int = 50,
+        llm_rerank_enabled: bool = True,
     ) -> None:
         self._content = content_recommender
         self._collab = collab_recommender
         self._alpha = alpha
+        self._llm = llm_service
+        self._sequel_penalty = sequel_penalty
+        self._diversity_lambda = diversity_lambda
+        self._rerank_candidates = rerank_candidates
+        self._llm_rerank_enabled = llm_rerank_enabled
 
     async def recommend(
         self,
@@ -49,26 +69,25 @@ class HybridRecommender:
         db: AsyncSession,
         top_k: int,
     ) -> list[tuple[int, float]]:
-        """Full hybrid: alpha * content + (1 - alpha) * collab."""
+        """Full hybrid: alpha * content + (1 - alpha) * collab, with diversity."""
         alpha = self._alpha if self._collab.is_known_user(user_id) else 1.0
 
         if alpha == 1.0:
             return await self._content_only_recommend(user_id, db, top_k)
 
         # Step 1: collaborative candidates
-        collab_results = self._collab.recommend_for_user(user_id, top_k=100)
-        collab_scores: dict[int, float] = {mid: s for mid, s in collab_results}
+        collab_results = self._collab.recommend_for_user(user_id, top_k=200)
+        collab_scores: dict[int, float] = dict(collab_results)
 
-        # Step 2: user's top-rated movies
-        user_top = await self._get_user_top_rated(user_id, db, limit=10)
+        # Step 2: user's top-rated movies (genre-diverse)
+        user_top = await self._get_user_top_rated_diverse(user_id, db, limit=10)
         if not user_top:
-            # No ratings — rely solely on collab
             return collab_results[:top_k]
 
         # Step 3: content candidates from user's favorites
         content_raw: dict[int, list[float]] = {}
         for rated_movie_id, user_rating in user_top:
-            similar = await self._content.get_similar_movies(rated_movie_id, db, top_k=30)
+            similar = await self._content.get_similar_movies(rated_movie_id, db, top_k=50)
             weight = user_rating / 5.0
             for mid, similarity in similar:
                 content_raw.setdefault(mid, []).append(similarity * weight)
@@ -87,15 +106,28 @@ class HybridRecommender:
         content_norm = self._min_max_normalize(content_scores)
 
         # Step 7: compute hybrid scores
-        results: list[tuple[int, float]] = []
+        scored: dict[int, float] = {}
         for mid in all_candidates:
             c_score = content_norm.get(mid, 0.0)
             f_score = collab_norm.get(mid, 0.0)
-            hybrid = alpha * c_score + (1 - alpha) * f_score
-            results.append((mid, round(hybrid, 4)))
+            scored[mid] = alpha * c_score + (1 - alpha) * f_score
 
-        results.sort(key=lambda r: r[1], reverse=True)
-        return results[:top_k]
+        # Step 8: franchise/sequel penalty
+        seed_titles = await self._get_movie_titles([mid for mid, _ in user_top], db)
+        seed_bases = {self._base_title(t) for t in seed_titles.values()}
+        candidate_titles = await self._get_movie_titles(list(scored.keys()), db)
+        for mid, title in candidate_titles.items():
+            if mid in scored and self._base_title(title) in seed_bases:
+                scored[mid] *= self._sequel_penalty
+
+        # Step 9: sort and over-fetch for re-ranking
+        fetch_n = max(top_k, self._rerank_candidates)
+        ranked = sorted(scored.items(), key=lambda r: r[1], reverse=True)[:fetch_n]
+
+        # Step 10: LLM re-ranking (with MMR fallback)
+        final = await self._rerank(ranked, candidate_titles, seed_titles, user_top, db, top_k)
+
+        return final
 
     async def _content_only_recommend(
         self,
@@ -104,13 +136,13 @@ class HybridRecommender:
         top_k: int,
     ) -> list[tuple[int, float]]:
         """Content-only: recommend based on user's top-rated movies."""
-        user_top = await self._get_user_top_rated(user_id, db, limit=10)
+        user_top = await self._get_user_top_rated_diverse(user_id, db, limit=10)
         if not user_top:
             return []
 
         content_raw: dict[int, list[float]] = {}
         for rated_movie_id, user_rating in user_top:
-            similar = await self._content.get_similar_movies(rated_movie_id, db, top_k=30)
+            similar = await self._content.get_similar_movies(rated_movie_id, db, top_k=50)
             weight = user_rating / 5.0
             for mid, similarity in similar:
                 content_raw.setdefault(mid, []).append(similarity * weight)
@@ -118,11 +150,23 @@ class HybridRecommender:
         content_scores = {mid: float(np.mean(sims)) for mid, sims in content_raw.items()}
 
         rated_ids = await self._get_user_rated_movie_ids(user_id, db)
-        results = [
-            (mid, round(score, 4)) for mid, score in content_scores.items() if mid not in rated_ids
-        ]
-        results.sort(key=lambda r: r[1], reverse=True)
-        return results[:top_k]
+        scored: dict[int, float] = {
+            mid: score for mid, score in content_scores.items() if mid not in rated_ids
+        }
+
+        # Franchise penalty
+        seed_titles = await self._get_movie_titles([mid for mid, _ in user_top], db)
+        seed_bases = {self._base_title(t) for t in seed_titles.values()}
+        candidate_titles = await self._get_movie_titles(list(scored.keys()), db)
+        for mid, title in candidate_titles.items():
+            if mid in scored and self._base_title(title) in seed_bases:
+                scored[mid] *= self._sequel_penalty
+
+        fetch_n = max(top_k, self._rerank_candidates)
+        ranked = sorted(scored.items(), key=lambda r: r[1], reverse=True)[:fetch_n]
+
+        final = await self._rerank(ranked, candidate_titles, seed_titles, user_top, db, top_k)
+        return final
 
     def _collab_only_recommend(
         self,
@@ -131,6 +175,166 @@ class HybridRecommender:
     ) -> list[tuple[int, float]]:
         """Collab-only: delegate to CollabRecommender."""
         return self._collab.recommend_for_user(user_id, top_k=top_k)
+
+    # ------------------------------------------------------------------
+    # Re-ranking: LLM primary, MMR fallback
+    # ------------------------------------------------------------------
+
+    async def _rerank(
+        self,
+        ranked: list[tuple[int, float]],
+        candidate_titles: dict[int, str],
+        seed_titles: dict[int, str],
+        user_top: list[tuple[int, float]],
+        db: AsyncSession,
+        top_k: int,
+    ) -> list[tuple[int, float]]:
+        """Try LLM re-ranking; fall back to MMR on failure."""
+        if self._llm_rerank_enabled and self._llm is not None:
+            try:
+                candidate_genres = await self._get_movie_genres([mid for mid, _ in ranked], db)
+                llm_result = await self._llm_rerank(
+                    ranked, candidate_titles, candidate_genres, seed_titles, user_top
+                )
+                if llm_result is not None:
+                    return llm_result[:top_k]
+            except Exception:
+                logger.warning("LLM re-ranking failed, falling back to MMR.", exc_info=True)
+
+        # MMR fallback
+        candidate_genres = await self._get_movie_genres([mid for mid, _ in ranked], db)
+        return self._mmr_rerank(ranked, candidate_genres, top_k)
+
+    async def _llm_rerank(
+        self,
+        ranked: list[tuple[int, float]],
+        candidate_titles: dict[int, str],
+        candidate_genres: dict[int, list[str]],
+        seed_titles: dict[int, str],
+        user_top: list[tuple[int, float]],
+    ) -> list[tuple[int, float]] | None:
+        """Ask the LLM to re-rank candidates. Returns None if parsing fails."""
+        if self._llm is None:
+            return None
+
+        reranked_ids = await self._llm.rerank_candidates(
+            candidates=[
+                {
+                    "id": mid,
+                    "title": candidate_titles.get(mid, f"Movie #{mid}"),
+                    "genres": candidate_genres.get(mid, []),
+                    "score": round(score, 3),
+                }
+                for mid, score in ranked
+            ],
+            user_history=[
+                {
+                    "title": seed_titles.get(mid, f"Movie #{mid}"),
+                    "rating": rating,
+                }
+                for mid, rating in user_top
+            ],
+        )
+
+        if reranked_ids is None:
+            return None
+
+        score_map = dict(ranked)
+        result = []
+        for mid in reranked_ids:
+            if mid in score_map:
+                result.append((mid, score_map[mid]))
+        return result if result else None
+
+    def _mmr_rerank(
+        self,
+        ranked: list[tuple[int, float]],
+        genres_map: dict[int, list[str]],
+        top_k: int,
+    ) -> list[tuple[int, float]]:
+        """Maximal Marginal Relevance using genre Jaccard similarity."""
+        if not ranked:
+            return []
+
+        # Normalize scores for MMR
+        scores = self._min_max_normalize(dict(ranked))
+        selected: list[tuple[int, float]] = []
+        remaining = list(ranked)
+        lam = self._diversity_lambda
+
+        for _ in range(min(top_k, len(ranked))):
+            best_mid, best_score, best_idx = -1, -float("inf"), -1
+            for idx, (mid, orig_score) in enumerate(remaining):
+                relevance = scores.get(mid, 0.0)
+                if selected:
+                    max_sim = max(
+                        self._jaccard(
+                            set(genres_map.get(mid, [])),
+                            set(genres_map.get(sel_mid, [])),
+                        )
+                        for sel_mid, _ in selected
+                    )
+                else:
+                    max_sim = 0.0
+                mmr = lam * relevance - (1 - lam) * max_sim
+                if mmr > best_score:
+                    best_score = mmr
+                    best_mid = mid
+                    best_idx = idx
+            if best_mid == -1:
+                break
+            selected.append((best_mid, remaining[best_idx][1]))
+            remaining.pop(best_idx)
+
+        return selected
+
+    # ------------------------------------------------------------------
+    # Diverse seed selection
+    # ------------------------------------------------------------------
+
+    async def _get_user_top_rated_diverse(
+        self,
+        user_id: int,
+        db: AsyncSession,
+        limit: int = 10,
+    ) -> list[tuple[int, float]]:
+        """Pick top-rated movies ensuring genre diversity among seeds."""
+        # Fetch more than needed so we can diversify
+        result = await db.execute(
+            text(
+                "SELECT r.movie_id, r.rating, m.genres FROM ratings r "
+                "JOIN movies m ON r.movie_id = m.id "
+                "WHERE r.user_id = :user_id "
+                "ORDER BY r.rating DESC, r.timestamp DESC "
+                "LIMIT :fetch_limit"
+            ),
+            {"user_id": user_id, "fetch_limit": limit * 3},
+        )
+        rows = result.fetchall()
+        if not rows:
+            return []
+
+        # Greedily pick: prefer top-rated, but skip if genre set already covered
+        selected: list[tuple[int, float]] = []
+        covered_genres: set[str] = set()
+
+        for movie_id, rating, genres in rows:
+            if len(selected) >= limit:
+                break
+            movie_genres = set(genres) if genres else set()
+            new_genres = movie_genres - covered_genres
+            # Always pick if we haven't filled up and either:
+            # - it brings new genres, OR
+            # - we've exhausted new genre options (all remaining share genres)
+            if new_genres or len(selected) < limit:
+                selected.append((movie_id, float(rating)))
+                covered_genres.update(movie_genres)
+
+        return selected
+
+    # ------------------------------------------------------------------
+    # Helper methods
+    # ------------------------------------------------------------------
 
     async def _get_user_top_rated(
         self,
@@ -161,6 +365,54 @@ class HybridRecommender:
             {"user_id": user_id},
         )
         return {r[0] for r in result.fetchall()}
+
+    async def _get_movie_titles(
+        self,
+        movie_ids: list[int],
+        db: AsyncSession,
+    ) -> dict[int, str]:
+        """Batch fetch movie titles."""
+        if not movie_ids:
+            return {}
+        result = await db.execute(
+            text("SELECT id, title FROM movies WHERE id = ANY(:ids)"),
+            {"ids": movie_ids},
+        )
+        return {r[0]: r[1] for r in result.fetchall()}
+
+    async def _get_movie_genres(
+        self,
+        movie_ids: list[int],
+        db: AsyncSession,
+    ) -> dict[int, list[str]]:
+        """Batch fetch movie genres."""
+        if not movie_ids:
+            return {}
+        result = await db.execute(
+            text("SELECT id, genres FROM movies WHERE id = ANY(:ids)"),
+            {"ids": movie_ids},
+        )
+        return {r[0]: (r[1] if r[1] else []) for r in result.fetchall()}
+
+    @staticmethod
+    def _base_title(title: str) -> str:
+        """Extract franchise base title for sequel detection.
+
+        Examples: 'Cars 2' -> 'cars', 'Star Wars: A New Hope' -> 'star wars'.
+        """
+        t = _SEQUEL_SUFFIX.sub("", title).strip()
+        t = _ARTICLES.sub("", t).strip()
+        return t.lower()
+
+    @staticmethod
+    def _jaccard(a: set, b: set) -> float:
+        """Jaccard similarity between two sets."""
+        if not a and not b:
+            return 1.0
+        union = a | b
+        if not union:
+            return 0.0
+        return len(a & b) / len(union)
 
     @staticmethod
     def _min_max_normalize(scores: dict[int, float]) -> dict[int, float]:

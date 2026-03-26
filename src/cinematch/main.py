@@ -61,13 +61,44 @@ async def lifespan(app: FastAPI):
             als_item_map = pickle.load(f)  # noqa: S301
         als_user_items = sp.load_npz(settings.als_user_items_path)
 
+        # LLM service (initialized before HybridRecommender so it can be injected)
+        app.state.llm_service = None
+        if settings.llm_enabled:
+            try:
+                from cinematch.services.llm_service import LLMService
+
+                llm_service = LLMService(
+                    base_url=settings.llm_base_url,
+                    model_name=settings.llm_model_name,
+                    timeout=settings.llm_rerank_timeout,
+                )
+                app.state.llm_service = llm_service
+                logger.info(
+                    "LLM service enabled (model=%s, backend=%s).",
+                    settings.llm_model_name,
+                    settings.llm_backend,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to initialize LLM service. "
+                    "Recommendations will use algorithmic fallback."
+                )
+                app.state.llm_service = None
+
         # Create services
         content_recommender = ContentRecommender(embedding_service, faiss_index, faiss_id_map)
         collab_recommender = CollabRecommender(
             als_model, als_user_map, als_item_map, als_user_items
         )
         hybrid_recommender = HybridRecommender(
-            content_recommender, collab_recommender, alpha=settings.hybrid_alpha
+            content_recommender,
+            collab_recommender,
+            alpha=settings.hybrid_alpha,
+            llm_service=app.state.llm_service,
+            sequel_penalty=settings.hybrid_sequel_penalty,
+            diversity_lambda=settings.hybrid_diversity_lambda,
+            rerank_candidates=settings.llm_rerank_candidates,
+            llm_rerank_enabled=settings.llm_rerank_enabled,
         )
 
         # Attach to app.state
@@ -97,26 +128,6 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.warning("Redis not available. App will run without caching.")
         app.state.cache_service = None
-
-    # LLM service (optional — app works without it)
-    app.state.llm_service = None
-    if settings.llm_enabled:
-        try:
-            from cinematch.services.llm_service import LLMService
-
-            llm_service = LLMService(
-                base_url=settings.llm_base_url,
-                model_name=settings.llm_model_name,
-            )
-            app.state.llm_service = llm_service
-            logger.info(
-                "LLM service enabled (model=%s, backend=%s).",
-                settings.llm_model_name,
-                settings.llm_backend,
-            )
-        except Exception:
-            logger.warning("Failed to initialize LLM service. App will run without explanations.")
-            app.state.llm_service = None
 
     yield
 

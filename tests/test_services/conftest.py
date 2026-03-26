@@ -125,4 +125,13 @@ def mock_db_session():
 
 @pytest.fixture()
 def hybrid_recommender(content_recommender, collab_recommender):
-    return HybridRecommender(content_recommender, collab_recommender, alpha=0.5)
+    return HybridRecommender(
+        content_recommender,
+        collab_recommender,
+        alpha=0.5,
+        llm_service=None,
+        sequel_penalty=0.5,
+        diversity_lambda=0.7,
+        rerank_candidates=50,
+        llm_rerank_enabled=False,
+    )

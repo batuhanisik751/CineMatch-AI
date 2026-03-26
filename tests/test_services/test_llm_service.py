@@ -105,3 +105,114 @@ async def test_close_closes_client(llm_service):
     with patch.object(llm_service._client, "aclose", new_callable=AsyncMock) as mock_close:
         await llm_service.close()
         mock_close.assert_called_once()
+
+
+# ------------------------------------------------------------------
+# Rerank candidate tests
+# ------------------------------------------------------------------
+
+
+@pytest.fixture()
+def sample_candidates():
+    return [
+        {"id": 10, "title": "Cars", "genres": ["Animation"], "score": 0.9},
+        {"id": 20, "title": "Inception", "genres": ["Sci-Fi"], "score": 0.8},
+        {"id": 30, "title": "Toy Story", "genres": ["Animation"], "score": 0.7},
+    ]
+
+
+@pytest.fixture()
+def sample_history():
+    return [{"title": "The Matrix", "rating": 5.0}]
+
+
+async def test_rerank_candidates_success(llm_service, sample_candidates, sample_history):
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"response": '{"ranked_ids": [20, 10, 30]}'}
+    mock_response.raise_for_status = MagicMock()
+
+    with patch.object(llm_service._client, "post", new_callable=AsyncMock) as mock_post:
+        mock_post.return_value = mock_response
+        result = await llm_service.rerank_candidates(sample_candidates, sample_history)
+
+    assert result == [20, 10, 30]
+
+
+async def test_rerank_candidates_timeout_returns_none(
+    llm_service, sample_candidates, sample_history
+):
+    with patch.object(llm_service._client, "post", new_callable=AsyncMock) as mock_post:
+        mock_post.side_effect = httpx.TimeoutException("Timed out")
+        result = await llm_service.rerank_candidates(sample_candidates, sample_history)
+
+    assert result is None
+
+
+async def test_rerank_candidates_connection_error_returns_none(
+    llm_service, sample_candidates, sample_history
+):
+    with patch.object(llm_service._client, "post", new_callable=AsyncMock) as mock_post:
+        mock_post.side_effect = httpx.ConnectError("Refused")
+        result = await llm_service.rerank_candidates(sample_candidates, sample_history)
+
+    assert result is None
+
+
+async def test_rerank_candidates_bad_json_returns_none(
+    llm_service, sample_candidates, sample_history
+):
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"response": "I cannot parse this"}
+    mock_response.raise_for_status = MagicMock()
+
+    with patch.object(llm_service._client, "post", new_callable=AsyncMock) as mock_post:
+        mock_post.return_value = mock_response
+        result = await llm_service.rerank_candidates(sample_candidates, sample_history)
+
+    assert result is None
+
+
+def test_parse_rerank_response_valid_json():
+    valid_ids = {10, 20, 30}
+    result = LLMService._parse_rerank_response('{"ranked_ids": [20, 10, 30]}', valid_ids)
+    assert result == [20, 10, 30]
+
+
+def test_parse_rerank_response_plain_array():
+    valid_ids = {10, 20, 30}
+    result = LLMService._parse_rerank_response("[20, 10, 30]", valid_ids)
+    assert result == [20, 10, 30]
+
+
+def test_parse_rerank_response_filters_invalid_ids():
+    valid_ids = {10, 20}
+    result = LLMService._parse_rerank_response('{"ranked_ids": [20, 999, 10]}', valid_ids)
+    assert result == [20, 10]
+
+
+def test_parse_rerank_response_empty_returns_none():
+    assert LLMService._parse_rerank_response("", {10, 20}) is None
+
+
+def test_parse_rerank_response_garbage_returns_none():
+    assert LLMService._parse_rerank_response("not json at all", {10, 20}) is None
+
+
+def test_parse_rerank_response_extracts_array_from_text():
+    valid_ids = {10, 20, 30}
+    result = LLMService._parse_rerank_response(
+        "Here are the results: [20, 10, 30] hope that helps!", valid_ids
+    )
+    assert result == [20, 10, 30]
+
+
+def test_rerank_prompt_contains_candidates(llm_service):
+    candidates = [
+        {"id": 10, "title": "Cars", "genres": ["Animation"], "score": 0.9},
+    ]
+    history = [{"title": "The Matrix", "rating": 5.0}]
+    prompt = LLMService._build_rerank_prompt(candidates, history)
+    assert "Cars" in prompt
+    assert "The Matrix" in prompt
+    assert "ID:10" in prompt
+    assert "ranked_ids" in prompt

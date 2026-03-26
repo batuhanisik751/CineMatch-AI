@@ -40,12 +40,17 @@ class Settings(BaseSettings):
 
     # Hybrid recommender
     hybrid_alpha: float = 0.5
+    hybrid_diversity_lambda: float = 0.7
+    hybrid_sequel_penalty: float = 0.5
 
-    # LLM (optional)
-    llm_enabled: bool = False
+    # LLM (required — install Ollama + Mistral)
+    llm_enabled: bool = True
     llm_model_name: str = "mistral"
     llm_base_url: str = "http://localhost:11434"
     llm_backend: str = "ollama"
+    llm_rerank_enabled: bool = True
+    llm_rerank_timeout: float = 60.0
+    llm_rerank_candidates: int = 50
 
     # Data paths
     data_raw_dir: str = "data/raw"
