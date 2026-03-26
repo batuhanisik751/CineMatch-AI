@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="CINEMATCH_")
+    model_config = SettingsConfigDict(env_file=".env", env_prefix="CINEMATCH_", extra="ignore")
 
     # Database
     database_url: str = "postgresql+asyncpg://cinematch:cinematch@localhost:5432/cinematch"

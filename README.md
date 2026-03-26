@@ -14,31 +14,41 @@ Hybrid movie recommendation system combining content-based filtering (embeddings
 
 ## Data Sources
 
-- [MovieLens ml-25m](https://grouplens.org/datasets/movielens/25m/) — 25M user ratings
+- [MovieLens ml-25m](https://grouplens.org/datasets/movielens/25m/) — 25M user ratings from 162K users on 62K movies
 - [TMDb metadata (Kaggle)](https://www.kaggle.com/datasets/rounakbanik/the-movies-dataset) — movie overviews, genres, keywords, cast, crew
+
+After processing: ~29K movies, ~162K users, ~24.7M ratings with 384-dim embeddings.
 
 ## Quick Start
 
 ```bash
-# Start infrastructure
+# 1. Start infrastructure
 docker compose up -d
 
-# Install dependencies
+# 2. Install dependencies
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+pip install psycopg2-binary   # needed for seed script
 
-# Configure environment
+# 3. Configure environment
 cp .env.example .env
+# Add your KAGGLE_API_TOKEN to .env if using Kaggle CLI
 
-# Run database migrations
+# 4. Run database migrations
 alembic upgrade head
 
-# Download and process data
+# 5. Download datasets
 python scripts/download_data.py
-python scripts/train_models.py
-python scripts/seed_db.py
+# For TMDb: either use Kaggle CLI or download manually from Kaggle
+# pip install kaggle && kaggle datasets download -d rounakbanik/the-movies-dataset -p data/raw/tmdb/ --unzip
 
-# Start the API server
+# 6. Run data pipeline (clean, embed, build FAISS, train ALS — ~10 min)
+PYTHONPATH=src python scripts/train_models.py
+
+# 7. Seed database (~15 min for 24.7M ratings)
+PYTHONPATH=src python scripts/seed_db.py
+
+# 8. Start the API server
 uvicorn cinematch.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -61,6 +71,23 @@ API docs available at http://localhost:8000/docs
 1. **Content-Based:** Movie overviews, genres, and keywords are encoded into 384-dim vectors using all-MiniLM-L6-v2. Similar movies are found via cosine similarity (pgvector).
 2. **Collaborative:** User-item rating matrix is factorized using ALS. Users with similar taste patterns get similar recommendations.
 3. **Hybrid:** Both scores are normalized to [0,1] and combined: `hybrid = alpha * content + (1 - alpha) * collab`. Cold-start users fall back to content-only.
+
+## Data Pipeline
+
+```
+MovieLens ml-25m ──┐
+                   ├──► Clean & Join ──► Embeddings ──► Seed DB + FAISS + ALS
+TMDb Metadata ─────┘
+```
+
+| Step | Script | Output |
+|------|--------|--------|
+| Download | `scripts/download_data.py` | `data/raw/ml-25m/`, `data/raw/tmdb/` |
+| Clean & join | `pipeline/cleaner.py` | `movies_clean.parquet`, `ratings_clean.parquet` |
+| Embed | `pipeline/embedder.py` | `embeddings.npy` (29K x 384) |
+| FAISS index | `pipeline/faiss_builder.py` | `faiss.index`, `faiss_id_map.pkl` |
+| Train ALS | `pipeline/collaborative.py` | `als_model.pkl`, mappings, sparse matrix |
+| Seed DB | `scripts/seed_db.py` | PostgreSQL tables + IVFFlat vector index |
 
 ## Project Structure
 
