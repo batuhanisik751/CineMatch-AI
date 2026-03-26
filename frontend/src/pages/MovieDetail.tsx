@@ -8,6 +8,7 @@ import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
 import StarRating from "../components/StarRating";
 import TopNav from "../components/TopNav";
+import { useUserId } from "../hooks/useUserId";
 
 function posterUrl(path: string | null, size = "w500") {
   return path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
@@ -19,8 +20,8 @@ export default function MovieDetail() {
   const [similar, setSimilar] = useState<SimilarMovie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { userId } = useUserId();
   const [userRating, setUserRating] = useState(0);
-  const [ratingUserId, setRatingUserId] = useState("");
   const [ratingMsg, setRatingMsg] = useState("");
 
   useEffect(() => {
@@ -37,9 +38,9 @@ export default function MovieDetail() {
 
   const handleRate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ratingUserId || userRating === 0 || !movie) return;
+    if (userRating === 0 || !movie) return;
     try {
-      await addRating(Number(ratingUserId), movie.id, userRating);
+      await addRating(userId, movie.id, userRating);
       setRatingMsg("Rating submitted!");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to submit";
@@ -159,16 +160,6 @@ export default function MovieDetail() {
                     <span className="text-primary font-bold text-xl">{userRating || "—"}</span>
                   </div>
                   <StarRating value={userRating} onChange={setUserRating} />
-                  <div className="space-y-2 pt-2">
-                    <label className="text-xs uppercase tracking-widest text-on-surface-variant font-label">User ID</label>
-                    <input
-                      value={ratingUserId}
-                      onChange={(e) => setRatingUserId(e.target.value)}
-                      className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-md py-3 px-4 focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/50 transition-all text-sm"
-                      placeholder="Enter your CineMatch ID"
-                      type="number"
-                    />
-                  </div>
                   <button type="submit" className="w-full bg-primary-container/20 border border-primary-container/40 text-primary py-3 rounded-md font-bold hover:bg-primary-container hover:text-on-primary-container transition-all">
                     Submit Review
                   </button>

@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import TopNav from "../components/TopNav";
+import { useUserId } from "../hooks/useUserId";
 
 export default function Home() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [userId, setUserId] = useState("");
+  const { userId } = useUserId();
   const [strategy, setStrategy] = useState("hybrid");
 
   const handleSearch = (e: React.FormEvent) => {
@@ -16,8 +17,7 @@ export default function Home() {
 
   const handleRecs = (e: React.FormEvent) => {
     e.preventDefault();
-    if (userId.trim())
-      navigate(`/recommendations?user=${userId.trim()}&strategy=${strategy}`);
+    navigate(`/recommendations?user=${userId}&strategy=${strategy}`);
   };
 
   return (
@@ -75,13 +75,9 @@ export default function Home() {
                     Member ID
                   </label>
                   <div className="relative glowing-border rounded-lg">
-                    <input
-                      value={userId}
-                      onChange={(e) => setUserId(e.target.value)}
-                      className="w-full bg-surface-container-lowest border-none rounded-lg p-4 text-on-surface focus:ring-0 font-body transition-all"
-                      placeholder="Enter your ID (e.g. 8829)"
-                      type="number"
-                    />
+                    <div className="w-full bg-surface-container-lowest rounded-lg p-4 text-on-surface font-mono">
+                      USR-{userId}
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-3">

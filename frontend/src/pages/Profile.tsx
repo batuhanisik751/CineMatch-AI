@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getUserRatings } from "../api/ratings";
 import type { RatingResponse, UserResponse } from "../api/types";
 import { getUser } from "../api/users";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import TopNav from "../components/TopNav";
+import { useUserId } from "../hooks/useUserId";
 
 export default function Profile() {
-  const [inputId, setInputId] = useState("");
+  const { userId } = useUserId();
   const [user, setUser] = useState<UserResponse | null>(null);
   const [ratings, setRatings] = useState<RatingResponse[]>([]);
   const [total, setTotal] = useState(0);
@@ -16,28 +17,32 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const limit = 20;
 
-  const fetchUser = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!inputId.trim()) return;
+  const fetchUser = async () => {
     setLoading(true);
     setError("");
     try {
       const [u, r] = await Promise.all([
-        getUser(Number(inputId)),
-        getUserRatings(Number(inputId), 0, limit),
+        getUser(userId),
+        getUserRatings(userId, 0, limit),
       ]);
       setUser(u);
       setRatings(r.ratings);
       setTotal(r.total);
       setOffset(0);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "User not found";
-      setError(msg);
+    } catch {
+      // User hasn't rated anything yet — that's fine, not an error
       setUser(null);
+      setRatings([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const changePage = async (newOffset: number) => {
     if (!user) return;
@@ -80,33 +85,29 @@ export default function Profile() {
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           <div className="lg:col-span-1 flex flex-col gap-6">
             <div className="p-8 rounded-xl glass-panel border border-outline-variant/10 shadow-2xl">
-              <h2 className="font-headline text-2xl font-extrabold mb-6 tracking-tight">User Identification</h2>
-              <form onSubmit={fetchUser} className="flex flex-col gap-4">
-                <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">Lookup User ID</label>
-                <div className="relative group">
-                  <input
-                    value={inputId}
-                    onChange={(e) => setInputId(e.target.value)}
-                    className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-4 py-4 font-body text-primary-fixed focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    type="number"
-                    placeholder="Enter user ID..."
-                  />
-                  <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary-container text-on-primary-container px-4 py-2 rounded font-bold text-xs uppercase tracking-tighter hover:scale-105 active:scale-95 transition-all">
-                    Fetch
-                  </button>
+              <h2 className="font-headline text-2xl font-extrabold mb-6 tracking-tight">Your Profile</h2>
+              <div className="flex flex-col gap-4">
+                <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">Your Member ID</label>
+                <div className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-4 py-4 font-mono text-primary-fixed text-lg">
+                  USR-{userId}
                 </div>
-              </form>
+                <p className="text-xs text-on-surface-variant/60">
+                  Your ID is automatically assigned and saved to this browser.
+                </p>
+              </div>
             </div>
           </div>
           {user && (
             <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Internal ID</span>
-                <span className="font-headline text-2xl font-bold text-on-surface">{user.id.toLocaleString()}</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Movies Rated</span>
+                <span className="font-headline text-2xl font-bold text-on-surface">{total}</span>
               </div>
               <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">MovieLens ID</span>
-                <span className="font-headline text-2xl font-bold text-on-surface">#{user.movielens_id}</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Avg Rating</span>
+                <span className="font-headline text-2xl font-bold text-on-surface">
+                  {ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1) : "—"}
+                </span>
               </div>
               <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
                 <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Member Since</span>
@@ -120,6 +121,14 @@ export default function Profile() {
                   <p className="text-on-surface-variant text-sm">Active screening preferences and historical data are synchronized.</p>
                 </div>
                 <span className="material-symbols-outlined text-4xl text-primary-fixed-dim" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+              </div>
+            </div>
+          )}
+          {!user && !loading && (
+            <div className="lg:col-span-2 flex items-center justify-center p-12 rounded-xl bg-surface-container-low border border-outline-variant/10">
+              <div className="text-center space-y-3">
+                <span className="material-symbols-outlined text-5xl text-outline/40">movie_filter</span>
+                <p className="text-on-surface-variant">You haven't rated any movies yet. Browse and rate movies to build your profile!</p>
               </div>
             </div>
           )}
@@ -202,8 +211,8 @@ export default function Profile() {
         )}
 
         {/* Bento Stats */}
-        {user && (
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {user && ratings.length > 0 && (
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
               <span className="material-symbols-outlined text-primary mb-4 text-3xl">movie_filter</span>
               <div className="text-4xl font-headline font-black text-on-surface mb-1">{total}</div>
@@ -212,7 +221,7 @@ export default function Profile() {
             <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
               <span className="material-symbols-outlined text-primary mb-4 text-3xl">star_half</span>
               <div className="text-4xl font-headline font-black text-on-surface mb-1">
-                {ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1) : "—"}
+                {(ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1)}
               </div>
               <div className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/60">Average Rating</div>
             </div>
@@ -220,11 +229,6 @@ export default function Profile() {
               <span className="material-symbols-outlined text-primary mb-4 text-3xl">verified</span>
               <div className="text-4xl font-headline font-black text-on-surface mb-1">Active</div>
               <div className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/60">CineMatch Status</div>
-            </div>
-            <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
-              <span className="material-symbols-outlined text-primary mb-4 text-3xl">history</span>
-              <div className="text-4xl font-headline font-black text-on-surface mb-1">{user.id}</div>
-              <div className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/60">User ID</div>
             </div>
           </section>
         )}

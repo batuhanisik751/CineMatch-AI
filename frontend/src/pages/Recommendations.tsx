@@ -8,10 +8,11 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
+import { useUserId } from "../hooks/useUserId";
 
 export default function Recommendations() {
   const [params, setParams] = useSearchParams();
-  const [userId, setUserId] = useState(params.get("user") || "");
+  const { userId } = useUserId();
   const [strategy, setStrategy] = useState(params.get("strategy") || "hybrid");
   const [topK, setTopK] = useState(20);
   const [recs, setRecs] = useState<RecommendationItem[]>([]);
@@ -20,11 +21,10 @@ export default function Recommendations() {
   const [fetched, setFetched] = useState(false);
 
   const fetchRecs = () => {
-    if (!userId.trim()) return;
     setLoading(true);
     setError("");
-    setParams({ user: userId.trim(), strategy });
-    getRecommendations(Number(userId), topK, strategy)
+    setParams({ user: String(userId), strategy });
+    getRecommendations(userId, topK, strategy)
       .then((data) => {
         setRecs(data.recommendations);
         setFetched(true);
@@ -68,15 +68,11 @@ export default function Recommendations() {
           <div className="glass-panel p-8 rounded-xl border border-outline-variant/10 shadow-2xl">
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-end">
               <div className="space-y-3">
-                <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant">User Identifier</label>
+                <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant">Your ID</label>
                 <div className="relative">
-                  <input
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
-                    className="w-full bg-surface-container-lowest border-0 focus:ring-2 focus:ring-primary-container/50 text-on-surface h-12 px-4 rounded-lg font-mono transition-all"
-                    placeholder="Enter ID..."
-                    type="number"
-                  />
+                  <div className="w-full bg-surface-container-lowest text-on-surface h-12 px-4 rounded-lg font-mono flex items-center">
+                    USR-{userId}
+                  </div>
                   <span className="material-symbols-outlined absolute right-3 top-3 text-outline text-sm">fingerprint</span>
                 </div>
               </div>
