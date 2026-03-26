@@ -90,6 +90,24 @@ TMDb Metadata ─────┘
 | FAISS index | `pipeline/faiss_builder.py` | `faiss.index`, `faiss_id_map.pkl` |
 | Train ALS | `pipeline/collaborative.py` | `als_model.pkl`, mappings, sparse matrix |
 | Seed DB | `scripts/seed_db.py` | PostgreSQL tables + IVFFlat vector index |
+| Evaluate | `python -m cinematch.evaluation.evaluate` | `evaluation_report.json` |
+
+## Caching
+
+Redis caches API responses with automatic invalidation:
+
+| Cache Key Pattern | TTL | Invalidation |
+|---|---|---|
+| `movie:{id}` | 1 hour | Manual |
+| `similar:{id}:{top_k}` | 30 min | Never (content similarity is stable) |
+| `recs:{user_id}:{strategy}:{top_k}` | 15 min | On new rating from this user |
+| `search:{query_hash}:{limit}` | 10 min | Never |
+
+Redis is optional — the app runs without it, just without caching.
+
+## Evaluation
+
+Run `python -m cinematch.evaluation.evaluate` to measure recommendation quality. Uses temporal train/test split (80/20) and computes Precision@K, Recall@K, NDCG@K, and MAP@K for content and collaborative strategies. Results are saved to `data/processed/evaluation_report.json`.
 
 ## Project Structure
 
@@ -114,7 +132,13 @@ src/cinematch/
 ├── schemas/         # Pydantic request/response schemas
 ├── pipeline/        # Data processing (cleaner, embedder, FAISS, ALS)
 ├── evaluation/      # Recommendation quality metrics
-├── core/            # Cache, logging, exceptions
+│   ├── metrics.py             # Precision@K, Recall@K, NDCG@K, MAP@K
+│   ├── splitter.py            # Temporal train/test split
+│   └── evaluate.py            # Full evaluation runner + JSON report
+├── core/            # Infrastructure
+│   ├── cache.py               # Redis cache service + invalidation
+│   ├── exceptions.py          # Custom exceptions + FastAPI handlers
+│   └── logging.py             # Structured logging config
 ├── db/              # Database engine, migrations
 ├── config.py        # Environment-based configuration
 └── main.py          # FastAPI app factory + service loading
