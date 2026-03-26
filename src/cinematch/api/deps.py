@@ -9,6 +9,7 @@ from fastapi import Request
 from cinematch.db.session import get_db
 
 if TYPE_CHECKING:
+    from cinematch.core.cache import CacheService
     from cinematch.services.content_recommender import ContentRecommender
     from cinematch.services.hybrid_recommender import HybridRecommender
     from cinematch.services.movie_service import MovieService
@@ -32,3 +33,7 @@ def get_content_recommender(request: Request) -> ContentRecommender:
 
 def get_hybrid_recommender(request: Request) -> HybridRecommender:
     return request.app.state.hybrid_recommender
+
+
+def get_cache_service(request: Request) -> CacheService | None:
+    return getattr(request.app.state, "cache_service", None)

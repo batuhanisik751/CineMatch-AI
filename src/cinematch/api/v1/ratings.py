@@ -5,7 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cinematch.api.deps import get_db, get_movie_service, get_rating_service
+from cinematch.api.deps import get_cache_service, get_db, get_movie_service, get_rating_service
+from cinematch.core.cache import CacheService
 from cinematch.schemas.rating import RatingCreate, RatingResponse, UserRatingsResponse
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_service import RatingService
@@ -24,12 +25,21 @@ async def add_rating(
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     rating_service: RatingService = Depends(get_rating_service),
+    cache: CacheService | None = Depends(get_cache_service),
 ):
     movie = await movie_service.get_by_id(body.movie_id, db)
     if movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
 
     rating = await rating_service.add_rating(user_id, body.movie_id, body.rating, db)
+
+    # Invalidate cached recommendations for this user
+    if cache is not None:
+        try:
+            await cache.invalidate_user_recs(user_id)
+        except Exception:  # noqa: BLE001
+            pass  # Cache failure should not break the request
+
     return RatingResponse.model_validate(rating)
 
 

@@ -14,6 +14,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from cinematch import __version__
 from cinematch.api.v1.router import api_v1_router
 from cinematch.config import get_settings
+from cinematch.core.cache import CacheService
+from cinematch.core.exceptions import (
+    NotFoundError,
+    ServiceUnavailableError,
+    not_found_handler,
+    service_unavailable_handler,
+)
+from cinematch.core.logging import setup_logging
 from cinematch.services.collab_recommender import CollabRecommender
 from cinematch.services.content_recommender import ContentRecommender
 from cinematch.services.embedding_service import EmbeddingService
@@ -27,6 +35,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+    setup_logging(debug=settings.debug)
 
     try:
         # Load embedding service
@@ -78,7 +87,22 @@ async def lifespan(app: FastAPI):
     app.state.movie_service = MovieService()
     app.state.rating_service = RatingService()
 
+    # Redis cache (optional — app works without it)
+    try:
+        cache_service = CacheService(
+            redis_url=settings.redis_url, default_ttl=settings.cache_ttl_seconds
+        )
+        app.state.cache_service = cache_service
+        logger.info("Redis cache connected.")
+    except Exception:
+        logger.warning("Redis not available. App will run without caching.")
+        app.state.cache_service = None
+
     yield
+
+    # Shutdown
+    if getattr(app.state, "cache_service", None) is not None:
+        await app.state.cache_service.close()
 
 
 def create_app() -> FastAPI:
@@ -96,6 +120,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.add_exception_handler(NotFoundError, not_found_handler)
+    app.add_exception_handler(ServiceUnavailableError, service_unavailable_handler)
 
     app.include_router(api_v1_router)
 
