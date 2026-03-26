@@ -21,6 +21,7 @@ class RatingResponse(BaseModel):
     movie_id: int
     rating: float
     timestamp: datetime
+    movie_title: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

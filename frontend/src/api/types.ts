@@ -46,6 +46,7 @@ export interface RatingResponse {
   movie_id: number;
   rating: number;
   timestamp: string;
+  movie_title: string | null;
 }
 
 export interface UserRatingsResponse {

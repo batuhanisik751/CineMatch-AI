@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 
+from cinematch.models.movie import Movie
 from cinematch.models.rating import Rating
 from cinematch.models.user import User
 
@@ -53,18 +54,20 @@ class RatingService:
         db: AsyncSession,
         offset: int = 0,
         limit: int = 20,
-    ) -> tuple[list[Rating], int]:
-        """Get paginated ratings for a user. Returns (ratings, total_count)."""
+    ) -> tuple[list[tuple[Rating, str | None]], int]:
+        """Get paginated ratings for a user. Returns ([(rating, movie_title), ...], total_count)."""
         count_stmt = select(func.count()).select_from(Rating).where(Rating.user_id == user_id)
         count_result = await db.execute(count_stmt)
         total = count_result.scalar_one()
 
         stmt = (
-            select(Rating)
+            select(Rating, Movie.title)
+            .outerjoin(Movie, Rating.movie_id == Movie.id)
             .where(Rating.user_id == user_id)
             .order_by(Rating.timestamp.desc())
             .offset(offset)
             .limit(limit)
         )
         result = await db.execute(stmt)
-        return list(result.scalars().all()), total
+        rows = [(rating, title) for rating, title in result.all()]
+        return rows, total

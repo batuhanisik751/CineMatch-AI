@@ -48,6 +48,7 @@ def _make_rating(user_id: int = 1, movie_id: int = 1, rating: float = 4.5) -> Ma
     r.movie_id = movie_id
     r.rating = rating
     r.timestamp = datetime(2024, 6, 15, 12, 0, 0, tzinfo=UTC)
+    r.movie_title = None
     return r
 
 
@@ -87,7 +88,7 @@ def mock_movie_service(sample_movie):
 def mock_rating_service(sample_rating):
     svc = AsyncMock()
     svc.add_rating.return_value = sample_rating
-    svc.get_user_ratings.return_value = ([sample_rating], 1)
+    svc.get_user_ratings.return_value = ([(sample_rating, "The Matrix")], 1)
     return svc
 
 

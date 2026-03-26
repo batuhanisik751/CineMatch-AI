@@ -13,6 +13,7 @@ async def test_add_rating_success(client, sample_rating):
     assert data["user_id"] == sample_rating.user_id
     assert data["movie_id"] == sample_rating.movie_id
     assert data["rating"] == sample_rating.rating
+    assert data["movie_title"] == "The Matrix"
 
 
 async def test_add_rating_movie_not_found(client, mock_movie_service):
@@ -49,6 +50,7 @@ async def test_get_user_ratings_success(client, sample_rating):
     assert data["total"] == 1
     assert len(data["ratings"]) == 1
     assert data["ratings"][0]["rating"] == sample_rating.rating
+    assert data["ratings"][0]["movie_title"] == "The Matrix"
 
 
 async def test_get_user_ratings_pagination(client, mock_rating_service):

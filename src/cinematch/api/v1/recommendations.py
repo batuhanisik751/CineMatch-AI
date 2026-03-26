@@ -86,9 +86,12 @@ async def explain_recommendation(
     if movie is None:
         raise NotFoundError("Movie", movie_id)
 
-    ratings, total = await rating_service.get_user_ratings(user_id, db, limit=10)
-    if not ratings:
+    rows, total = await rating_service.get_user_ratings(user_id, db, limit=10)
+    if not rows:
         raise NotFoundError("User", user_id)
+
+    # Unpack tuples from get_user_ratings (rating, movie_title)
+    ratings = [r for r, _title in rows]
 
     # Build top-rated list with movie titles
     rated_movie_ids = [r.movie_id for r in ratings]

@@ -150,7 +150,7 @@ export default function Profile() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-surface-container-high/50">
-                    <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 border-b border-white/5">Movie ID</th>
+                    <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 border-b border-white/5">Movie</th>
                     <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 border-b border-white/5 text-center">Your Rating</th>
                     <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 border-b border-white/5 text-right">Timestamp</th>
                   </tr>
@@ -158,7 +158,11 @@ export default function Profile() {
                 <tbody className="divide-y divide-white/5">
                   {ratings.map((r) => (
                     <tr key={`${r.movie_id}-${r.timestamp}`} className="hover:bg-white/5 transition-colors group">
-                      <td className="px-6 py-5 font-body text-sm text-on-surface-variant">#{r.movie_id}</td>
+                      <td className="px-6 py-5 font-body text-sm text-on-surface-variant">
+                        <a href={`/movies/${r.movie_id}`} className="text-primary hover:underline transition-colors">
+                          {r.movie_title ?? `Movie #${r.movie_id}`}
+                        </a>
+                      </td>
                       <td className="px-6 py-5 text-center">{stars(r.rating)}</td>
                       <td className="px-6 py-5 text-right font-body text-sm text-on-surface-variant">
                         {new Date(r.timestamp).toLocaleString()}

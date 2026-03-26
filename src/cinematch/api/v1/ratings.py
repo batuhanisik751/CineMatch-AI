@@ -40,7 +40,9 @@ async def add_rating(
         except Exception:  # noqa: BLE001
             pass  # Cache failure should not break the request
 
-    return RatingResponse.model_validate(rating)
+    resp = RatingResponse.model_validate(rating)
+    resp.movie_title = movie.title
+    return resp
 
 
 @router.get("/users/{user_id}/ratings", response_model=UserRatingsResponse)
@@ -51,10 +53,15 @@ async def get_user_ratings(
     db: AsyncSession = Depends(get_db),
     rating_service: RatingService = Depends(get_rating_service),
 ):
-    ratings, total = await rating_service.get_user_ratings(user_id, db, offset=offset, limit=limit)
+    rows, total = await rating_service.get_user_ratings(user_id, db, offset=offset, limit=limit)
+    ratings = []
+    for rating, movie_title in rows:
+        r = RatingResponse.model_validate(rating)
+        r.movie_title = movie_title
+        ratings.append(r)
     return UserRatingsResponse(
         user_id=user_id,
-        ratings=[RatingResponse.model_validate(r) for r in ratings],
+        ratings=ratings,
         total=total,
         offset=offset,
         limit=limit,
