@@ -60,11 +60,12 @@ API docs available at http://localhost:8000/docs
 |--------|------|-------------|
 | GET | `/health` | Health check |
 | GET | `/api/v1/movies/{id}` | Movie details |
-| GET | `/api/v1/movies/search?q=` | Search movies by title |
-| GET | `/api/v1/movies/{id}/similar` | Content-similar movies |
-| GET | `/api/v1/users/{id}/recommendations` | Hybrid recommendations |
-| POST | `/api/v1/users/{id}/ratings` | Add/update a rating |
-| GET | `/api/v1/users/{id}/ratings` | User's ratings |
+| GET | `/api/v1/movies/search?q=&limit=20` | Search movies by title |
+| GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
+| GET | `/api/v1/users/{id}` | User details |
+| GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Hybrid recommendations |
+| POST | `/api/v1/users/{id}/ratings` | Add/update a rating (body: `{"movie_id": 1, "rating": 4.5}`) |
+| GET | `/api/v1/users/{id}/ratings?offset=0&limit=20` | User's ratings (paginated) |
 
 ## How It Works
 
@@ -94,12 +95,21 @@ TMDb Metadata ─────┘
 
 ```
 src/cinematch/
-├── api/v1/          # REST endpoints
-├── services/        # Recommendation engines
+├── api/
+│   ├── deps.py                   # Dependency injection (get_db, services)
+│   └── v1/                       # REST endpoints
+│       ├── movies.py             # GET /{id}, /search, /{id}/similar
+│       ├── ratings.py            # POST/GET /users/{id}/ratings
+│       ├── recommendations.py    # GET /users/{id}/recommendations
+│       ├── users.py              # GET /users/{id}
+│       └── router.py             # Aggregated v1 router
+├── services/        # Business logic
 │   ├── embedding_service.py      # sentence-transformers wrapper
 │   ├── content_recommender.py    # pgvector + FAISS similarity search
 │   ├── collab_recommender.py     # ALS collaborative filtering
-│   └── hybrid_recommender.py     # Combined content + collab scoring
+│   ├── hybrid_recommender.py     # Combined content + collab scoring
+│   ├── movie_service.py          # Movie DB queries (get, search, batch)
+│   └── rating_service.py         # Rating DB queries (upsert, list)
 ├── models/          # SQLAlchemy ORM models
 ├── schemas/         # Pydantic request/response schemas
 ├── pipeline/        # Data processing (cleaner, embedder, FAISS, ALS)
