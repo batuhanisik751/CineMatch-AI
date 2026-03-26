@@ -1,0 +1,68 @@
+"""Tests for rating API endpoints."""
+
+from __future__ import annotations
+
+
+async def test_add_rating_success(client, sample_rating):
+    resp = await client.post(
+        "/api/v1/users/1/ratings",
+        json={"movie_id": 1, "rating": 4.5},
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["user_id"] == sample_rating.user_id
+    assert data["movie_id"] == sample_rating.movie_id
+    assert data["rating"] == sample_rating.rating
+
+
+async def test_add_rating_movie_not_found(client, mock_movie_service):
+    mock_movie_service.get_by_id.return_value = None
+    resp = await client.post(
+        "/api/v1/users/1/ratings",
+        json={"movie_id": 999, "rating": 4.0},
+    )
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Movie not found"
+
+
+async def test_add_rating_invalid_value(client):
+    resp = await client.post(
+        "/api/v1/users/1/ratings",
+        json={"movie_id": 1, "rating": 6.0},
+    )
+    assert resp.status_code == 422
+
+
+async def test_add_rating_too_low(client):
+    resp = await client.post(
+        "/api/v1/users/1/ratings",
+        json={"movie_id": 1, "rating": 0.0},
+    )
+    assert resp.status_code == 422
+
+
+async def test_get_user_ratings_success(client, sample_rating):
+    resp = await client.get("/api/v1/users/1/ratings")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user_id"] == 1
+    assert data["total"] == 1
+    assert len(data["ratings"]) == 1
+    assert data["ratings"][0]["rating"] == sample_rating.rating
+
+
+async def test_get_user_ratings_pagination(client, mock_rating_service):
+    resp = await client.get("/api/v1/users/1/ratings", params={"offset": 10, "limit": 5})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["offset"] == 10
+    assert data["limit"] == 5
+
+
+async def test_get_user_ratings_empty(client, mock_rating_service):
+    mock_rating_service.get_user_ratings.return_value = ([], 0)
+    resp = await client.get("/api/v1/users/1/ratings")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 0
+    assert data["ratings"] == []

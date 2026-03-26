@@ -12,11 +12,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from cinematch import __version__
+from cinematch.api.v1.router import api_v1_router
 from cinematch.config import get_settings
 from cinematch.services.collab_recommender import CollabRecommender
 from cinematch.services.content_recommender import ContentRecommender
 from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.hybrid_recommender import HybridRecommender
+from cinematch.services.movie_service import MovieService
+from cinematch.services.rating_service import RatingService
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +74,10 @@ async def lifespan(app: FastAPI):
             "App will start without recommendation services."
         )
 
+    # Services that work without pipeline artifacts
+    app.state.movie_service = MovieService()
+    app.state.rating_service = RatingService()
+
     yield
 
 
@@ -89,6 +96,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.include_router(api_v1_router)
 
     @app.get("/health")
     async def health_check():
