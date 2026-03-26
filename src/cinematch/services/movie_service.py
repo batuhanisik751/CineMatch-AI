@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func, select
+from sqlalchemy import desc, func, select, text
 
 from cinematch.models.movie import Movie
 
@@ -26,21 +26,46 @@ class MovieService:
         db: AsyncSession,
         limit: int = 20,
     ) -> tuple[list[Movie], int]:
-        """Search movies by title using ILIKE. Returns (results, total_count)."""
+        """Search movies by title. Tries ILIKE first, falls back to pg_trgm fuzzy match."""
         pattern = f"%{query}%"
 
+        # Fast path: exact substring match via ILIKE
         count_stmt = select(func.count()).select_from(Movie).where(Movie.title.ilike(pattern))
         count_result = await db.execute(count_stmt)
         total = count_result.scalar_one()
 
+        if total > 0:
+            stmt = (
+                select(Movie)
+                .where(Movie.title.ilike(pattern))
+                .order_by(Movie.popularity.desc())
+                .limit(limit)
+            )
+            result = await db.execute(stmt)
+            return list(result.scalars().all()), total
+
+        # Fuzzy fallback: use pg_trgm similarity (skip for very short queries)
+        if len(query) < 3:
+            return [], 0
+
+        await db.execute(text("SELECT set_config('pg_trgm.similarity_threshold', '0.2', true)"))
+
+        similarity_col = func.similarity(Movie.title, query).label("sim")
+        fuzzy_filter = Movie.title.op("%")(query)
+
+        count_stmt = select(func.count()).select_from(Movie).where(fuzzy_filter)
+        count_result = await db.execute(count_stmt)
+        total = count_result.scalar_one()
+
         stmt = (
-            select(Movie)
-            .where(Movie.title.ilike(pattern))
-            .order_by(Movie.popularity.desc())
+            select(Movie, similarity_col)
+            .where(fuzzy_filter)
+            .order_by(desc("sim"), Movie.popularity.desc())
             .limit(limit)
         )
         result = await db.execute(stmt)
-        return list(result.scalars().all()), total
+        movies = [row[0] for row in result.all()]
+        return movies, total
 
     async def get_movies_by_ids(
         self,
