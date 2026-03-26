@@ -74,8 +74,25 @@ Opens at http://localhost:3000 — connects to the backend API automatically.
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/users/{id}` | User details |
 | GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Hybrid recommendations |
+| GET | `/api/v1/users/{id}/recommendations/explain/{movie_id}?score=0.9` | LLM explanation for a recommendation (requires Ollama) |
 | POST | `/api/v1/users/{id}/ratings` | Add/update a rating (body: `{"movie_id": 1, "rating": 4.5}`) |
 | GET | `/api/v1/users/{id}/ratings?offset=0&limit=20` | User's ratings (paginated) |
+
+## LLM Explanations (Optional)
+
+The `/explain` endpoint uses Mistral 7B via Ollama to generate natural language explanations for why a movie was recommended. This feature is entirely optional — the app works without it.
+
+```bash
+# Install and start Ollama
+brew install ollama
+ollama pull mistral
+
+# Enable in .env
+CINEMATCH_LLM_ENABLED=true
+
+# Restart the API server, then:
+curl http://localhost:8000/api/v1/users/1/recommendations/explain/603
+```
 
 ## How It Works
 
@@ -137,7 +154,8 @@ src/cinematch/
 │   ├── collab_recommender.py     # ALS collaborative filtering
 │   ├── hybrid_recommender.py     # Combined content + collab scoring
 │   ├── movie_service.py          # Movie DB queries (get, search, batch)
-│   └── rating_service.py         # Rating DB queries (upsert, list)
+│   ├── rating_service.py         # Rating DB queries (upsert, list)
+│   └── llm_service.py            # Ollama LLM client for explanations
 ├── models/          # SQLAlchemy ORM models
 ├── schemas/         # Pydantic request/response schemas
 ├── pipeline/        # Data processing (cleaner, embedder, FAISS, ALS)
