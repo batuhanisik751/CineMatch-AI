@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { discoverMovies, getGenres, searchMovies } from "../api/movies";
+import { discoverMovies, getGenres, searchMovies, semanticSearchMovies } from "../api/movies";
 import type { GenreCount, MovieSummary } from "../api/types";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
@@ -28,6 +28,9 @@ export default function Discover() {
   const [yearMax, setYearMax] = useState("");
   const [debouncedYearMin, setDebouncedYearMin] = useState("");
   const [debouncedYearMax, setDebouncedYearMax] = useState("");
+  const [searchMode, setSearchMode] = useState<"title" | "vibe">(
+    (params.get("mode") as "title" | "vibe") || "title"
+  );
   const [searchQuery, setSearchQuery] = useState(params.get("q") || "");
   const [movies, setMovies] = useState<MovieSummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -62,8 +65,16 @@ export default function Discover() {
     setError("");
 
     if (searchQuery.trim()) {
-      // Search mode: use title search API
-      searchMovies(searchQuery.trim(), 40)
+      // Search mode: title search or semantic vibe search
+      const searchPromise =
+        searchMode === "vibe"
+          ? semanticSearchMovies(searchQuery.trim(), 40).then((data) => ({
+              results: data.results.map((r) => r.movie),
+              total: data.total,
+            }))
+          : searchMovies(searchQuery.trim(), 40);
+
+      searchPromise
         .then((data) => {
           setMovies(data.results);
           setTotal(data.total);
@@ -90,7 +101,7 @@ export default function Discover() {
         .catch((e) => setError(e.detail || e.message))
         .finally(() => setLoading(false));
     }
-  }, [searchQuery, selectedGenre, sortBy, debouncedYearMin, debouncedYearMax, offset]);
+  }, [searchQuery, searchMode, selectedGenre, sortBy, debouncedYearMin, debouncedYearMax, offset]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
@@ -101,7 +112,9 @@ export default function Discover() {
     setOffset(0);
     // Update URL params for shareability
     if (searchQuery.trim()) {
-      setParams({ q: searchQuery.trim() });
+      const p: Record<string, string> = { q: searchQuery.trim() };
+      if (searchMode === "vibe") p.mode = "vibe";
+      setParams(p);
     } else {
       setParams({});
     }
@@ -137,7 +150,7 @@ export default function Discover() {
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setOffset(0); }}
               className="w-full h-14 pl-14 pr-12 bg-surface-container-lowest border-none rounded-xl text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint shadow-lg transition-all duration-300 font-body text-base"
-              placeholder="Search by title..."
+              placeholder={searchMode === "vibe" ? "Describe a movie vibe..." : "Search by title..."}
               type="text"
             />
             {searchQuery && (
@@ -150,6 +163,30 @@ export default function Discover() {
               </button>
             )}
           </form>
+
+          {/* Search mode toggle */}
+          <div className="flex gap-2 mb-8">
+            <button
+              onClick={() => { setSearchMode("title"); setOffset(0); }}
+              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
+                searchMode === "title"
+                  ? "bg-primary-container text-on-primary-container shadow-md"
+                  : "bg-surface-container-highest text-on-surface-variant hover:bg-surface-container-high"
+              }`}
+            >
+              Search by title
+            </button>
+            <button
+              onClick={() => { setSearchMode("vibe"); setOffset(0); }}
+              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
+                searchMode === "vibe"
+                  ? "bg-primary-container text-on-primary-container shadow-md"
+                  : "bg-surface-container-highest text-on-surface-variant hover:bg-surface-container-high"
+              }`}
+            >
+              Search by vibe
+            </button>
+          </div>
 
           {/* Filters — hidden during search mode */}
           {!isSearchMode && (
@@ -247,7 +284,7 @@ export default function Discover() {
               <p className="text-on-surface-variant text-sm mb-6">
                 {isSearchMode ? (
                   <>
-                    Found <span className="font-bold text-on-surface">{total}</span> result{total !== 1 ? "s" : ""} for "<span className="italic text-primary">{searchQuery.trim()}</span>"
+                    Found <span className="font-bold text-on-surface">{total}</span> {searchMode === "vibe" ? "vibe match" : "result"}{total !== 1 ? (searchMode === "vibe" ? "es" : "s") : ""} for "<span className="italic text-primary">{searchQuery.trim()}</span>"
                   </>
                 ) : (
                   <>{total.toLocaleString()} movie{total !== 1 ? "s" : ""} found</>

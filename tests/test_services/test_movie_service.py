@@ -241,3 +241,57 @@ async def test_get_genre_counts_empty(service, mock_db):
     result = await service.get_genre_counts(mock_db)
 
     assert result == []
+
+
+# --- semantic_search tests ---
+
+
+async def test_semantic_search_returns_movies_with_scores(service, mock_db):
+    """Returns (Movie, similarity) tuples ordered by pgvector score."""
+    movie1 = _mock_movie(id=1, title="Interstellar")
+    movie2 = _mock_movie(id=2, title="Gravity")
+
+    # pgvector query returns IDs and similarities
+    pgvector_result = MagicMock()
+    pgvector_result.fetchall.return_value = [(1, 0.92), (2, 0.85)]
+
+    mock_db.execute = AsyncMock(return_value=pgvector_result)
+
+    # Patch get_movies_by_ids via the service instance
+    service.get_movies_by_ids = AsyncMock(return_value={1: movie1, 2: movie2})
+
+    results = await service.semantic_search([0.1] * 384, mock_db, limit=20)
+
+    assert len(results) == 2
+    assert results[0] == (movie1, 0.92)
+    assert results[1] == (movie2, 0.85)
+
+
+async def test_semantic_search_empty_results(service, mock_db):
+    """Returns empty list when pgvector finds no matches."""
+    pgvector_result = MagicMock()
+    pgvector_result.fetchall.return_value = []
+
+    mock_db.execute = AsyncMock(return_value=pgvector_result)
+
+    results = await service.semantic_search([0.1] * 384, mock_db)
+
+    assert results == []
+
+
+async def test_semantic_search_preserves_order(service, mock_db):
+    """Results maintain pgvector similarity ordering, not ID ordering."""
+    movie5 = _mock_movie(id=5, title="Movie 5")
+    movie2 = _mock_movie(id=2, title="Movie 2")
+    movie8 = _mock_movie(id=8, title="Movie 8")
+
+    pgvector_result = MagicMock()
+    pgvector_result.fetchall.return_value = [(5, 0.95), (8, 0.88), (2, 0.72)]
+
+    mock_db.execute = AsyncMock(return_value=pgvector_result)
+    service.get_movies_by_ids = AsyncMock(return_value={5: movie5, 2: movie2, 8: movie8})
+
+    results = await service.semantic_search([0.1] * 384, mock_db)
+
+    assert [r[0].id for r in results] == [5, 8, 2]
+    assert [r[1] for r in results] == [0.95, 0.88, 0.72]

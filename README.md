@@ -96,7 +96,7 @@ npm run dev
 
 Opens at http://localhost:3000 — connects to the backend API automatically.
 
-Features: movie discovery with genre/year/sort filters, title search with typo tolerance, hybrid/content/collab recommendations, "Why This?" explanation button on each recommended movie (powered by Mistral), rating history with movie names.
+Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, hybrid/content/collab recommendations, "Why This?" explanation button on each recommended movie (powered by Mistral), rating history with movie names.
 
 ## API Endpoints
 
@@ -105,6 +105,7 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/health` | Health check |
 | GET | `/api/v1/movies/{id}` | Movie details |
 | GET | `/api/v1/movies/search?q=&limit=20` | Search movies by title (fuzzy/typo-tolerant) |
+| GET | `/api/v1/movies/semantic-search?q=&limit=20` | Semantic "vibe" search by description (e.g., "dark thriller in space") |
 | GET | `/api/v1/movies/discover?genre=&sort_by=popularity&year_min=&year_max=&offset=0&limit=20` | Browse movies with filters and pagination |
 | GET | `/api/v1/movies/genres` | All genres with movie counts |
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
@@ -140,6 +141,7 @@ If Ollama is not running, the app still works — recommendations use the algori
 6. **LLM Re-ranking:** Top 50 candidates are sent to Mistral, which re-ranks for thematic variety, sequel avoidance, and deeper taste matching. Returns the best 20.
 7. **MMR Fallback:** If the LLM is unavailable, Maximal Marginal Relevance (MMR) with genre Jaccard similarity ensures diversity algorithmically.
 8. **Fuzzy Search:** Movie search uses ILIKE for exact matches, with automatic pg_trgm fuzzy fallback for typos (e.g., "Casr" finds "Cars").
+9. **Semantic "Vibe" Search:** Users can search by mood or description (e.g., "funny movie about time travel"). The query text is embedded using the same sentence-transformer model and matched against movie embeddings via pgvector cosine similarity. No LLM needed — pure vector search.
 9. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only). Cold-start users (not in ALS training data) get a 400 error on `collab` with guidance to use `hybrid` or `content` instead. The `hybrid` strategy handles cold-start automatically by falling back to content-only.
 
 ## Data Pipeline
@@ -184,7 +186,7 @@ src/cinematch/
 ├── api/
 │   ├── deps.py                   # Dependency injection (get_db, services)
 │   └── v1/                       # REST endpoints
-│       ├── movies.py             # GET /{id}, /search, /discover, /genres, /{id}/similar
+│       ├── movies.py             # GET /{id}, /search, /semantic-search, /discover, /genres, /{id}/similar
 │       ├── ratings.py            # POST/GET /users/{id}/ratings
 │       ├── recommendations.py    # GET /users/{id}/recommendations
 │       ├── users.py              # GET /users/{id}

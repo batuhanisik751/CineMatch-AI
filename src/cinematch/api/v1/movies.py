@@ -5,7 +5,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cinematch.api.deps import get_content_recommender, get_db, get_movie_service
+from cinematch.api.deps import (
+    get_content_recommender,
+    get_db,
+    get_embedding_service,
+    get_movie_service,
+)
 from cinematch.core.exceptions import ServiceUnavailableError
 from cinematch.schemas.movie import (
     GenreCount,
@@ -14,11 +19,14 @@ from cinematch.schemas.movie import (
     MovieResponse,
     MovieSearchResponse,
     MovieSummary,
+    SemanticSearchResponse,
+    SemanticSearchResult,
     SimilarMovie,
     SimilarMoviesResponse,
     SortOption,
 )
 from cinematch.services.content_recommender import ContentRecommender
+from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.movie_service import MovieService
 
 router = APIRouter()
@@ -74,6 +82,33 @@ async def discover_movies(
         total=total,
         offset=offset,
         limit=limit,
+    )
+
+
+@router.get("/semantic-search", response_model=SemanticSearchResponse)
+async def semantic_search(
+    q: str = Query(min_length=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    embedding_service: EmbeddingService | None = Depends(get_embedding_service),
+):
+    if embedding_service is None:
+        raise ServiceUnavailableError("Embedding service")
+
+    query_embedding = embedding_service.embed_text(q).tolist()
+    results = await movie_service.semantic_search(query_embedding, db, limit=limit)
+
+    return SemanticSearchResponse(
+        results=[
+            SemanticSearchResult(
+                movie=MovieSummary.model_validate(movie),
+                similarity=round(score, 4),
+            )
+            for movie, score in results
+        ],
+        total=len(results),
+        query=q,
     )
 
 

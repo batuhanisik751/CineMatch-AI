@@ -80,3 +80,14 @@ class GenreCount(BaseModel):
 
 class GenresResponse(BaseModel):
     genres: list[GenreCount]
+
+
+class SemanticSearchResult(BaseModel):
+    movie: MovieSummary
+    similarity: float
+
+
+class SemanticSearchResponse(BaseModel):
+    results: list[SemanticSearchResult]
+    total: int
+    query: str

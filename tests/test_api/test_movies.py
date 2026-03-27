@@ -95,9 +95,7 @@ async def test_discover_with_genre(client, mock_movie_service):
 
 
 async def test_discover_with_year_range(client, mock_movie_service):
-    resp = await client.get(
-        "/api/v1/movies/discover", params={"year_min": 2000, "year_max": 2020}
-    )
+    resp = await client.get("/api/v1/movies/discover", params={"year_min": 2000, "year_max": 2020})
     assert resp.status_code == 200
     call_kwargs = mock_movie_service.list_movies.call_args.kwargs
     assert call_kwargs["year_min"] == 2000
@@ -105,18 +103,14 @@ async def test_discover_with_year_range(client, mock_movie_service):
 
 
 async def test_discover_with_sort(client, mock_movie_service):
-    resp = await client.get(
-        "/api/v1/movies/discover", params={"sort_by": "vote_average"}
-    )
+    resp = await client.get("/api/v1/movies/discover", params={"sort_by": "vote_average"})
     assert resp.status_code == 200
     call_kwargs = mock_movie_service.list_movies.call_args.kwargs
     assert call_kwargs["sort_by"] == "vote_average"
 
 
 async def test_discover_with_pagination(client, mock_movie_service):
-    resp = await client.get(
-        "/api/v1/movies/discover", params={"offset": 20, "limit": 10}
-    )
+    resp = await client.get("/api/v1/movies/discover", params={"offset": 20, "limit": 10})
     assert resp.status_code == 200
     data = resp.json()
     assert data["offset"] == 20
@@ -157,3 +151,47 @@ async def test_genres_response_structure(client):
         assert isinstance(item["count"], int)
     assert data["genres"][0]["genre"] == "Action"
     assert data["genres"][0]["count"] == 50
+
+
+# --- Semantic search endpoint tests ---
+
+
+async def test_semantic_search_success(client, sample_movie, mock_movie_service):
+    mock_movie_service.semantic_search.return_value = [(sample_movie, 0.91)]
+
+    resp = await client.get(
+        "/api/v1/movies/semantic-search", params={"q": "dark thriller in space"}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["query"] == "dark thriller in space"
+    assert data["total"] == 1
+    assert len(data["results"]) == 1
+    assert data["results"][0]["movie"]["title"] == sample_movie.title
+    assert data["results"][0]["similarity"] == 0.91
+
+
+async def test_semantic_search_empty_query(client):
+    resp = await client.get("/api/v1/movies/semantic-search", params={"q": ""})
+    assert resp.status_code == 422
+
+
+async def test_semantic_search_service_unavailable(app, client):
+    from cinematch.api.deps import get_embedding_service
+
+    app.dependency_overrides[get_embedding_service] = lambda: None
+    resp = await client.get("/api/v1/movies/semantic-search", params={"q": "funny movie"})
+    assert resp.status_code == 503
+    assert "Embedding service" in resp.json()["detail"]
+
+
+async def test_semantic_search_no_results(client, mock_movie_service):
+    mock_movie_service.semantic_search.return_value = []
+
+    resp = await client.get(
+        "/api/v1/movies/semantic-search", params={"q": "completely unknown vibe"}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 0
+    assert data["results"] == []

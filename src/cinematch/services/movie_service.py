@@ -123,6 +123,33 @@ class MovieService:
         result = await db.execute(stmt)
         return [(row[0], row[1]) for row in result.all()]
 
+    async def semantic_search(
+        self,
+        query_embedding: list[float],
+        db: AsyncSession,
+        limit: int = 20,
+    ) -> list[tuple[Movie, float]]:
+        """Search movies by embedding similarity using pgvector."""
+        result = await db.execute(
+            text(
+                "SELECT id, (embedding <#> :query_embedding) * -1 AS similarity "
+                "FROM movies "
+                "WHERE embedding IS NOT NULL "
+                "ORDER BY embedding <#> :query_embedding "
+                "LIMIT :limit"
+            ),
+            {"query_embedding": str(query_embedding), "limit": limit},
+        )
+        rows = result.fetchall()
+        if not rows:
+            return []
+
+        id_score_map = {row[0]: float(row[1]) for row in rows}
+        ordered_ids = [row[0] for row in rows]
+
+        movies_map = await self.get_movies_by_ids(ordered_ids, db)
+        return [(movies_map[mid], id_score_map[mid]) for mid in ordered_ids if mid in movies_map]
+
     async def get_movies_by_ids(
         self,
         movie_ids: list[int],

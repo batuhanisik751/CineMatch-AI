@@ -57,6 +57,17 @@ export interface GenresResponse {
   genres: GenreCount[];
 }
 
+export interface SemanticSearchResult {
+  movie: MovieSummary;
+  similarity: number;
+}
+
+export interface SemanticSearchResponse {
+  results: SemanticSearchResult[];
+  total: number;
+  query: string;
+}
+
 export interface RatingResponse {
   user_id: number;
   movie_id: number;

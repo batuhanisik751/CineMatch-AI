@@ -4,6 +4,7 @@ import type {
   MovieListResponse,
   MovieResponse,
   MovieSearchResponse,
+  SemanticSearchResponse,
   SimilarMoviesResponse,
 } from "./types";
 
@@ -37,6 +38,12 @@ export function discoverMovies(params: {
   if (params.offset != null) qs.set("offset", String(params.offset));
   if (params.limit != null) qs.set("limit", String(params.limit));
   return apiFetch<MovieListResponse>(`/api/v1/movies/discover?${qs.toString()}`);
+}
+
+export function semanticSearchMovies(q: string, limit = 20) {
+  return apiFetch<SemanticSearchResponse>(
+    `/api/v1/movies/semantic-search?q=${encodeURIComponent(q)}&limit=${limit}`
+  );
 }
 
 export function getGenres() {

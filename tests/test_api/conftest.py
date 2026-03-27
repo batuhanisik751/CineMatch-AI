@@ -5,12 +5,14 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock
 
+import numpy as np
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from cinematch.api.deps import (
     get_content_recommender,
     get_db,
+    get_embedding_service,
     get_hybrid_recommender,
     get_llm_service,
     get_movie_service,
@@ -83,6 +85,7 @@ def mock_movie_service(sample_movie):
     svc.get_movies_by_ids.return_value = {sample_movie.id: sample_movie}
     svc.list_movies.return_value = ([sample_movie], 1)
     svc.get_genre_counts.return_value = [("Action", 50), ("Sci-Fi", 30)]
+    svc.semantic_search.return_value = []
     return svc
 
 
@@ -118,6 +121,13 @@ def mock_llm_service():
 
 
 @pytest.fixture()
+def mock_embedding_service():
+    svc = MagicMock()
+    svc.embed_text.return_value = np.zeros(384, dtype=np.float32)
+    return svc
+
+
+@pytest.fixture()
 def mock_db():
     return AsyncMock()
 
@@ -129,6 +139,7 @@ def app(
     mock_content_recommender,
     mock_hybrid_recommender,
     mock_llm_service,
+    mock_embedding_service,
     mock_db,
 ):
     test_app = create_app()
@@ -139,6 +150,7 @@ def app(
     test_app.dependency_overrides[get_content_recommender] = lambda: mock_content_recommender
     test_app.dependency_overrides[get_hybrid_recommender] = lambda: mock_hybrid_recommender
     test_app.dependency_overrides[get_llm_service] = lambda: mock_llm_service
+    test_app.dependency_overrides[get_embedding_service] = lambda: mock_embedding_service
 
     return test_app
 
