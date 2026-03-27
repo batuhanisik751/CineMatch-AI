@@ -19,6 +19,33 @@ Hybrid movie recommendation system combining content-based filtering (embeddings
 
 After processing: ~29K movies, ~162K users, ~24.7M ratings with 384-dim embeddings.
 
+## Running the App (3 Terminals)
+
+Open 3 terminal windows and keep them all running:
+
+**Terminal 1 — Backend**
+```bash
+source .venv/bin/activate
+PYTHONPATH=src uvicorn cinematch.main:app --reload --reload-dir src --host 0.0.0.0 --port 8000
+```
+
+**Terminal 2 — Frontend**
+```bash
+cd frontend
+npm run dev
+```
+Opens at http://localhost:3000
+
+**Terminal 3 — Ollama (LLM, optional)**
+```bash
+ollama serve
+```
+Required for "Why This?" explanations and LLM re-ranking. Skip this if you don't need those features — recommendations still work without it.
+
+Docker runs in the background (`docker compose up -d`) and does not need its own terminal.
+
+---
+
 ## Quick Start
 
 ```bash

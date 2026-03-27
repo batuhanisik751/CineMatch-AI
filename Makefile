@@ -2,13 +2,14 @@
 
 setup:          ## Install dependencies and run migrations
 	pip install -e ".[dev]"
+	chflags -R nohidden .venv
 	alembic upgrade head
 
 run:            ## Start the FastAPI development server
-	uvicorn cinematch.main:app --reload --host 0.0.0.0 --port 8000
+	PYTHONPATH=src uvicorn cinematch.main:app --reload --reload-dir src --host 0.0.0.0 --port 8000
 
 test:           ## Run test suite
-	pytest tests/ -v --cov=cinematch
+	PYTHONPATH=src pytest tests/ -v --cov=cinematch
 
 download:       ## Download datasets
 	python scripts/download_data.py
