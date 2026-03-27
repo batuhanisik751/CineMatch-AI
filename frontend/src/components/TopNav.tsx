@@ -31,7 +31,7 @@ export default function TopNav() {
       </Link>
       <div className="hidden md:flex items-center gap-8">
         {navLink("/", "Home")}
-        {navLink("/search", "Search")}
+        {navLink("/discover", "Discover")}
         {navLink("/recommendations", "Recommendations")}
         {navLink("/profile", "Profile")}
       </div>

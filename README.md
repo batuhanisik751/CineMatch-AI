@@ -96,7 +96,7 @@ npm run dev
 
 Opens at http://localhost:3000 — connects to the backend API automatically.
 
-Features: movie search with typo tolerance, hybrid/content/collab recommendations, "Why This?" explanation button on each recommended movie (powered by Mistral), rating history with movie names.
+Features: movie discovery with genre/year/sort filters, title search with typo tolerance, hybrid/content/collab recommendations, "Why This?" explanation button on each recommended movie (powered by Mistral), rating history with movie names.
 
 ## API Endpoints
 
@@ -105,6 +105,8 @@ Features: movie search with typo tolerance, hybrid/content/collab recommendation
 | GET | `/health` | Health check |
 | GET | `/api/v1/movies/{id}` | Movie details |
 | GET | `/api/v1/movies/search?q=&limit=20` | Search movies by title (fuzzy/typo-tolerant) |
+| GET | `/api/v1/movies/discover?genre=&sort_by=popularity&year_min=&year_max=&offset=0&limit=20` | Browse movies with filters and pagination |
+| GET | `/api/v1/movies/genres` | All genres with movie counts |
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/users/{id}` | User details |
 | GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Recommendations (strategy: `hybrid`, `content`, `collab`) |
@@ -182,7 +184,7 @@ src/cinematch/
 ├── api/
 │   ├── deps.py                   # Dependency injection (get_db, services)
 │   └── v1/                       # REST endpoints
-│       ├── movies.py             # GET /{id}, /search, /{id}/similar
+│       ├── movies.py             # GET /{id}, /search, /discover, /genres, /{id}/similar
 │       ├── ratings.py            # POST/GET /users/{id}/ratings
 │       ├── recommendations.py    # GET /users/{id}/recommendations
 │       ├── users.py              # GET /users/{id}
@@ -192,7 +194,7 @@ src/cinematch/
 │   ├── content_recommender.py    # pgvector + FAISS similarity search
 │   ├── collab_recommender.py     # ALS collaborative filtering
 │   ├── hybrid_recommender.py     # Combined scoring + franchise penalty + MMR + LLM re-ranking
-│   ├── movie_service.py          # Movie DB queries (get, search with fuzzy fallback, batch)
+│   ├── movie_service.py          # Movie DB queries (get, search, discover, genres, batch)
 │   ├── rating_service.py         # Rating DB queries (upsert, list with movie titles)
 │   └── llm_service.py            # Ollama LLM client for re-ranking + explanations
 ├── models/          # SQLAlchemy ORM models

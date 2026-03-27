@@ -41,6 +41,22 @@ export interface MovieSearchResponse {
   query: string;
 }
 
+export interface MovieListResponse {
+  results: MovieSummary[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface GenreCount {
+  genre: string;
+  count: number;
+}
+
+export interface GenresResponse {
+  genres: GenreCount[];
+}
+
 export interface RatingResponse {
   user_id: number;
   movie_id: number;

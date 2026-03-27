@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import Discover from "./pages/Discover";
 import Home from "./pages/Home";
 import MovieDetail from "./pages/MovieDetail";
 import Profile from "./pages/Profile";
@@ -9,6 +10,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/discover" element={<Discover />} />
       <Route path="/search" element={<Search />} />
       <Route path="/movies/:id" element={<MovieDetail />} />
       <Route path="/recommendations" element={<Recommendations />} />

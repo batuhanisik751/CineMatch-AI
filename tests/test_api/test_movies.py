@@ -71,3 +71,89 @@ async def test_get_similar_movies_service_unavailable(app, client):
     resp = await client.get("/api/v1/movies/1/similar")
     assert resp.status_code == 503
     assert "Content recommendation service" in resp.json()["detail"]
+
+
+# --- Discover endpoint tests ---
+
+
+async def test_discover_no_filters(client):
+    resp = await client.get("/api/v1/movies/discover")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "results" in data
+    assert "total" in data
+    assert data["offset"] == 0
+    assert data["limit"] == 20
+
+
+async def test_discover_with_genre(client, mock_movie_service):
+    resp = await client.get("/api/v1/movies/discover", params={"genre": "Action"})
+    assert resp.status_code == 200
+    mock_movie_service.list_movies.assert_called_once()
+    call_kwargs = mock_movie_service.list_movies.call_args.kwargs
+    assert call_kwargs["genre"] == "Action"
+
+
+async def test_discover_with_year_range(client, mock_movie_service):
+    resp = await client.get(
+        "/api/v1/movies/discover", params={"year_min": 2000, "year_max": 2020}
+    )
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.list_movies.call_args.kwargs
+    assert call_kwargs["year_min"] == 2000
+    assert call_kwargs["year_max"] == 2020
+
+
+async def test_discover_with_sort(client, mock_movie_service):
+    resp = await client.get(
+        "/api/v1/movies/discover", params={"sort_by": "vote_average"}
+    )
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.list_movies.call_args.kwargs
+    assert call_kwargs["sort_by"] == "vote_average"
+
+
+async def test_discover_with_pagination(client, mock_movie_service):
+    resp = await client.get(
+        "/api/v1/movies/discover", params={"offset": 20, "limit": 10}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["offset"] == 20
+    assert data["limit"] == 10
+    call_kwargs = mock_movie_service.list_movies.call_args.kwargs
+    assert call_kwargs["offset"] == 20
+    assert call_kwargs["limit"] == 10
+
+
+async def test_discover_invalid_sort(client):
+    resp = await client.get("/api/v1/movies/discover", params={"sort_by": "invalid"})
+    assert resp.status_code == 422
+
+
+async def test_discover_invalid_limit(client):
+    resp = await client.get("/api/v1/movies/discover", params={"limit": 0})
+    assert resp.status_code == 422
+
+
+# --- Genres endpoint tests ---
+
+
+async def test_genres_success(client):
+    resp = await client.get("/api/v1/movies/genres")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "genres" in data
+    assert len(data["genres"]) == 2
+
+
+async def test_genres_response_structure(client):
+    resp = await client.get("/api/v1/movies/genres")
+    assert resp.status_code == 200
+    data = resp.json()
+    for item in data["genres"]:
+        assert "genre" in item
+        assert "count" in item
+        assert isinstance(item["count"], int)
+    assert data["genres"][0]["genre"] == "Action"
+    assert data["genres"][0]["count"] == 50

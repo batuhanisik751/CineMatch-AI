@@ -1,6 +1,9 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { discoverMovies } from "../api/movies";
+import type { MovieSummary } from "../api/types";
 import BottomNav from "../components/BottomNav";
+import MovieCard from "../components/MovieCard";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
 
@@ -9,10 +12,21 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const { userId } = useUserId();
   const [strategy, setStrategy] = useState("hybrid");
+  const [popular, setPopular] = useState<MovieSummary[]>([]);
+  const [topRated, setTopRated] = useState<MovieSummary[]>([]);
+
+  useEffect(() => {
+    discoverMovies({ sort_by: "popularity", limit: 8 })
+      .then((data) => setPopular(data.results))
+      .catch(() => {});
+    discoverMovies({ sort_by: "vote_average", limit: 8 })
+      .then((data) => setTopRated(data.results))
+      .catch(() => {});
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+    if (query.trim()) navigate(`/discover?q=${encodeURIComponent(query.trim())}`);
   };
 
   const handleRecs = (e: React.FormEvent) => {
@@ -109,28 +123,42 @@ export default function Home() {
                 </button>
               </form>
             </div>
-            {/* Editorial Visual */}
-            <div className="lg:col-span-7 grid grid-cols-2 gap-4 h-full">
-              <div className="space-y-4 pt-12">
-                <div className="aspect-[2/3] rounded-xl overflow-hidden bg-surface-container shadow-2xl relative">
-                  <div className="w-full h-full bg-gradient-to-br from-surface-container-highest to-surface-container flex items-center justify-center">
-                    <span className="material-symbols-outlined text-6xl text-outline/30">movie</span>
+            {/* Movie Carousels */}
+            <div className="lg:col-span-7 space-y-10">
+              {popular.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-headline font-bold text-xl text-on-surface">Popular Now</h3>
+                    <Link to="/discover?sort_by=popularity" className="text-primary text-sm font-medium hover:underline">
+                      See all &rarr;
+                    </Link>
+                  </div>
+                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                    {popular.map((m) => (
+                      <div key={m.id} className="flex-shrink-0 w-44">
+                        <MovieCard movie={m} />
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-              <div className="space-y-4">
-                <div className="aspect-[2/3] rounded-xl overflow-hidden bg-surface-container shadow-2xl relative">
-                  <div className="w-full h-full bg-gradient-to-br from-surface-container to-surface-container-low flex items-center justify-center">
-                    <span className="material-symbols-outlined text-6xl text-outline/30">theaters</span>
+              )}
+              {topRated.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-headline font-bold text-xl text-on-surface">Top Rated</h3>
+                    <Link to="/discover?sort_by=vote_average" className="text-primary text-sm font-medium hover:underline">
+                      See all &rarr;
+                    </Link>
+                  </div>
+                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                    {topRated.map((m) => (
+                      <div key={m.id} className="flex-shrink-0 w-44">
+                        <MovieCard movie={m} />
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="aspect-[16/9] rounded-xl overflow-hidden bg-surface-container border border-outline-variant/10 p-6 flex flex-col justify-end">
-                  <h3 className="font-headline font-bold text-lg">Curated Collections</h3>
-                  <p className="text-sm text-on-surface-variant font-body">
-                    Exclusive member-only premieres weekly.
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </section>

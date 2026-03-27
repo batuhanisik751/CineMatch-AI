@@ -121,3 +121,123 @@ async def test_search_both_empty(service, mock_db):
 
     assert total == 0
     assert movies == []
+
+
+# --- list_movies tests ---
+
+
+async def test_list_movies_no_filters(service, mock_db):
+    """Returns movies sorted by popularity desc with no filters."""
+    movie = _mock_movie()
+
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 1
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie]
+
+    mock_db.execute = AsyncMock(side_effect=[count_result, results_result])
+
+    movies, total = await service.list_movies(mock_db)
+
+    assert total == 1
+    assert movies == [movie]
+    assert mock_db.execute.call_count == 2
+
+
+async def test_list_movies_genre_filter(service, mock_db):
+    """Filters by genre using JSONB containment."""
+    movie = _mock_movie()
+
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 1
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie]
+
+    mock_db.execute = AsyncMock(side_effect=[count_result, results_result])
+
+    movies, total = await service.list_movies(mock_db, genre="Action")
+
+    assert total == 1
+    assert movies == [movie]
+    assert mock_db.execute.call_count == 2
+
+
+async def test_list_movies_year_range(service, mock_db):
+    """Filters by year range."""
+    movie = _mock_movie()
+
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 1
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie]
+
+    mock_db.execute = AsyncMock(side_effect=[count_result, results_result])
+
+    movies, total = await service.list_movies(mock_db, year_min=2000, year_max=2020)
+
+    assert total == 1
+    assert movies == [movie]
+    assert mock_db.execute.call_count == 2
+
+
+async def test_list_movies_pagination(service, mock_db):
+    """Respects offset and limit."""
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 50
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [_mock_movie()]
+
+    mock_db.execute = AsyncMock(side_effect=[count_result, results_result])
+
+    movies, total = await service.list_movies(mock_db, offset=20, limit=10)
+
+    assert total == 50
+    assert len(movies) == 1
+
+
+async def test_list_movies_sort_by_title(service, mock_db):
+    """Sorts by title ascending."""
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 1
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [_mock_movie()]
+
+    mock_db.execute = AsyncMock(side_effect=[count_result, results_result])
+
+    movies, total = await service.list_movies(mock_db, sort_by="title", sort_order="asc")
+
+    assert total == 1
+    assert len(movies) == 1
+
+
+# --- get_genre_counts tests ---
+
+
+async def test_get_genre_counts(service, mock_db):
+    """Returns genre counts from raw SQL aggregation."""
+    result_mock = MagicMock()
+    result_mock.all.return_value = [("Action", 150), ("Comedy", 120)]
+
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    result = await service.get_genre_counts(mock_db)
+
+    assert result == [("Action", 150), ("Comedy", 120)]
+    mock_db.execute.assert_called_once()
+
+
+async def test_get_genre_counts_empty(service, mock_db):
+    """Returns empty list when no genres exist."""
+    result_mock = MagicMock()
+    result_mock.all.return_value = []
+
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    result = await service.get_genre_counts(mock_db)
+
+    assert result == []

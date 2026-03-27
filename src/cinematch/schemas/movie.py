@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict
 
@@ -56,3 +57,26 @@ class MovieSearchResponse(BaseModel):
     results: list[MovieSummary]
     total: int
     query: str
+
+
+class SortOption(StrEnum):
+    popularity = "popularity"
+    vote_average = "vote_average"
+    release_date = "release_date"
+    title = "title"
+
+
+class MovieListResponse(BaseModel):
+    results: list[MovieSummary]
+    total: int
+    offset: int
+    limit: int
+
+
+class GenreCount(BaseModel):
+    genre: str
+    count: int
+
+
+class GenresResponse(BaseModel):
+    genres: list[GenreCount]

@@ -81,6 +81,8 @@ def mock_movie_service(sample_movie):
     svc.get_by_id.return_value = sample_movie
     svc.search_by_title.return_value = ([sample_movie], 1)
     svc.get_movies_by_ids.return_value = {sample_movie.id: sample_movie}
+    svc.list_movies.return_value = ([sample_movie], 1)
+    svc.get_genre_counts.return_value = [("Action", 50), ("Sci-Fi", 30)]
     return svc
 
 
