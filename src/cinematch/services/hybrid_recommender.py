@@ -174,6 +174,11 @@ class HybridRecommender:
         top_k: int,
     ) -> list[tuple[int, float]]:
         """Collab-only: delegate to CollabRecommender."""
+        if not self._collab.is_known_user(user_id):
+            raise ValueError(
+                f"User {user_id} has no collaborative filtering data yet. "
+                "Use 'hybrid' or 'content' strategy for cold-start users."
+            )
         return self._collab.recommend_for_user(user_id, top_k=top_k)
 
     # ------------------------------------------------------------------

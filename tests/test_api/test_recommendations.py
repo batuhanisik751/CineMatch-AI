@@ -62,6 +62,24 @@ async def test_get_recommendations_empty_results(
     assert data["recommendations"] == []
 
 
+async def test_get_recommendations_service_unavailable(app, client):
+    from cinematch.api.deps import get_hybrid_recommender
+
+    app.dependency_overrides[get_hybrid_recommender] = lambda: None
+    resp = await client.get("/api/v1/users/1/recommendations")
+    assert resp.status_code == 503
+    assert "Recommendation service" in resp.json()["detail"]
+
+
+async def test_get_recommendations_collab_cold_start(client, mock_hybrid_recommender):
+    mock_hybrid_recommender.recommend.side_effect = ValueError(
+        "User 999 has no collaborative filtering data yet."
+    )
+    resp = await client.get("/api/v1/users/999/recommendations", params={"strategy": "collab"})
+    assert resp.status_code == 400
+    assert "collaborative filtering data" in resp.json()["detail"]
+
+
 # --- Explain endpoint tests ---
 
 

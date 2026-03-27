@@ -37,16 +37,9 @@ def seed_database(processed_dir: str | None = None) -> None:
             embeddings = embeddings[keep_indices]
         print(f"  Removed {dup_count} duplicate tmdb_ids.")
 
-    # Build mapping: original movie_id -> new sequential id (vectorized, fast)
-    old_ids = movies["movie_id"].values.copy()
-    movies["movie_id"] = range(1, len(movies) + 1)
-    old_to_new = pd.Series(movies["movie_id"].values, index=old_ids)
-
-    # Remap ratings movie_ids (vectorized via pandas .map, handles 24M rows in seconds)
-    ratings = ratings.copy()
-    ratings["movie_id"] = ratings["movie_id"].map(old_to_new)
-    ratings = ratings.dropna(subset=["movie_id"])
-    ratings["movie_id"] = ratings["movie_id"].astype(int)
+    # Filter ratings to only include movies that survived dedup
+    valid_movie_ids = set(movies["movie_id"])
+    ratings = ratings[ratings["movie_id"].isin(valid_movie_ids)].copy()
 
     if embeddings is not None and len(embeddings) != len(movies):
         raise ValueError(f"Mismatch: {len(movies)} movies vs {len(embeddings)} embeddings")
@@ -101,7 +94,7 @@ def seed_database(processed_dir: str | None = None) -> None:
             if (end % 5000 == 0) or end == len(movies):
                 print(f"  Movies: {end:,}/{len(movies):,}")
 
-        session.execute(text(f"SELECT setval('movies_id_seq', {len(movies)})"))
+        session.execute(text(f"SELECT setval('movies_id_seq', {int(movies['movie_id'].max())})"))
         session.commit()
 
         # --- Insert users ---

@@ -107,7 +107,7 @@ Features: movie search with typo tolerance, hybrid/content/collab recommendation
 | GET | `/api/v1/movies/search?q=&limit=20` | Search movies by title (fuzzy/typo-tolerant) |
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/users/{id}` | User details |
-| GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Hybrid recommendations |
+| GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Recommendations (strategy: `hybrid`, `content`, `collab`) |
 | GET | `/api/v1/users/{id}/recommendations/explain/{movie_id}?score=0.9` | LLM explanation for a recommendation |
 | POST | `/api/v1/users/{id}/ratings` | Add/update a rating (body: `{"movie_id": 1, "rating": 4.5}`) |
 | GET | `/api/v1/users/{id}/ratings?offset=0&limit=20` | User's ratings (paginated) |
@@ -138,7 +138,7 @@ If Ollama is not running, the app still works — recommendations use the algori
 6. **LLM Re-ranking:** Top 50 candidates are sent to Mistral, which re-ranks for thematic variety, sequel avoidance, and deeper taste matching. Returns the best 20.
 7. **MMR Fallback:** If the LLM is unavailable, Maximal Marginal Relevance (MMR) with genre Jaccard similarity ensures diversity algorithmically.
 8. **Fuzzy Search:** Movie search uses ILIKE for exact matches, with automatic pg_trgm fuzzy fallback for typos (e.g., "Casr" finds "Cars").
-9. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only).
+9. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only). Cold-start users (not in ALS training data) get a 400 error on `collab` with guidance to use `hybrid` or `content` instead. The `hybrid` strategy handles cold-start automatically by falling back to content-only.
 
 ## Data Pipeline
 
@@ -155,7 +155,7 @@ TMDb Metadata ─────┘
 | Embed | `pipeline/embedder.py` | `embeddings.npy` (29K x 384) |
 | FAISS index | `pipeline/faiss_builder.py` | `faiss.index`, `faiss_id_map.pkl` |
 | Train ALS | `pipeline/collaborative.py` | `als_model.pkl`, mappings, sparse matrix |
-| Seed DB | `scripts/seed_db.py` | PostgreSQL tables + IVFFlat vector index |
+| Seed DB | `scripts/seed_db.py` | PostgreSQL tables + IVFFlat vector index (re-run after pipeline) |
 | Evaluate | `python -m cinematch.evaluation.evaluate` | `evaluation_report.json` |
 
 ## Caching

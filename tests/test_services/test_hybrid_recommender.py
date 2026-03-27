@@ -141,6 +141,14 @@ async def test_collab_only_strategy(hybrid_recommender, mock_db_session):
 
 
 @pytest.mark.asyncio
+async def test_collab_strategy_cold_start_raises_error(hybrid_recommender, mock_db_session):
+    with pytest.raises(ValueError, match="no collaborative filtering data"):
+        await hybrid_recommender.recommend(
+            user_id=999, db=mock_db_session, top_k=5, strategy="collab"
+        )
+
+
+@pytest.mark.asyncio
 async def test_invalid_strategy_raises_value_error(hybrid_recommender, mock_db_session):
     with pytest.raises(ValueError, match="Unknown strategy"):
         await hybrid_recommender.recommend(

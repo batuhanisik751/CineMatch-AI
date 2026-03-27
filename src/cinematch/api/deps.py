@@ -28,12 +28,12 @@ def get_rating_service(request: Request) -> RatingService:
     return request.app.state.rating_service
 
 
-def get_content_recommender(request: Request) -> ContentRecommender:
-    return request.app.state.content_recommender
+def get_content_recommender(request: Request) -> ContentRecommender | None:
+    return getattr(request.app.state, "content_recommender", None)
 
 
-def get_hybrid_recommender(request: Request) -> HybridRecommender:
-    return request.app.state.hybrid_recommender
+def get_hybrid_recommender(request: Request) -> HybridRecommender | None:
+    return getattr(request.app.state, "hybrid_recommender", None)
 
 
 def get_cache_service(request: Request) -> CacheService | None:

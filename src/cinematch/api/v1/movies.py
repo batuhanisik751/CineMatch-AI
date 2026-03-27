@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import get_content_recommender, get_db, get_movie_service
+from cinematch.core.exceptions import ServiceUnavailableError
 from cinematch.schemas.movie import (
     MovieResponse,
     MovieSearchResponse,
@@ -52,8 +53,10 @@ async def get_similar_movies(
     top_k: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
-    content_rec: ContentRecommender = Depends(get_content_recommender),
+    content_rec: ContentRecommender | None = Depends(get_content_recommender),
 ):
+    if content_rec is None:
+        raise ServiceUnavailableError("Content recommendation service")
     movie = await movie_service.get_by_id(movie_id, db)
     if movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")

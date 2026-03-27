@@ -62,3 +62,12 @@ async def test_get_similar_movies_not_found(client, mock_movie_service):
     mock_movie_service.get_by_id.return_value = None
     resp = await client.get("/api/v1/movies/999/similar")
     assert resp.status_code == 404
+
+
+async def test_get_similar_movies_service_unavailable(app, client):
+    from cinematch.api.deps import get_content_recommender
+
+    app.dependency_overrides[get_content_recommender] = lambda: None
+    resp = await client.get("/api/v1/movies/1/similar")
+    assert resp.status_code == 503
+    assert "Content recommendation service" in resp.json()["detail"]

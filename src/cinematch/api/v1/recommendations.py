@@ -37,8 +37,10 @@ async def get_recommendations(
     strategy: str = Query(default="hybrid", pattern="^(hybrid|content|collab)$"),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
-    hybrid_rec: HybridRecommender = Depends(get_hybrid_recommender),
+    hybrid_rec: HybridRecommender | None = Depends(get_hybrid_recommender),
 ):
+    if hybrid_rec is None:
+        raise ServiceUnavailableError("Recommendation service")
     try:
         rec_pairs = await hybrid_rec.recommend(user_id, db, top_k=top_k, strategy=strategy)
     except ValueError as e:
