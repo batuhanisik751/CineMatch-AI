@@ -69,6 +69,8 @@ npm run dev
 
 Opens at http://localhost:3000 — connects to the backend API automatically.
 
+Features: movie search with typo tolerance, hybrid/content/collab recommendations, "Why This?" explanation button on each recommended movie (powered by Mistral), rating history with movie names.
+
 ## API Endpoints
 
 | Method | Path | Description |

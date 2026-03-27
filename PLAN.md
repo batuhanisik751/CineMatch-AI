@@ -162,15 +162,288 @@ User request → Hybrid scoring (content + collab blend)
 
 ---
 
-## Implementation Order
+## Implementation Order (Completed)
 
 1. ~~**Problem 1** (Movie Name in Ratings)~~ — DONE
 2. ~~**Problem 2** (Fuzzy Search)~~ — DONE
-3. **Problem 3** (Richer Recommendations + LLM Re-ranking) — implement in this order:
-   a. Make Mistral required (config + startup changes)
-   b. Franchise/sequel penalty
-   c. Diverse seed selection
-   d. MMR diversity re-ranking (fallback)
-   e. LLM `llm_rerank()` method
-   f. Integrate LLM re-ranking into hybrid pipeline
-   g. Tests for all new logic
+3. ~~**Problem 3** (Richer Recommendations + LLM Re-ranking)~~ — DONE
+
+---
+---
+
+# Phase 2: Additional Features
+
+Below are feature options explored after completing the initial improvements. They are organized by category and ranked by impact vs. effort within each category.
+
+---
+
+## Option A: "Why This?" — LLM Explanations in the UI
+
+**Impact: High | Effort: Low**
+
+The backend already has `GET /users/{id}/recommendations/explain/{movie_id}` but the frontend never calls it. This is the lowest-effort, highest-impact feature to add.
+
+### What to build
+1. **Add an "Explain" button** on each recommendation card in the Recommendations page.
+2. **Create an API client function** `getExplanation(userId, movieId, score)` in `frontend/src/api/recommendations.ts`.
+3. **Add `RecommendationExplanation` type** to `frontend/src/api/types.ts`.
+4. **Show the explanation in a modal or expandable panel** below the card when clicked. Display the LLM-generated text explaining why this movie matches the user's taste.
+5. **Loading state** — show a spinner while waiting (Mistral takes a few seconds).
+
+### Files to modify
+- `frontend/src/api/recommendations.ts` — add `getExplanation()`
+- `frontend/src/api/types.ts` — add `RecommendationExplanation` interface
+- `frontend/src/pages/Recommendations.tsx` — add explain button + modal/panel per card
+
+### Why it matters
+Users currently see a list of movies with a match percentage but no reasoning. The explanation feature makes recommendations feel intelligent rather than random, and builds trust in the system.
+
+---
+
+## Option B: Semantic "Vibe" Search
+
+**Impact: High | Effort: Medium**
+
+Let users search by description/mood instead of just title. Example: "funny movie about time travel" or "dark thriller set in space".
+
+### What to build
+
+**Backend:**
+1. **New endpoint** `GET /api/v1/movies/semantic-search?q=funny movie about time travel&limit=20`
+2. **New service method** in `MovieService` — calls `EmbeddingService.embed_text(query)` to get a 384-dim vector, then queries pgvector with `<#>` operator to find movies with the most similar embeddings.
+3. The `EmbeddingService.embed_text()` method already exists but is never used at runtime — this feature activates it.
+
+**Frontend:**
+4. **Add a toggle** on the search page or Home page: "Search by title" vs. "Search by vibe/description".
+5. **Reuse the existing search results grid** — same `MovieCard` layout, just different data source.
+
+### Files to modify
+- `src/cinematch/services/movie_service.py` — add `semantic_search()` method
+- `src/cinematch/api/v1/movies.py` — add `/semantic-search` endpoint
+- `src/cinematch/schemas/movie.py` — possibly new response schema with similarity score
+- `frontend/src/api/movies.ts` — add `semanticSearch()` client
+- `frontend/src/pages/Search.tsx` or `frontend/src/pages/Home.tsx` — UI toggle
+
+### Why it matters
+This is a differentiating feature. Most movie apps only support title search. Semantic search lets users find movies by mood, theme, or plot description — exactly what embeddings were built for but are currently only used for "similar movies".
+
+---
+
+## Option C: Movie Discovery & Browsing
+
+**Impact: High | Effort: Medium**
+
+The app currently has no way to browse movies without already knowing a title. There's no "Popular", "Top Rated", "By Genre", or "New Releases" browsing.
+
+### What to build
+
+**Backend:**
+1. **New endpoint** `GET /api/v1/movies?genre=Action&sort=popularity&year_min=2000&limit=20&offset=0` — general movie listing with filters and pagination.
+2. **New endpoint** `GET /api/v1/genres` — returns all unique genres with movie counts.
+3. Use existing JSONB GIN index on `movies.genres` for efficient genre filtering.
+
+**Frontend:**
+4. **New "Discover" page** or enhance the Home page with:
+   - Genre chips/pills for filtering (Action, Comedy, Drama, Sci-Fi, etc.)
+   - Sort dropdown (Popular, Top Rated, Newest, A-Z)
+   - Year range slider
+   - Infinite scroll or pagination
+5. **Update Home page** — replace the static placeholder section with real data: "Popular Now", "Top Rated", "Recently Added" carousels.
+
+### Files to modify
+- `src/cinematch/services/movie_service.py` — add `list_movies()`, `get_genres()`
+- `src/cinematch/api/v1/movies.py` — add browse/list and genres endpoints
+- `src/cinematch/schemas/movie.py` — add filter/list schemas
+- `frontend/src/pages/Home.tsx` — data-driven sections
+- New `frontend/src/pages/Discover.tsx` — browse page
+- `frontend/src/App.tsx` — add route
+
+### Why it matters
+New users can't get recommendations without rating movies first, and they can't find movies to rate without search. Browsing solves the cold-start UX problem.
+
+---
+
+## Option D: Watchlist / Save for Later
+
+**Impact: Medium | Effort: Medium**
+
+A standard feature for movie apps — let users bookmark movies they want to watch.
+
+### What to build
+
+**Backend:**
+1. **New model** `Watchlist` — `user_id`, `movie_id`, `added_at`, unique constraint on (user_id, movie_id).
+2. **New migration** for the `watchlist` table.
+3. **New endpoints:**
+   - `POST /api/v1/users/{id}/watchlist` — add movie to watchlist (body: `{"movie_id": 123}`)
+   - `DELETE /api/v1/users/{id}/watchlist/{movie_id}` — remove from watchlist
+   - `GET /api/v1/users/{id}/watchlist?offset=0&limit=20` — paginated watchlist with movie details
+4. **New service** `WatchlistService` — CRUD operations.
+
+**Frontend:**
+5. **Bookmark icon** on `MovieCard` and `MovieDetail` — toggleable, shows filled/outlined state.
+6. **Watchlist section** on the Profile page or a new Watchlist page.
+7. **"Add to Watchlist" from recommendations** — quick-save without leaving the page.
+
+### Files to modify
+- New `src/cinematch/models/watchlist.py`
+- New migration
+- New `src/cinematch/services/watchlist_service.py`
+- New `src/cinematch/api/v1/watchlist.py`
+- New `src/cinematch/schemas/watchlist.py`
+- `frontend/src/components/MovieCard.tsx` — bookmark button
+- `frontend/src/pages/MovieDetail.tsx` — bookmark button
+- New `frontend/src/pages/Watchlist.tsx` or update Profile
+
+### Why it matters
+Ratings are a commitment ("I've seen this and I rate it X/5"). Watchlisting is low-friction ("I want to see this"). It captures intent data that could later improve recommendations.
+
+---
+
+## Option E: Score Transparency — Show Content vs. Collab Breakdown
+
+**Impact: Medium | Effort: Low**
+
+The `RecommendationItem` schema already has `content_score` and `collab_score` fields but they're always `null`. Populate them and show users why each movie was recommended.
+
+### What to build
+
+**Backend:**
+1. **Pass individual scores through** from `HybridRecommender` — return `(movie_id, hybrid_score, content_score, collab_score)` tuples instead of `(movie_id, score)`.
+2. **Update the recommendation API endpoint** to populate `content_score` and `collab_score` on `RecommendationItem`.
+
+**Frontend:**
+3. **Score breakdown bar** on each recommendation card — a visual showing the content (blue) vs. collab (green) contribution. Example: "72% taste match, 28% similar users".
+4. **Tooltip or label** explaining what each signal means.
+
+### Files to modify
+- `src/cinematch/services/hybrid_recommender.py` — return richer tuples
+- `src/cinematch/api/v1/recommendations.py` — populate schema fields
+- `frontend/src/pages/Recommendations.tsx` — score breakdown visualization
+
+### Why it matters
+Transparency builds trust. Users can understand "this was recommended because it's similar to movies you liked" (content) vs. "users like you also enjoyed this" (collab).
+
+---
+
+## Option F: Search Bar in Navigation + Search Page Input
+
+**Impact: Medium | Effort: Low**
+
+Currently there's no way to search from the Search page itself — users must go back to Home. The TopNav has no search input.
+
+### What to build
+1. **Add a search input** to `TopNav.tsx` — compact, expands on focus, submits to `/search?q=...`.
+2. **Add a search input** at the top of the `Search.tsx` page — pre-filled with the current query, allows refining.
+3. **Add pagination** to the search results — the backend already returns `total` but there's no offset param on the endpoint. Add `offset` to the API and paginate in the frontend.
+
+### Files to modify
+- `src/cinematch/api/v1/movies.py` — add `offset` query param to search endpoint
+- `frontend/src/components/TopNav.tsx` — add search input
+- `frontend/src/pages/Search.tsx` — add search input + pagination
+
+### Why it matters
+Basic usability. Users currently have no way to refine a search or start a new search without navigating away.
+
+---
+
+## Option G: Richer Embeddings — Include Cast & Director
+
+**Impact: Medium | Effort: Low-Medium**
+
+`cast_names` and `director` are cleaned and stored in the DB but excluded from the embedding text. Including them would capture "people who like Christopher Nolan films" patterns.
+
+### What to build
+1. **Update `build_movie_text()`** in both `src/cinematch/pipeline/embedder.py` and `src/cinematch/services/embedding_service.py` to include cast and director:
+   ```python
+   if director:
+       parts.append(f"Director: {director}.")
+   if cast_names:
+       parts.append(f"Cast: {', '.join(cast_names[:5])}.")
+   ```
+2. **Re-run the pipeline** — `python scripts/train_models.py` to regenerate embeddings, FAISS index, and re-seed the DB.
+3. **No API or frontend changes needed** — the downstream similar-movies and recommendations automatically benefit.
+
+### Files to modify
+- `src/cinematch/pipeline/embedder.py` — update `build_movie_text()`
+- `src/cinematch/services/embedding_service.py` — update `build_movie_text()`
+
+### Why it matters
+Two users who both love "Quentin Tarantino" or "Leonardo DiCaprio" should get recommendations reflecting that. Currently the system is blind to who made or starred in a movie.
+
+---
+
+## Option H: User Profile Analytics Dashboard
+
+**Impact: Medium | Effort: Medium**
+
+The Profile page is minimal. A richer analytics view would make the app feel more personal.
+
+### What to build
+1. **Genre distribution chart** — pie or bar chart showing what genres the user rates most.
+2. **Rating distribution histogram** — how many 1-star, 2-star, etc. ratings.
+3. **Average rating fix** — the current average is computed from the current page only (bug), not all ratings. Compute on the backend instead.
+4. **Favorite directors/actors** — derived from rated movies.
+5. **Rating timeline** — when the user was most active.
+
+**Backend:**
+- New endpoint `GET /api/v1/users/{id}/stats` returning aggregated statistics.
+
+**Frontend:**
+- Chart library (e.g., recharts, chart.js) for visualizations.
+- Updated Profile page with analytics sections.
+
+### Files to modify
+- New `src/cinematch/api/v1/users.py` endpoint or new file
+- New `src/cinematch/services/user_stats_service.py`
+- `frontend/src/pages/Profile.tsx` — add charts/analytics
+- `frontend/package.json` — add chart library
+
+### Why it matters
+Makes the app feel personalized and sticky. Users enjoy seeing their own data reflected back.
+
+---
+
+## Option I: Hybrid Strategy Evaluation + Diversity Metrics
+
+**Impact: High (for quality) | Effort: Medium**
+
+The most important recommendation path (hybrid + MMR + LLM reranking) is the one that's never evaluated. The diversity mechanisms have no metrics proving they work.
+
+### What to build
+1. **Add "hybrid" to evaluated strategies** in `src/cinematch/evaluation/evaluate.py`.
+2. **Add diversity metrics:**
+   - **Intra-List Diversity (ILD)** — average pairwise genre dissimilarity within a recommendation list.
+   - **Coverage** — fraction of the catalog that appears in at least one user's recommendations.
+   - **Novelty** — inverse popularity of recommended items (recommending obscure good movies > obvious popular ones).
+3. **Add cold-start evaluation** — separate metrics for users with <5 ratings.
+4. **Generate a comparison report** — hybrid vs. content vs. collab across all metrics.
+
+### Files to modify
+- `src/cinematch/evaluation/metrics.py` — add ILD, coverage, novelty functions
+- `src/cinematch/evaluation/evaluate.py` — add hybrid strategy, new metrics, cold-start split
+- Possibly new `src/cinematch/evaluation/diversity.py`
+
+### Why it matters
+Without measurement, you can't know if the MMR reranking and LLM reranking are actually improving recommendations or just adding latency.
+
+---
+
+## Recommended Implementation Order
+
+Pick based on your priorities:
+
+**Quick wins (1-2 hours each):**
+1. **Option A** — "Why This?" explanations (backend exists, just wire up the frontend)
+2. **Option F** — Search bar in nav + search page refinement
+3. **Option E** — Score transparency (schema fields already exist)
+
+**Medium features (half day each):**
+4. **Option G** — Richer embeddings with cast/director (requires pipeline re-run)
+5. **Option B** — Semantic "vibe" search
+6. **Option C** — Movie discovery/browsing
+7. **Option H** — User profile analytics
+
+**Larger features (1+ day each):**
+8. **Option D** — Watchlist
+9. **Option I** — Evaluation improvements

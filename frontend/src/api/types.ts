@@ -79,3 +79,10 @@ export interface UserResponse {
 export interface ApiError {
   detail: string;
 }
+
+export interface RecommendationExplanation {
+  movie_id: number;
+  title: string;
+  explanation: string;
+  score: number;
+}

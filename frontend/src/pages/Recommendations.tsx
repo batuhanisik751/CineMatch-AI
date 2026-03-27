@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getRecommendations } from "../api/recommendations";
+import { getExplanation, getRecommendations } from "../api/recommendations";
 import type { RecommendationItem } from "../api/types";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
@@ -19,6 +19,11 @@ export default function Recommendations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fetched, setFetched] = useState(false);
+  const [explainMovieId, setExplainMovieId] = useState<number | null>(null);
+  const [explainTitle, setExplainTitle] = useState("");
+  const [explainText, setExplainText] = useState("");
+  const [explainLoading, setExplainLoading] = useState(false);
+  const [explainError, setExplainError] = useState("");
 
   const fetchRecs = () => {
     setLoading(true);
@@ -38,6 +43,18 @@ export default function Recommendations() {
     if (params.get("user") && !fetched) fetchRecs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleExplain = (movieId: number, movieTitle: string, score: number) => {
+    setExplainMovieId(movieId);
+    setExplainTitle(movieTitle);
+    setExplainText("");
+    setExplainError("");
+    setExplainLoading(true);
+    getExplanation(userId, movieId, score)
+      .then((data) => setExplainText(data.explanation))
+      .catch((e) => setExplainError(e.detail || e.message || "LLM unavailable"))
+      .finally(() => setExplainLoading(false));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,12 +138,54 @@ export default function Recommendations() {
         {!loading && !error && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-10">
             {recs.map((rec) => (
-              <MovieCard
-                key={rec.movie.id}
-                movie={rec.movie}
-                matchPercent={Math.round(rec.score * 100)}
-              />
+              <div key={rec.movie.id} className="flex flex-col">
+                <MovieCard movie={rec.movie} matchPercent={Math.round(rec.score * 100)} />
+                <button
+                  onClick={() => handleExplain(rec.movie.id, rec.movie.title, rec.score)}
+                  className="mt-2 w-full text-xs font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary-container flex items-center justify-center gap-1 py-1 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-sm">psychology</span>
+                  Why This?
+                </button>
+              </div>
             ))}
+          </div>
+        )}
+
+        {explainMovieId !== null && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setExplainMovieId(null)}
+          >
+            <div
+              className="glass-panel rounded-xl border border-outline-variant/20 shadow-2xl p-8 max-w-lg w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-1">Why This?</p>
+                  <h3 className="text-xl font-bold text-on-surface">{explainTitle}</h3>
+                </div>
+                <button
+                  onClick={() => setExplainMovieId(null)}
+                  className="text-outline hover:text-on-surface transition-colors ml-4"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              {explainLoading && (
+                <div className="flex items-center gap-3 text-on-surface-variant py-4">
+                  <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                  Mistral is thinking...
+                </div>
+              )}
+              {explainError && (
+                <p className="text-error text-sm py-4">{explainError}</p>
+              )}
+              {explainText && (
+                <p className="text-on-surface leading-relaxed">{explainText}</p>
+              )}
+            </div>
           </div>
         )}
 
