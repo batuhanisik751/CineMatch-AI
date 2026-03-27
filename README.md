@@ -96,7 +96,7 @@ npm run dev
 
 Opens at http://localhost:3000 — connects to the backend API automatically.
 
-Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, hybrid/content/collab recommendations, "Why This?" explanation button on each recommended movie (powered by Mistral), rating history with movie names.
+Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, hybrid/content/collab recommendations, "Why This?" explanation button on each recommended movie (powered by Mistral), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages.
 
 ## API Endpoints
 
@@ -114,6 +114,10 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/users/{id}/recommendations/explain/{movie_id}?score=0.9` | LLM explanation for a recommendation |
 | POST | `/api/v1/users/{id}/ratings` | Add/update a rating (body: `{"movie_id": 1, "rating": 4.5}`) |
 | GET | `/api/v1/users/{id}/ratings?offset=0&limit=20` | User's ratings (paginated) |
+| POST | `/api/v1/users/{id}/watchlist` | Add to watchlist (body: `{"movie_id": 1}`) |
+| DELETE | `/api/v1/users/{id}/watchlist/{movie_id}` | Remove from watchlist |
+| GET | `/api/v1/users/{id}/watchlist?offset=0&limit=20` | User's watchlist (paginated, with movie details) |
+| GET | `/api/v1/users/{id}/watchlist/check?movie_ids=1,2,3` | Bulk check which movies are in watchlist |
 
 ## LLM Integration (Mistral via Ollama)
 
@@ -190,6 +194,7 @@ src/cinematch/
 │       ├── ratings.py            # POST/GET /users/{id}/ratings
 │       ├── recommendations.py    # GET /users/{id}/recommendations
 │       ├── users.py              # GET /users/{id}
+│       ├── watchlist.py          # POST/DELETE/GET /users/{id}/watchlist
 │       └── router.py             # Aggregated v1 router
 ├── services/        # Business logic
 │   ├── embedding_service.py      # sentence-transformers wrapper
@@ -198,6 +203,7 @@ src/cinematch/
 │   ├── hybrid_recommender.py     # Combined scoring + franchise penalty + MMR + LLM re-ranking
 │   ├── movie_service.py          # Movie DB queries (get, search, discover, genres, batch)
 │   ├── rating_service.py         # Rating DB queries (upsert, list with movie titles)
+│   ├── watchlist_service.py      # Watchlist CRUD (add, remove, list, bulk check)
 │   └── llm_service.py            # Ollama LLM client for re-ranking + explanations
 ├── models/          # SQLAlchemy ORM models
 ├── schemas/         # Pydantic request/response schemas

@@ -10,6 +10,12 @@ from cinematch.schemas.movie import (
 from cinematch.schemas.rating import RatingCreate, RatingResponse, UserRatingsResponse
 from cinematch.schemas.recommendation import RecommendationItem, RecommendationsResponse
 from cinematch.schemas.user import UserResponse
+from cinematch.schemas.watchlist import (
+    WatchlistAdd,
+    WatchlistBulkStatusResponse,
+    WatchlistItemResponse,
+    WatchlistResponse,
+)
 
 __all__ = [
     "MovieResponse",
@@ -23,4 +29,8 @@ __all__ = [
     "SimilarMoviesResponse",
     "UserRatingsResponse",
     "UserResponse",
+    "WatchlistAdd",
+    "WatchlistBulkStatusResponse",
+    "WatchlistItemResponse",
+    "WatchlistResponse",
 ]

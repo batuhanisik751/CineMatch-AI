@@ -4,6 +4,7 @@ const items = [
   { to: "/", icon: "home", label: "Home" },
   { to: "/discover", icon: "explore", label: "Discover" },
   { to: "/recommendations", icon: "auto_awesome", label: "Recommendations" },
+  { to: "/watchlist", icon: "bookmark", label: "Watchlist" },
   { to: "/profile", icon: "person", label: "Profile" },
 ];
 

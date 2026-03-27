@@ -10,10 +10,10 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from cinematch.config import get_settings
+from cinematch.db.base import Base
 
 # Import all models so Alembic can detect them
-from cinematch.models import Movie, Rating, RecommendationCache, User  # noqa: F401
-from cinematch.db.base import Base
+from cinematch.models import Movie, Rating, RecommendationCache, User, WatchlistItem  # noqa: F401
 
 config = context.config
 

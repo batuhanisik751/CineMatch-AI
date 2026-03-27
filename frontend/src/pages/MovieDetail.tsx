@@ -9,6 +9,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import StarRating from "../components/StarRating";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
+import { useWatchlist } from "../hooks/useWatchlist";
 
 function posterUrl(path: string | null, size = "w500") {
   return path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
@@ -23,6 +24,7 @@ export default function MovieDetail() {
   const { userId } = useUserId();
   const [userRating, setUserRating] = useState(0);
   const [ratingMsg, setRatingMsg] = useState("");
+  const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
 
   useEffect(() => {
     if (!id) return;
@@ -31,6 +33,7 @@ export default function MovieDetail() {
       .then(([m, s]) => {
         setMovie(m);
         setSimilar(s.similar);
+        refreshForMovieIds([m.id]);
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -152,6 +155,25 @@ export default function MovieDetail() {
             </div>
             {/* Right: Rating + Meta */}
             <div className="lg:col-span-4 space-y-8">
+              <div className="glass-card p-8 rounded-2xl flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-headline font-bold text-on-surface">Watchlist</h3>
+                  <p className="text-sm text-on-surface-variant">
+                    {isInWatchlist(movie.id) ? "In your watchlist" : "Save for later"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggle(movie.id)}
+                  className="p-2 rounded-lg hover:bg-surface-container transition-colors"
+                >
+                  <span
+                    className="material-symbols-outlined text-3xl text-primary"
+                    style={isInWatchlist(movie.id) ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                  >
+                    bookmark
+                  </span>
+                </button>
+              </div>
               <div className="glass-card p-8 rounded-2xl space-y-6">
                 <h3 className="text-xl font-headline font-bold text-on-surface">Rate this Movie</h3>
                 <form onSubmit={handleRate} className="space-y-4">

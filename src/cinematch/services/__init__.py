@@ -6,6 +6,7 @@ from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.hybrid_recommender import HybridRecommender
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_service import RatingService
+from cinematch.services.watchlist_service import WatchlistService
 
 __all__ = [
     "CollabRecommender",
@@ -14,4 +15,5 @@ __all__ = [
     "HybridRecommender",
     "MovieService",
     "RatingService",
+    "WatchlistService",
 ]

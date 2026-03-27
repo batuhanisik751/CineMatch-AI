@@ -28,6 +28,7 @@ from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.hybrid_recommender import HybridRecommender
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_service import RatingService
+from cinematch.services.watchlist_service import WatchlistService
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,7 @@ async def lifespan(app: FastAPI):
     # Services that work without pipeline artifacts
     app.state.movie_service = MovieService()
     app.state.rating_service = RatingService()
+    app.state.watchlist_service = WatchlistService()
 
     # Redis cache (optional — app works without it)
     try:

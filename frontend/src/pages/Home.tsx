@@ -6,6 +6,7 @@ import BottomNav from "../components/BottomNav";
 import MovieCard from "../components/MovieCard";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
+import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -14,13 +15,20 @@ export default function Home() {
   const [strategy, setStrategy] = useState("hybrid");
   const [popular, setPopular] = useState<MovieSummary[]>([]);
   const [topRated, setTopRated] = useState<MovieSummary[]>([]);
+  const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
 
   useEffect(() => {
     discoverMovies({ sort_by: "popularity", limit: 8 })
-      .then((data) => setPopular(data.results))
+      .then((data) => {
+        setPopular(data.results);
+        refreshForMovieIds(data.results.map((m) => m.id));
+      })
       .catch(() => {});
     discoverMovies({ sort_by: "vote_average", limit: 8 })
-      .then((data) => setTopRated(data.results))
+      .then((data) => {
+        setTopRated(data.results);
+        refreshForMovieIds(data.results.map((m) => m.id));
+      })
       .catch(() => {});
   }, []);
 
@@ -136,7 +144,7 @@ export default function Home() {
                   <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                     {popular.map((m) => (
                       <div key={m.id} className="flex-shrink-0 w-44">
-                        <MovieCard movie={m} />
+                        <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
                       </div>
                     ))}
                   </div>
@@ -153,7 +161,7 @@ export default function Home() {
                   <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                     {topRated.map((m) => (
                       <div key={m.id} className="flex-shrink-0 w-44">
-                        <MovieCard movie={m} />
+                        <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
                       </div>
                     ))}
                   </div>

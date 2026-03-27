@@ -17,6 +17,7 @@ from cinematch.api.deps import (
     get_llm_service,
     get_movie_service,
     get_rating_service,
+    get_watchlist_service,
 )
 from cinematch.main import create_app
 
@@ -127,6 +128,50 @@ def mock_embedding_service():
     return svc
 
 
+def _make_watchlist_item(user_id: int = 1, movie_id: int = 1) -> MagicMock:
+    w = MagicMock()
+    w.id = 1
+    w.user_id = user_id
+    w.movie_id = movie_id
+    w.added_at = datetime(2024, 6, 15, 12, 0, 0, tzinfo=UTC)
+    # These fields aren't on the ORM model — set to None so Pydantic doesn't
+    # pick up MagicMock auto-attributes during model_validate(from_attributes).
+    w.movie_title = None
+    w.poster_path = None
+    w.genres = []
+    w.vote_average = 0.0
+    w.release_date = None
+    return w
+
+
+@pytest.fixture()
+def sample_watchlist_item():
+    return _make_watchlist_item()
+
+
+@pytest.fixture()
+def mock_watchlist_service(sample_watchlist_item, sample_movie):
+    svc = AsyncMock()
+    svc.add_to_watchlist.return_value = sample_watchlist_item
+    svc.remove_from_watchlist.return_value = True
+    svc.get_watchlist.return_value = (
+        [
+            (
+                sample_watchlist_item,
+                "The Matrix",
+                "/poster.jpg",
+                ["Action", "Sci-Fi"],
+                8.2,
+                date(1999, 3, 31),
+            )
+        ],
+        1,
+    )
+    svc.is_in_watchlist.return_value = True
+    svc.bulk_check.return_value = {1}
+    return svc
+
+
 @pytest.fixture()
 def mock_db():
     return AsyncMock()
@@ -140,6 +185,7 @@ def app(
     mock_hybrid_recommender,
     mock_llm_service,
     mock_embedding_service,
+    mock_watchlist_service,
     mock_db,
 ):
     test_app = create_app()
@@ -151,6 +197,7 @@ def app(
     test_app.dependency_overrides[get_hybrid_recommender] = lambda: mock_hybrid_recommender
     test_app.dependency_overrides[get_llm_service] = lambda: mock_llm_service
     test_app.dependency_overrides[get_embedding_service] = lambda: mock_embedding_service
+    test_app.dependency_overrides[get_watchlist_service] = lambda: mock_watchlist_service
 
     return test_app
 

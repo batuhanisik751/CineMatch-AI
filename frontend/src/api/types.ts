@@ -107,6 +107,29 @@ export interface ApiError {
   detail: string;
 }
 
+export interface WatchlistItemResponse {
+  user_id: number;
+  movie_id: number;
+  added_at: string;
+  movie_title: string | null;
+  poster_path: string | null;
+  genres: string[];
+  vote_average: number;
+  release_date: string | null;
+}
+
+export interface WatchlistResponse {
+  user_id: number;
+  items: WatchlistItemResponse[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface WatchlistBulkStatusResponse {
+  movie_ids: number[];
+}
+
 export interface RecommendationExplanation {
   movie_id: number;
   title: string;

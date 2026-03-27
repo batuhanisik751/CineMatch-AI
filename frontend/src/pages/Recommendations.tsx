@@ -9,6 +9,7 @@ import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
+import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Recommendations() {
   const [params, setParams] = useSearchParams();
@@ -24,6 +25,7 @@ export default function Recommendations() {
   const [explainText, setExplainText] = useState("");
   const [explainLoading, setExplainLoading] = useState(false);
   const [explainError, setExplainError] = useState("");
+  const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
 
   const fetchRecs = () => {
     setLoading(true);
@@ -33,6 +35,7 @@ export default function Recommendations() {
       .then((data) => {
         setRecs(data.recommendations);
         setFetched(true);
+        refreshForMovieIds(data.recommendations.map((r) => r.movie.id));
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -139,7 +142,7 @@ export default function Recommendations() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-10">
             {recs.map((rec) => (
               <div key={rec.movie.id} className="flex flex-col">
-                <MovieCard movie={rec.movie} matchPercent={Math.round(rec.score * 100)} />
+                <MovieCard movie={rec.movie} matchPercent={Math.round(rec.score * 100)} isBookmarked={isInWatchlist(rec.movie.id)} onToggleBookmark={toggle} />
                 <button
                   onClick={() => handleExplain(rec.movie.id, rec.movie.title, rec.score)}
                   className="mt-2 w-full text-xs font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary-container flex items-center justify-center gap-1 py-1 transition-colors"

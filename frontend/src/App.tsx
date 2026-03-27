@@ -5,6 +5,7 @@ import MovieDetail from "./pages/MovieDetail";
 import Profile from "./pages/Profile";
 import Recommendations from "./pages/Recommendations";
 import Search from "./pages/Search";
+import Watchlist from "./pages/Watchlist";
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
       <Route path="/search" element={<Search />} />
       <Route path="/movies/:id" element={<MovieDetail />} />
       <Route path="/recommendations" element={<Recommendations />} />
+      <Route path="/watchlist" element={<Watchlist />} />
       <Route path="/profile" element={<Profile />} />
     </Routes>
   );

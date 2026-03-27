@@ -33,6 +33,7 @@ export default function TopNav() {
         {navLink("/", "Home")}
         {navLink("/discover", "Discover")}
         {navLink("/recommendations", "Recommendations")}
+        {navLink("/watchlist", "Watchlist")}
         {navLink("/profile", "Profile")}
       </div>
       <div className="flex items-center gap-6">
