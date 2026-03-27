@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from cinematch.services.llm_service import LLMService
     from cinematch.services.movie_service import MovieService
     from cinematch.services.rating_service import RatingService
+    from cinematch.services.user_stats_service import UserStatsService
     from cinematch.services.watchlist_service import WatchlistService
 
 # Re-export get_db so routes can import from one place
@@ -48,6 +49,10 @@ def get_embedding_service(request: Request) -> EmbeddingService | None:
 
 def get_llm_service(request: Request) -> LLMService | None:
     return getattr(request.app.state, "llm_service", None)
+
+
+def get_user_stats_service(request: Request) -> UserStatsService:
+    return request.app.state.user_stats_service
 
 
 def get_watchlist_service(request: Request) -> WatchlistService:

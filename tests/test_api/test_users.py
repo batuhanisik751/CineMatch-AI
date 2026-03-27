@@ -25,3 +25,37 @@ async def test_get_user_not_found(client, mock_db):
     resp = await client.get("/api/v1/users/999")
     assert resp.status_code == 404
     assert resp.json()["detail"] == "User not found"
+
+
+async def test_get_user_stats_success(client, mock_user_stats_service):
+    resp = await client.get("/api/v1/users/1/stats")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user_id"] == 1
+    assert data["total_ratings"] == 5
+    assert data["average_rating"] == 3.8
+    assert len(data["genre_distribution"]) == 2
+    assert len(data["rating_distribution"]) == 10
+    assert len(data["top_directors"]) == 1
+    assert len(data["top_actors"]) == 1
+    assert len(data["rating_timeline"]) == 1
+    mock_user_stats_service.get_user_stats.assert_called_once()
+
+
+async def test_get_user_stats_empty(client, mock_user_stats_service):
+    mock_user_stats_service.get_user_stats.return_value = {
+        "user_id": 999,
+        "total_ratings": 0,
+        "average_rating": 0.0,
+        "genre_distribution": [],
+        "rating_distribution": [{"rating": f"{v / 10:.1f}", "count": 0} for v in range(5, 55, 5)],
+        "top_directors": [],
+        "top_actors": [],
+        "rating_timeline": [],
+    }
+    resp = await client.get("/api/v1/users/999/stats")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_ratings"] == 0
+    assert data["average_rating"] == 0.0
+    assert data["genre_distribution"] == []

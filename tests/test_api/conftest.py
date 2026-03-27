@@ -17,6 +17,7 @@ from cinematch.api.deps import (
     get_llm_service,
     get_movie_service,
     get_rating_service,
+    get_user_stats_service,
     get_watchlist_service,
 )
 from cinematch.main import create_app
@@ -173,6 +174,25 @@ def mock_watchlist_service(sample_watchlist_item, sample_movie):
 
 
 @pytest.fixture()
+def mock_user_stats_service():
+    svc = AsyncMock()
+    svc.get_user_stats.return_value = {
+        "user_id": 1,
+        "total_ratings": 5,
+        "average_rating": 3.8,
+        "genre_distribution": [
+            {"genre": "Action", "count": 3, "percentage": 60.0},
+            {"genre": "Comedy", "count": 2, "percentage": 40.0},
+        ],
+        "rating_distribution": [{"rating": f"{v / 10:.1f}", "count": 0} for v in range(5, 55, 5)],
+        "top_directors": [{"name": "Nolan", "count": 3}],
+        "top_actors": [{"name": "DiCaprio", "count": 2}],
+        "rating_timeline": [{"month": "2024-01", "count": 5}],
+    }
+    return svc
+
+
+@pytest.fixture()
 def mock_db():
     return AsyncMock()
 
@@ -185,6 +205,7 @@ def app(
     mock_hybrid_recommender,
     mock_llm_service,
     mock_embedding_service,
+    mock_user_stats_service,
     mock_watchlist_service,
     mock_db,
 ):
@@ -197,6 +218,7 @@ def app(
     test_app.dependency_overrides[get_hybrid_recommender] = lambda: mock_hybrid_recommender
     test_app.dependency_overrides[get_llm_service] = lambda: mock_llm_service
     test_app.dependency_overrides[get_embedding_service] = lambda: mock_embedding_service
+    test_app.dependency_overrides[get_user_stats_service] = lambda: mock_user_stats_service
     test_app.dependency_overrides[get_watchlist_service] = lambda: mock_watchlist_service
 
     return test_app

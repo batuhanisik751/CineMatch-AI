@@ -96,7 +96,7 @@ npm run dev
 
 Opens at http://localhost:3000 — connects to the backend API automatically.
 
-Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, hybrid/content/collab recommendations, "Why This?" explanation button on each recommended movie (powered by Mistral), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages.
+Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, hybrid/content/collab recommendations, "Why This?" explanation button on each recommended movie (powered by Mistral), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with genre distribution, rating histogram, top directors/actors, and monthly activity timeline.
 
 ## API Endpoints
 
@@ -110,6 +110,7 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/movies/genres` | All genres with movie counts |
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/users/{id}` | User details |
+| GET | `/api/v1/users/{id}/stats` | User profile analytics (genre distribution, rating histogram, top directors/actors, timeline) |
 | GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Recommendations (strategy: `hybrid`, `content`, `collab`) |
 | GET | `/api/v1/users/{id}/recommendations/explain/{movie_id}?score=0.9` | LLM explanation for a recommendation |
 | POST | `/api/v1/users/{id}/ratings` | Add/update a rating (body: `{"movie_id": 1, "rating": 4.5}`) |
@@ -193,7 +194,7 @@ src/cinematch/
 │       ├── movies.py             # GET /{id}, /search, /semantic-search, /discover, /genres, /{id}/similar
 │       ├── ratings.py            # POST/GET /users/{id}/ratings
 │       ├── recommendations.py    # GET /users/{id}/recommendations
-│       ├── users.py              # GET /users/{id}
+│       ├── users.py              # GET /users/{id}, /users/{id}/stats
 │       ├── watchlist.py          # POST/DELETE/GET /users/{id}/watchlist
 │       └── router.py             # Aggregated v1 router
 ├── services/        # Business logic
@@ -203,6 +204,7 @@ src/cinematch/
 │   ├── hybrid_recommender.py     # Combined scoring + franchise penalty + MMR + LLM re-ranking
 │   ├── movie_service.py          # Movie DB queries (get, search, discover, genres, batch)
 │   ├── rating_service.py         # Rating DB queries (upsert, list with movie titles)
+│   ├── user_stats_service.py     # User profile analytics (genre, rating, director/actor stats)
 │   ├── watchlist_service.py      # Watchlist CRUD (add, remove, list, bulk check)
 │   └── llm_service.py            # Ollama LLM client for re-ranking + explanations
 ├── models/          # SQLAlchemy ORM models

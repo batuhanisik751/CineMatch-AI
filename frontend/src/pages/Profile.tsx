@@ -1,17 +1,35 @@
 import { useEffect, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { getUserRatings } from "../api/ratings";
-import type { RatingResponse, UserResponse } from "../api/types";
-import { getUser } from "../api/users";
+import type { RatingResponse, UserResponse, UserStatsResponse } from "../api/types";
+import { getUser, getUserStats } from "../api/users";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
+
+const CHART_COLORS = [
+  "#D0BCFF", "#CCC2DC", "#EFB8C8", "#FFB4AB", "#FFD8E4",
+  "#B8C9FF", "#A8D8B9", "#FFD6A5", "#FDFFB6", "#CAFFBF",
+];
 
 export default function Profile() {
   const { userId } = useUserId();
   const [user, setUser] = useState<UserResponse | null>(null);
   const [ratings, setRatings] = useState<RatingResponse[]>([]);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<UserStatsResponse | null>(null);
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,19 +39,22 @@ export default function Profile() {
     setLoading(true);
     setError("");
     try {
-      const [u, r] = await Promise.all([
+      const [u, r, s] = await Promise.all([
         getUser(userId),
         getUserRatings(userId, 0, limit),
+        getUserStats(userId),
       ]);
       setUser(u);
       setRatings(r.ratings);
       setTotal(r.total);
+      setStats(s);
       setOffset(0);
     } catch {
       // User hasn't rated anything yet — that's fine, not an error
       setUser(null);
       setRatings([]);
       setTotal(0);
+      setStats(null);
     } finally {
       setLoading(false);
     }
@@ -101,12 +122,12 @@ export default function Profile() {
             <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
                 <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Movies Rated</span>
-                <span className="font-headline text-2xl font-bold text-on-surface">{total}</span>
+                <span className="font-headline text-2xl font-bold text-on-surface">{stats?.total_ratings ?? total}</span>
               </div>
               <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
                 <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Avg Rating</span>
                 <span className="font-headline text-2xl font-bold text-on-surface">
-                  {ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1) : "—"}
+                  {stats ? stats.average_rating.toFixed(1) : "—"}
                 </span>
               </div>
               <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
@@ -136,6 +157,126 @@ export default function Profile() {
 
         {loading && <div className="flex justify-center py-12"><div className="w-12 h-12 border-4 border-primary-container/20 border-t-primary-container rounded-full animate-spin" /></div>}
         {error && <ErrorPanel message={error} />}
+
+        {/* Analytics Dashboard */}
+        {stats && stats.total_ratings > 0 && (
+          <section className="flex flex-col gap-6">
+            <div>
+              <h2 className="font-headline text-3xl font-black italic tracking-tighter text-on-surface mb-2">Analytics</h2>
+              <p className="text-on-surface-variant font-body">Insights from your viewing history and ratings.</p>
+            </div>
+
+            {/* Row 1: Genre Distribution + Rating Distribution */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Genre Distribution */}
+              <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">Genre Distribution</h3>
+                <ResponsiveContainer width="100%" height={Math.max(200, stats.genre_distribution.slice(0, 10).length * 36)}>
+                  <BarChart data={stats.genre_distribution.slice(0, 10)} layout="vertical" margin={{ left: 10, right: 30, top: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                    <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="genre" width={90} tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{ background: "#1C1B1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#E6E1E5" }}
+                      formatter={(value, _, entry) => [`${value} (${(entry as { payload: { percentage: number } }).payload.percentage}%)`, "Rated"]}
+                    />
+                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                      {stats.genre_distribution.slice(0, 10).map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Rating Distribution */}
+              <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">Rating Distribution</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={stats.rating_distribution} margin={{ left: -10, right: 10, top: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="rating" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ background: "#1C1B1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#E6E1E5" }}
+                      formatter={(value) => [value, "Ratings"]}
+                      labelFormatter={(label) => `${label} stars`}
+                    />
+                    <Bar dataKey="count" fill="#D0BCFF" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Row 2: Top Directors + Top Actors */}
+            {(stats.top_directors.length > 0 || stats.top_actors.length > 0) && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Top Directors */}
+                {stats.top_directors.length > 0 && (
+                  <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">Top Directors</h3>
+                    <ResponsiveContainer width="100%" height={Math.max(200, stats.top_directors.length * 36)}>
+                      <BarChart data={stats.top_directors} layout="vertical" margin={{ left: 10, right: 30, top: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                        <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <YAxis type="category" dataKey="name" width={120} tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ background: "#1C1B1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#E6E1E5" }}
+                          formatter={(value) => [value, "Movies Rated"]}
+                        />
+                        <Bar dataKey="count" fill="#CCC2DC" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {/* Top Actors */}
+                {stats.top_actors.length > 0 && (
+                  <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">Top Actors</h3>
+                    <ResponsiveContainer width="100%" height={Math.max(200, stats.top_actors.length * 36)}>
+                      <BarChart data={stats.top_actors} layout="vertical" margin={{ left: 10, right: 30, top: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                        <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <YAxis type="category" dataKey="name" width={120} tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ background: "#1C1B1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#E6E1E5" }}
+                          formatter={(value) => [value, "Movies Rated"]}
+                        />
+                        <Bar dataKey="count" fill="#EFB8C8" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Row 3: Rating Timeline */}
+            {stats.rating_timeline.length > 1 && (
+              <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">Rating Timeline</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={stats.rating_timeline} margin={{ left: -10, right: 10, top: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="timelineGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#D0BCFF" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#D0BCFF" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ background: "#1C1B1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#E6E1E5" }}
+                      formatter={(value) => [value, "Ratings"]}
+                    />
+                    <Area type="monotone" dataKey="count" stroke="#D0BCFF" fill="url(#timelineGrad)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Rating History Table */}
         {user && ratings.length > 0 && (
@@ -210,29 +351,6 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-            </div>
-          </section>
-        )}
-
-        {/* Bento Stats */}
-        {user && ratings.length > 0 && (
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
-              <span className="material-symbols-outlined text-primary mb-4 text-3xl">movie_filter</span>
-              <div className="text-4xl font-headline font-black text-on-surface mb-1">{total}</div>
-              <div className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/60">Movies Reviewed</div>
-            </div>
-            <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
-              <span className="material-symbols-outlined text-primary mb-4 text-3xl">star_half</span>
-              <div className="text-4xl font-headline font-black text-on-surface mb-1">
-                {(ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1)}
-              </div>
-              <div className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/60">Average Rating</div>
-            </div>
-            <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
-              <span className="material-symbols-outlined text-primary mb-4 text-3xl">verified</span>
-              <div className="text-4xl font-headline font-black text-on-surface mb-1">Active</div>
-              <div className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/60">CineMatch Status</div>
             </div>
           </section>
         )}

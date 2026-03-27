@@ -136,3 +136,35 @@ export interface RecommendationExplanation {
   explanation: string;
   score: number;
 }
+
+export interface StatsGenreCount {
+  genre: string;
+  count: number;
+  percentage: number;
+}
+
+export interface RatingBucket {
+  rating: string;
+  count: number;
+}
+
+export interface PersonCount {
+  name: string;
+  count: number;
+}
+
+export interface MonthlyActivity {
+  month: string;
+  count: number;
+}
+
+export interface UserStatsResponse {
+  user_id: number;
+  total_ratings: number;
+  average_rating: number;
+  genre_distribution: StatsGenreCount[];
+  rating_distribution: RatingBucket[];
+  top_directors: PersonCount[];
+  top_actors: PersonCount[];
+  rating_timeline: MonthlyActivity[];
+}
