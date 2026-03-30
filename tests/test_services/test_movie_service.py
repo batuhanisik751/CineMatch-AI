@@ -364,3 +364,67 @@ async def test_trending_custom_window_and_limit(service, mock_db):
 
     assert len(results) == 1
     assert mock_db.execute.call_count == 1
+
+
+# --- hidden_gems tests ---
+
+
+async def test_hidden_gems_returns_filtered_movies(service, mock_db):
+    """Returns movies matching vote_average/vote_count filters."""
+    movie1 = _mock_movie(id=1, title="Hidden Gem 1")
+    movie2 = _mock_movie(id=2, title="Hidden Gem 2")
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie1, movie2]
+
+    mock_db.execute = AsyncMock(return_value=results_result)
+
+    results = await service.hidden_gems(mock_db)
+
+    assert len(results) == 2
+    assert results[0] == movie1
+    assert results[1] == movie2
+    mock_db.execute.assert_called_once()
+
+
+async def test_hidden_gems_with_genre_filter(service, mock_db):
+    """Passes genre filter through to the query."""
+    movie = _mock_movie(id=1, title="Genre Gem")
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie]
+
+    mock_db.execute = AsyncMock(return_value=results_result)
+
+    results = await service.hidden_gems(mock_db, genre="Drama")
+
+    assert len(results) == 1
+    assert results[0] == movie
+    mock_db.execute.assert_called_once()
+
+
+async def test_hidden_gems_empty_results(service, mock_db):
+    """Returns empty list when no movies match the filters."""
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = []
+
+    mock_db.execute = AsyncMock(return_value=results_result)
+
+    results = await service.hidden_gems(mock_db)
+
+    assert results == []
+
+
+async def test_hidden_gems_custom_params(service, mock_db):
+    """Accepts custom min_rating, max_votes, and limit."""
+    movie = _mock_movie(id=1, title="Custom Gem")
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie]
+
+    mock_db.execute = AsyncMock(return_value=results_result)
+
+    results = await service.hidden_gems(mock_db, min_rating=8.0, max_votes=50, limit=5)
+
+    assert len(results) == 1
+    mock_db.execute.assert_called_once()

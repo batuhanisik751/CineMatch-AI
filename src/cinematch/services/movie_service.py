@@ -190,3 +190,29 @@ class MovieService:
         ordered_ids = [row[0] for row in rows]
         movies_map = await self.get_movies_by_ids(ordered_ids, db)
         return [(movies_map[mid], id_count[mid]) for mid in ordered_ids if mid in movies_map]
+
+    async def hidden_gems(
+        self,
+        db: AsyncSession,
+        *,
+        min_rating: float = 7.5,
+        max_votes: int = 100,
+        genre: str | None = None,
+        limit: int = 20,
+    ) -> list[Movie]:
+        """Return high-quality movies that most users haven't found yet."""
+        filters = [
+            Movie.vote_average >= min_rating,
+            Movie.vote_count <= max_votes,
+            Movie.vote_count > 0,
+        ]
+        if genre is not None:
+            filters.append(Movie.genres.op("@>")(cast([genre], JSONB_TYPE)))
+
+        stmt = select(Movie)
+        for f in filters:
+            stmt = stmt.where(f)
+        stmt = stmt.order_by(desc(Movie.vote_average), desc(Movie.vote_count)).limit(limit)
+
+        result = await db.execute(stmt)
+        return list(result.scalars().all())

@@ -271,3 +271,89 @@ async def test_trending_no_cache_service(app, client, mock_movie_service):
     resp = await client.get("/api/v1/movies/trending")
     assert resp.status_code == 200
     mock_movie_service.trending.assert_called_once()
+
+
+# --- Hidden Gems endpoint tests ---
+
+
+async def test_hidden_gems_default_params(client, sample_movie):
+    resp = await client.get("/api/v1/movies/hidden-gems")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["min_rating"] == 7.5
+    assert data["max_votes"] == 100
+    assert data["limit"] == 20
+    assert len(data["results"]) == 1
+    assert data["results"][0]["movie"]["title"] == sample_movie.title
+    assert data["results"][0]["vote_average"] == sample_movie.vote_average
+    assert data["results"][0]["vote_count"] == sample_movie.vote_count
+
+
+async def test_hidden_gems_custom_params(client, mock_movie_service):
+    resp = await client.get(
+        "/api/v1/movies/hidden-gems",
+        params={"min_rating": 8.0, "max_votes": 50, "genre": "Drama", "limit": 10},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["min_rating"] == 8.0
+    assert data["max_votes"] == 50
+    assert data["limit"] == 10
+    mock_movie_service.hidden_gems.assert_called_once()
+    call_kwargs = mock_movie_service.hidden_gems.call_args.kwargs
+    assert call_kwargs["min_rating"] == 8.0
+    assert call_kwargs["max_votes"] == 50
+    assert call_kwargs["genre"] == "Drama"
+    assert call_kwargs["limit"] == 10
+
+
+async def test_hidden_gems_cache_miss(client, mock_movie_service, mock_cache_service):
+    resp = await client.get("/api/v1/movies/hidden-gems")
+    assert resp.status_code == 200
+    mock_movie_service.hidden_gems.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "hidden_gems:7.5:100:None:20"  # min_rating rounded to 1dp
+    assert call_args[1]["ttl"] == 21600
+
+
+async def test_hidden_gems_cache_hit(client, mock_movie_service, mock_cache_service):
+    cached_response = (
+        '{"results":[{"movie":{"id":1,"title":"The Matrix","genres":["Action","Sci-Fi"],'
+        '"vote_average":8.2,"release_date":"1999-03-31","poster_path":"/poster.jpg"},'
+        '"vote_average":8.2,"vote_count":20000}],"min_rating":7.5,"max_votes":100,"limit":20}'
+    )
+    mock_cache_service.get.return_value = cached_response
+
+    resp = await client.get("/api/v1/movies/hidden-gems")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["results"][0]["movie"]["title"] == "The Matrix"
+    mock_movie_service.hidden_gems.assert_not_called()
+
+
+async def test_hidden_gems_invalid_min_rating(client):
+    resp = await client.get("/api/v1/movies/hidden-gems", params={"min_rating": 11})
+    assert resp.status_code == 422
+
+
+async def test_hidden_gems_invalid_max_votes(client):
+    resp = await client.get("/api/v1/movies/hidden-gems", params={"max_votes": 0})
+    assert resp.status_code == 422
+
+
+async def test_hidden_gems_invalid_limit(client):
+    resp = await client.get("/api/v1/movies/hidden-gems", params={"limit": 0})
+    assert resp.status_code == 422
+
+    resp = await client.get("/api/v1/movies/hidden-gems", params={"limit": 101})
+    assert resp.status_code == 422
+
+
+async def test_hidden_gems_no_cache_service(app, client, mock_movie_service):
+    from cinematch.api.deps import get_cache_service
+
+    app.dependency_overrides[get_cache_service] = lambda: None
+    resp = await client.get("/api/v1/movies/hidden-gems")
+    assert resp.status_code == 200
+    mock_movie_service.hidden_gems.assert_called_once()

@@ -19,6 +19,8 @@ from cinematch.core.exceptions import ServiceUnavailableError
 from cinematch.schemas.movie import (
     GenreCount,
     GenresResponse,
+    HiddenGemResult,
+    HiddenGemsResponse,
     MovieListResponse,
     MovieResponse,
     MovieSearchResponse,
@@ -153,6 +155,49 @@ async def trending_movies(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=3600)
         except Exception:
             logger.warning("Failed to cache trending movies", exc_info=True)
+
+    return response
+
+
+@router.get("/hidden-gems", response_model=HiddenGemsResponse)
+async def hidden_gems(
+    min_rating: float = Query(default=7.5, ge=0, le=10),
+    max_votes: int = Query(default=100, ge=1, le=100000),
+    genre: str | None = Query(default=None, max_length=100),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = f"hidden_gems:{round(min_rating, 1)}:{max_votes}:{genre}:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return HiddenGemsResponse.model_validate_json(cached)
+
+    movies = await movie_service.hidden_gems(
+        db, min_rating=min_rating, max_votes=max_votes, genre=genre, limit=limit
+    )
+
+    response = HiddenGemsResponse(
+        results=[
+            HiddenGemResult(
+                movie=MovieSummary.model_validate(movie),
+                vote_average=movie.vote_average,
+                vote_count=movie.vote_count,
+            )
+            for movie in movies
+        ],
+        min_rating=min_rating,
+        max_votes=max_votes,
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache hidden gems", exc_info=True)
 
     return response
 

@@ -102,3 +102,16 @@ class TrendingResponse(BaseModel):
     results: list[TrendingMovieResult]
     window: int
     limit: int
+
+
+class HiddenGemResult(BaseModel):
+    movie: MovieSummary
+    vote_average: float
+    vote_count: int
+
+
+class HiddenGemsResponse(BaseModel):
+    results: list[HiddenGemResult]
+    min_rating: float
+    max_votes: int
+    limit: int
