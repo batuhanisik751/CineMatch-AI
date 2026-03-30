@@ -96,7 +96,7 @@ npm run dev
 
 Opens at http://localhost:3000 — connects to the backend API automatically.
 
-Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, mood-based discovery (preset moods + custom vibe input, personalized by blending mood with user taste), hybrid/content/collab recommendations with smart explanation tags ("Because you liked Inception", "Same director as Interstellar — Christopher Nolan", content vs. collab score breakdown bar), "Why This?" deep-dive explanation button (powered by Mistral), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with genre distribution, rating histogram, top directors/actors, and monthly activity timeline.
+Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, mood-based discovery (preset moods + custom vibe input, personalized by blending mood with user taste), hybrid/content/collab recommendations with smart explanation tags ("Because you liked Inception", "Same director as Interstellar — Christopher Nolan", content vs. collab score breakdown bar), "Why This?" deep-dive explanation button (powered by Mistral), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with rating histogram, top directors/actors, and monthly activity timeline.
 
 ## API Endpoints
 
@@ -110,7 +110,7 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/movies/genres` | All genres with movie counts |
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/users/{id}` | User details |
-| GET | `/api/v1/users/{id}/stats` | User profile analytics (genre distribution, rating histogram, top directors/actors, timeline) |
+| GET | `/api/v1/users/{id}/stats` | User profile analytics (rating histogram, top directors/actors, timeline) |
 | GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Recommendations with smart explanations (strategy: `hybrid`, `content`, `collab`) |
 | POST | `/api/v1/recommendations/mood` | Mood-based discovery (body: `{"mood": "dark gritty thriller", "user_id": 1, "alpha": 0.3, "limit": 20}`) |
 | GET | `/api/v1/users/{id}/recommendations/explain/{movie_id}?score=0.9` | LLM explanation for a recommendation |
