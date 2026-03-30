@@ -387,15 +387,10 @@ class MovieService:
             )
             result = await db.execute(stmt)
             rows = result.all()
-            films = [
-                (row[0], float(row[1]) if row[1] is not None else None)
-                for row in rows
-            ]
+            films = [(row[0], float(row[1]) if row[1] is not None else None) for row in rows]
         else:
             stmt = (
-                select(Movie)
-                .where(director_filter)
-                .order_by(Movie.release_date.asc().nulls_last())
+                select(Movie).where(director_filter).order_by(Movie.release_date.asc().nulls_last())
             )
             result = await db.execute(stmt)
             films = [(m, None) for m in result.scalars().all()]
@@ -416,9 +411,116 @@ class MovieService:
             "avg_vote": round(vote_sum / total_films, 2) if total_films > 0 else 0.0,
             "genres": sorted(all_genres),
             "user_avg_rating": (
-                round(sum(user_ratings) / len(user_ratings), 2)
-                if user_ratings
-                else None
+                round(sum(user_ratings) / len(user_ratings), 2) if user_ratings else None
+            ),
+            "user_rated_count": len(user_ratings),
+        }
+
+        return films, stats
+
+    async def search_actors(
+        self,
+        query: str,
+        db: AsyncSession,
+        limit: int = 20,
+    ) -> list[tuple[str, int, float]]:
+        """Search actors by partial name match across cast_names JSONB arrays."""
+        pattern = f"%{query}%"
+        actor_name = func.jsonb_array_elements_text(Movie.cast_names).label("actor_name")
+        unnested = (
+            select(actor_name, Movie.vote_average)
+            .where(Movie.cast_names != cast("[]", JSONB_TYPE))
+            .subquery()
+        )
+        stmt = (
+            select(
+                unnested.c.actor_name,
+                func.count().label("film_count"),
+                func.avg(unnested.c.vote_average).label("avg_vote"),
+            )
+            .where(unnested.c.actor_name.ilike(pattern))
+            .group_by(unnested.c.actor_name)
+            .order_by(desc("film_count"))
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return [(row[0], int(row[1]), float(row[2])) for row in result.all()]
+
+    async def popular_actors(
+        self,
+        db: AsyncSession,
+        limit: int = 30,
+    ) -> list[tuple[str, int, float]]:
+        """Return popular actors with at least 3 films, ordered by avg popularity."""
+        actor_name = func.jsonb_array_elements_text(Movie.cast_names).label("actor_name")
+        unnested = (
+            select(actor_name, Movie.vote_average, Movie.popularity)
+            .where(Movie.cast_names != cast("[]", JSONB_TYPE))
+            .subquery()
+        )
+        stmt = (
+            select(
+                unnested.c.actor_name,
+                func.count().label("film_count"),
+                func.avg(unnested.c.vote_average).label("avg_vote"),
+            )
+            .group_by(unnested.c.actor_name)
+            .having(func.count() >= 3)
+            .order_by(desc(func.avg(unnested.c.popularity)))
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return [(row[0], int(row[1]), float(row[2])) for row in result.all()]
+
+    async def filmography_by_actor(
+        self,
+        db: AsyncSession,
+        *,
+        name: str,
+        user_id: int | None = None,
+    ) -> tuple[list[tuple[Movie, float | None]], dict]:
+        """Return an actor's filmography with optional user rating overlay."""
+        actor_filter = Movie.cast_names.op("@>")(func.jsonb_build_array(name).cast(JSONB_TYPE))
+
+        if user_id is not None:
+            user_rating_col = Rating.rating.label("user_rating")
+            stmt = (
+                select(Movie, user_rating_col)
+                .select_from(
+                    outerjoin(
+                        Movie,
+                        Rating,
+                        (Rating.movie_id == Movie.id) & (Rating.user_id == user_id),
+                    )
+                )
+                .where(actor_filter)
+                .order_by(Movie.release_date.asc().nulls_last())
+            )
+            result = await db.execute(stmt)
+            rows = result.all()
+            films = [(row[0], float(row[1]) if row[1] is not None else None) for row in rows]
+        else:
+            stmt = select(Movie).where(actor_filter).order_by(Movie.release_date.asc().nulls_last())
+            result = await db.execute(stmt)
+            films = [(m, None) for m in result.scalars().all()]
+
+        # Compute stats
+        all_genres: set[str] = set()
+        vote_sum = 0.0
+        user_ratings: list[float] = []
+        for movie, user_rating in films:
+            vote_sum += movie.vote_average
+            all_genres.update(movie.genres or [])
+            if user_rating is not None:
+                user_ratings.append(user_rating)
+
+        total_films = len(films)
+        stats = {
+            "total_films": total_films,
+            "avg_vote": round(vote_sum / total_films, 2) if total_films > 0 else 0.0,
+            "genres": sorted(all_genres),
+            "user_avg_rating": (
+                round(sum(user_ratings) / len(user_ratings), 2) if user_ratings else None
             ),
             "user_rated_count": len(user_ratings),
         }

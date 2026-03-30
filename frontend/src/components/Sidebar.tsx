@@ -8,6 +8,7 @@ const items = [
   { to: "/hidden-gems", icon: "diamond", label: "Hidden Gems" },
   { to: "/decades", icon: "history", label: "Decades" },
   { to: "/directors", icon: "movie_filter", label: "Directors" },
+  { to: "/actors", icon: "theater_comedy", label: "Actors" },
   { to: "/recommendations", icon: "auto_awesome", label: "Recommendations" },
   { to: "/watchlist", icon: "bookmark", label: "Watchlist" },
   { to: "/profile", icon: "person", label: "Profile" },

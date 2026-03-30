@@ -109,6 +109,21 @@ def mock_movie_service(sample_movie):
             "user_rated_count": 0,
         },
     )
+    svc.search_actors.return_value = [("Keanu Reeves", 8, 7.15)]
+    svc.popular_actors.return_value = [
+        ("Keanu Reeves", 8, 7.15),
+        ("Tom Hanks", 25, 7.42),
+    ]
+    svc.filmography_by_actor.return_value = (
+        [(sample_movie, None)],
+        {
+            "total_films": 1,
+            "avg_vote": 8.2,
+            "genres": ["Action", "Sci-Fi"],
+            "user_avg_rating": None,
+            "user_rated_count": 0,
+        },
+    )
     return svc
 
 

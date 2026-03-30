@@ -187,3 +187,38 @@ class DirectorFilmographyResponse(BaseModel):
     director: str
     stats: DirectorStats
     filmography: list[DirectorFilmResult]
+
+
+class ActorSummary(BaseModel):
+    name: str
+    film_count: int
+    avg_vote: float
+
+
+class ActorSearchResponse(BaseModel):
+    results: list[ActorSummary]
+    query: str
+
+
+class PopularActorsResponse(BaseModel):
+    results: list[ActorSummary]
+    limit: int
+
+
+class ActorFilmResult(BaseModel):
+    movie: MovieSummary
+    user_rating: float | None
+
+
+class ActorStats(BaseModel):
+    total_films: int
+    avg_vote: float
+    genres: list[str]
+    user_avg_rating: float | None
+    user_rated_count: int
+
+
+class ActorFilmographyResponse(BaseModel):
+    actor: str
+    stats: ActorStats
+    filmography: list[ActorFilmResult]

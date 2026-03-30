@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import Actors from "./pages/Actors";
 import Decades from "./pages/Decades";
 import Directors from "./pages/Directors";
 import Discover from "./pages/Discover";
@@ -22,6 +23,7 @@ export default function App() {
       <Route path="/hidden-gems" element={<HiddenGems />} />
       <Route path="/decades" element={<Decades />} />
       <Route path="/directors" element={<Directors />} />
+      <Route path="/actors" element={<Actors />} />
       <Route path="/search" element={<Search />} />
       <Route path="/movies/:id" element={<MovieDetail />} />
       <Route path="/recommendations" element={<Recommendations />} />

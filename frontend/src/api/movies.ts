@@ -1,5 +1,7 @@
 import { apiFetch } from "./client";
 import type {
+  ActorFilmographyResponse,
+  ActorSearchResponse,
   DecadeMoviesResponse,
   DecadesResponse,
   DirectorFilmographyResponse,
@@ -9,6 +11,7 @@ import type {
   MovieListResponse,
   MovieResponse,
   MovieSearchResponse,
+  PopularActorsResponse,
   PopularDirectorsResponse,
   SemanticSearchResponse,
   SimilarMoviesResponse,
@@ -120,5 +123,25 @@ export function getDirectorFilmography(name: string, userId?: number) {
   if (userId != null) qs.set("user_id", String(userId));
   return apiFetch<DirectorFilmographyResponse>(
     `/api/v1/movies/directors/filmography?${qs.toString()}`
+  );
+}
+
+export function searchActors(q: string, limit = 20) {
+  return apiFetch<ActorSearchResponse>(
+    `/api/v1/movies/actors/search?q=${encodeURIComponent(q)}&limit=${limit}`
+  );
+}
+
+export function getPopularActors(limit = 30) {
+  return apiFetch<PopularActorsResponse>(
+    `/api/v1/movies/actors/popular?limit=${limit}`
+  );
+}
+
+export function getActorFilmography(name: string, userId?: number) {
+  const qs = new URLSearchParams({ name });
+  if (userId != null) qs.set("user_id", String(userId));
+  return apiFetch<ActorFilmographyResponse>(
+    `/api/v1/movies/actors/filmography?${qs.toString()}`
   );
 }

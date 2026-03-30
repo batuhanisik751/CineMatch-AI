@@ -19,7 +19,9 @@ class Movie(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tmdb_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, index=True)
     imdb_id: Mapped[str | None] = mapped_column(String(15), nullable=True, index=True)
-    movielens_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True, index=True)
+    movielens_id: Mapped[int | None] = mapped_column(
+        Integer, unique=True, nullable=True, index=True
+    )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     overview: Mapped[str | None] = mapped_column(Text, nullable=True)
     genres: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
@@ -32,12 +34,11 @@ class Movie(Base):
     popularity: Mapped[float] = mapped_column(Float, nullable=False, server_default="0.0")
     poster_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     embedding = mapped_column(Vector(384), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     __table_args__ = (
         Index("idx_movies_genres", "genres", postgresql_using="gin"),
+        Index("idx_movies_cast_names", "cast_names", postgresql_using="gin"),
     )
 
     def __repr__(self) -> str:

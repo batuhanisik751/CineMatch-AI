@@ -17,6 +17,11 @@ from cinematch.api.deps import (
 from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import ServiceUnavailableError
 from cinematch.schemas.movie import (
+    ActorFilmographyResponse,
+    ActorFilmResult,
+    ActorSearchResponse,
+    ActorStats,
+    ActorSummary,
     DecadeMovieResult,
     DecadeMoviesResponse,
     DecadesResponse,
@@ -34,6 +39,7 @@ from cinematch.schemas.movie import (
     MovieResponse,
     MovieSearchResponse,
     MovieSummary,
+    PopularActorsResponse,
     PopularDirectorsResponse,
     SemanticSearchResponse,
     SemanticSearchResult,
@@ -398,9 +404,7 @@ async def director_filmography(
         if cached is not None:
             return DirectorFilmographyResponse.model_validate_json(cached)
 
-    films, stats = await movie_service.filmography_by_director(
-        db, name=name, user_id=user_id
-    )
+    films, stats = await movie_service.filmography_by_director(db, name=name, user_id=user_id)
 
     if not films:
         raise HTTPException(status_code=404, detail="Director not found")
@@ -422,6 +426,97 @@ async def director_filmography(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
         except Exception:
             logger.warning("Failed to cache director filmography", exc_info=True)
+
+    return response
+
+
+@router.get("/actors/search", response_model=ActorSearchResponse)
+async def search_actors(
+    q: str = Query(min_length=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+):
+    rows = await movie_service.search_actors(q, db, limit=limit)
+    return ActorSearchResponse(
+        results=[
+            ActorSummary(name=name, film_count=count, avg_vote=round(avg, 2))
+            for name, count, avg in rows
+        ],
+        query=q,
+    )
+
+
+@router.get("/actors/popular", response_model=PopularActorsResponse)
+async def popular_actors(
+    limit: int = Query(default=30, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = f"popular_actors:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return PopularActorsResponse.model_validate_json(cached)
+
+    rows = await movie_service.popular_actors(db, limit=limit)
+
+    response = PopularActorsResponse(
+        results=[
+            ActorSummary(name=name, film_count=count, avg_vote=round(avg, 2))
+            for name, count, avg in rows
+        ],
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache popular actors", exc_info=True)
+
+    return response
+
+
+@router.get("/actors/filmography", response_model=ActorFilmographyResponse)
+async def actor_filmography(
+    name: str = Query(min_length=1, max_length=255),
+    user_id: int | None = Query(default=None, ge=1),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    use_cache = user_id is None
+    cache_key = f"actor_filmography:{name.lower()}"
+
+    if use_cache and cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return ActorFilmographyResponse.model_validate_json(cached)
+
+    films, stats = await movie_service.filmography_by_actor(db, name=name, user_id=user_id)
+
+    if not films:
+        raise HTTPException(status_code=404, detail="Actor not found")
+
+    response = ActorFilmographyResponse(
+        actor=name,
+        stats=ActorStats(**stats),
+        filmography=[
+            ActorFilmResult(
+                movie=MovieSummary.model_validate(movie),
+                user_rating=rating,
+            )
+            for movie, rating in films
+        ],
+    )
+
+    if use_cache and cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache actor filmography", exc_info=True)
 
     return response
 

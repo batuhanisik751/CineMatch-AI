@@ -717,3 +717,148 @@ async def test_directors_filmography_not_found(client, mock_movie_service):
     )
     assert resp.status_code == 404
     assert resp.json()["detail"] == "Director not found"
+
+
+# --- Actor Filmography ---
+
+
+async def test_actors_search_success(client):
+    resp = await client.get("/api/v1/movies/actors/search", params={"q": "keanu"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["query"] == "keanu"
+    assert len(data["results"]) == 1
+    assert data["results"][0]["name"] == "Keanu Reeves"
+    assert data["results"][0]["film_count"] == 8
+    assert data["results"][0]["avg_vote"] == 7.15
+
+
+async def test_actors_search_empty_query_422(client):
+    resp = await client.get("/api/v1/movies/actors/search", params={"q": ""})
+    assert resp.status_code == 422
+
+
+async def test_actors_search_custom_limit(client, mock_movie_service):
+    resp = await client.get("/api/v1/movies/actors/search", params={"q": "tom", "limit": 5})
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.search_actors.call_args
+    assert call_kwargs[1]["limit"] == 5 or call_kwargs.kwargs.get("limit") == 5
+
+
+async def test_actors_popular_success(client):
+    resp = await client.get("/api/v1/movies/actors/popular")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["limit"] == 30
+    assert len(data["results"]) == 2
+    assert data["results"][0]["name"] == "Keanu Reeves"
+    assert data["results"][1]["name"] == "Tom Hanks"
+
+
+async def test_actors_popular_cache_miss(client, mock_movie_service, mock_cache_service):
+    resp = await client.get("/api/v1/movies/actors/popular")
+    assert resp.status_code == 200
+    mock_movie_service.popular_actors.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "popular_actors:30"
+    assert call_args[1]["ttl"] == 21600
+
+
+async def test_actors_popular_cache_hit(client, mock_movie_service, mock_cache_service):
+    cached_response = (
+        '{"results":[{"name":"Keanu Reeves","film_count":8,"avg_vote":7.15}],"limit":30}'
+    )
+    mock_cache_service.get.return_value = cached_response
+
+    resp = await client.get("/api/v1/movies/actors/popular")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["results"][0]["name"] == "Keanu Reeves"
+    mock_movie_service.popular_actors.assert_not_called()
+
+
+async def test_actors_filmography_success(client, sample_movie):
+    resp = await client.get("/api/v1/movies/actors/filmography", params={"name": "Keanu Reeves"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["actor"] == "Keanu Reeves"
+    assert data["stats"]["total_films"] == 1
+    assert data["stats"]["avg_vote"] == 8.2
+    assert "Action" in data["stats"]["genres"]
+    assert data["stats"]["user_avg_rating"] is None
+    assert data["stats"]["user_rated_count"] == 0
+    assert len(data["filmography"]) == 1
+    assert data["filmography"][0]["movie"]["title"] == sample_movie.title
+    assert data["filmography"][0]["user_rating"] is None
+
+
+async def test_actors_filmography_with_user_id(client, mock_movie_service, sample_movie):
+    mock_movie_service.filmography_by_actor.return_value = (
+        [(sample_movie, 9.0)],
+        {
+            "total_films": 1,
+            "avg_vote": 8.2,
+            "genres": ["Action", "Sci-Fi"],
+            "user_avg_rating": 9.0,
+            "user_rated_count": 1,
+        },
+    )
+
+    resp = await client.get(
+        "/api/v1/movies/actors/filmography",
+        params={"name": "Keanu Reeves", "user_id": 42},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["filmography"][0]["user_rating"] == 9.0
+    assert data["stats"]["user_avg_rating"] == 9.0
+    assert data["stats"]["user_rated_count"] == 1
+
+    call_kwargs = mock_movie_service.filmography_by_actor.call_args.kwargs
+    assert call_kwargs["user_id"] == 42
+
+
+async def test_actors_filmography_no_cache_with_user_id(
+    client, mock_movie_service, mock_cache_service
+):
+    resp = await client.get(
+        "/api/v1/movies/actors/filmography",
+        params={"name": "Keanu Reeves", "user_id": 42},
+    )
+    assert resp.status_code == 200
+    # Cache set should not be called when user_id is provided
+    mock_cache_service.set.assert_not_called()
+
+
+async def test_actors_filmography_cache_miss_without_user_id(
+    client, mock_movie_service, mock_cache_service
+):
+    resp = await client.get("/api/v1/movies/actors/filmography", params={"name": "Keanu Reeves"})
+    assert resp.status_code == 200
+    mock_movie_service.filmography_by_actor.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "actor_filmography:keanu reeves"
+    assert call_args[1]["ttl"] == 21600
+
+
+async def test_actors_filmography_missing_name_422(client):
+    resp = await client.get("/api/v1/movies/actors/filmography")
+    assert resp.status_code == 422
+
+
+async def test_actors_filmography_not_found(client, mock_movie_service):
+    mock_movie_service.filmography_by_actor.return_value = (
+        [],
+        {
+            "total_films": 0,
+            "avg_vote": 0.0,
+            "genres": [],
+            "user_avg_rating": None,
+            "user_rated_count": 0,
+        },
+    )
+    resp = await client.get("/api/v1/movies/actors/filmography", params={"name": "Nobody Unknown"})
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Actor not found"

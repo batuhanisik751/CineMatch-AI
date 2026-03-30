@@ -96,7 +96,7 @@ npm run dev
 
 Opens at http://localhost:3000 — connects to the backend API automatically.
 
-Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, mood-based discovery (preset moods + custom vibe input, personalized by blending mood with user taste), hybrid/content/collab recommendations with smart explanation tags ("Because you liked Inception", "Same director as Interstellar — Christopher Nolan", content vs. collab score breakdown bar), "Why This?" deep-dive explanation button (powered by Mistral), **Top Charts** (genre-tab selector showing the highest community-rated movies per genre, ranked by in-system average with numbered badges), **Decade Explorer** (browse film history by era — clickable decade grid with movie counts and avg ratings, drill into any decade for top-rated movies with genre filtering and ranked badges), **Director Spotlight** (search or browse popular directors, view full filmography sorted chronologically with your personal ratings overlaid, director stats including total films, average rating, genres, and your average score), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with rating histogram, top directors/actors, and monthly activity timeline.
+Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, mood-based discovery (preset moods + custom vibe input, personalized by blending mood with user taste), hybrid/content/collab recommendations with smart explanation tags ("Because you liked Inception", "Same director as Interstellar — Christopher Nolan", content vs. collab score breakdown bar), "Why This?" deep-dive explanation button (powered by Mistral), **Top Charts** (genre-tab selector showing the highest community-rated movies per genre, ranked by in-system average with numbered badges), **Decade Explorer** (browse film history by era — clickable decade grid with movie counts and avg ratings, drill into any decade for top-rated movies with genre filtering and ranked badges), **Director Spotlight** (search or browse popular directors, view full filmography sorted chronologically with your personal ratings overlaid, director stats including total films, average rating, genres, and your average score), **Actor Filmography** (search or browse popular actors, view their complete filmography with your personal ratings overlaid — same two-level drill-down pattern, backed by GIN-indexed JSONB containment queries on cast_names), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with rating histogram, top directors/actors, and monthly activity timeline.
 
 ## API Endpoints
 
@@ -114,6 +114,9 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/movies/directors/search?q=nolan&limit=20` | Search directors by name |
 | GET | `/api/v1/movies/directors/popular?limit=30` | Popular directors (3+ films, sorted by popularity) |
 | GET | `/api/v1/movies/directors/filmography?name=Christopher+Nolan&user_id=1` | Director filmography with user rating overlay |
+| GET | `/api/v1/movies/actors/search?q=hanks&limit=20` | Search actors by name |
+| GET | `/api/v1/movies/actors/popular?limit=30` | Popular actors (3+ films, sorted by popularity) |
+| GET | `/api/v1/movies/actors/filmography?name=Tom+Hanks&user_id=1` | Actor filmography with user rating overlay |
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/users/{id}` | User details |
 | GET | `/api/v1/users/{id}/stats` | User profile analytics (rating histogram, top directors/actors, timeline) |
@@ -186,6 +189,8 @@ Redis caches API responses with automatic invalidation:
 | `decade_movies:{decade}:{genre}:{offset}:{limit}` | 6 hours | Manual |
 | `popular_directors:{limit}` | 6 hours | Manual |
 | `director_filmography:{name}` | 6 hours | Manual (not cached when user_id provided) |
+| `popular_actors:{limit}` | 6 hours | Manual |
+| `actor_filmography:{name}` | 6 hours | Manual (not cached when user_id provided) |
 | `top_charts:{genre}:{limit}` | 6 hours | Manual |
 | `movie:{id}` | 1 hour | Manual |
 | `similar:{id}:{top_k}` | 30 min | Never (content similarity is stable) |
