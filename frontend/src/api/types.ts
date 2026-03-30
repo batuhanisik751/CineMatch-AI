@@ -258,3 +258,38 @@ export interface UserStatsResponse {
   top_actors: PersonCount[];
   rating_timeline: MonthlyActivity[];
 }
+
+export interface DirectorSummary {
+  name: string;
+  film_count: number;
+  avg_vote: number;
+}
+
+export interface DirectorSearchResponse {
+  results: DirectorSummary[];
+  query: string;
+}
+
+export interface PopularDirectorsResponse {
+  results: DirectorSummary[];
+  limit: number;
+}
+
+export interface DirectorFilmResult {
+  movie: MovieSummary;
+  user_rating: number | null;
+}
+
+export interface DirectorStats {
+  total_films: number;
+  avg_vote: number;
+  genres: string[];
+  user_avg_rating: number | null;
+  user_rated_count: number;
+}
+
+export interface DirectorFilmographyResponse {
+  director: string;
+  stats: DirectorStats;
+  filmography: DirectorFilmResult[];
+}

@@ -152,3 +152,38 @@ class DecadeMoviesResponse(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+class DirectorSummary(BaseModel):
+    name: str
+    film_count: int
+    avg_vote: float
+
+
+class DirectorSearchResponse(BaseModel):
+    results: list[DirectorSummary]
+    query: str
+
+
+class PopularDirectorsResponse(BaseModel):
+    results: list[DirectorSummary]
+    limit: int
+
+
+class DirectorFilmResult(BaseModel):
+    movie: MovieSummary
+    user_rating: float | None
+
+
+class DirectorStats(BaseModel):
+    total_films: int
+    avg_vote: float
+    genres: list[str]
+    user_avg_rating: float | None
+    user_rated_count: int
+
+
+class DirectorFilmographyResponse(BaseModel):
+    director: str
+    stats: DirectorStats
+    filmography: list[DirectorFilmResult]

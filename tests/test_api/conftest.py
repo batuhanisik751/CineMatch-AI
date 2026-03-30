@@ -94,6 +94,21 @@ def mock_movie_service(sample_movie):
     svc.top_by_genre.return_value = [(sample_movie, 8.5, 150)]
     svc.get_decade_stats.return_value = [(2000, 150, 6.8), (1990, 200, 7.1)]
     svc.top_by_decade.return_value = ([(sample_movie, 8.5, 150)], 1)
+    svc.search_directors.return_value = [("Christopher Nolan", 12, 7.84)]
+    svc.popular_directors.return_value = [
+        ("Christopher Nolan", 12, 7.84),
+        ("Steven Spielberg", 30, 7.21),
+    ]
+    svc.filmography_by_director.return_value = (
+        [(sample_movie, None)],
+        {
+            "total_films": 1,
+            "avg_vote": 8.2,
+            "genres": ["Action", "Sci-Fi"],
+            "user_avg_rating": None,
+            "user_rated_count": 0,
+        },
+    )
     return svc
 
 

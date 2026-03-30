@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, cast, desc, extract, func, select, text
+from sqlalchemy import Integer, cast, desc, extract, func, outerjoin, select, text
 from sqlalchemy.dialects.postgresql import JSONB as JSONB_TYPE
 
 from cinematch.models.movie import Movie
@@ -317,3 +317,110 @@ class MovieService:
         result = await db.execute(stmt)
         rows = [(row[0], float(row[1]), int(row[2])) for row in result.all()]
         return rows, total
+
+    async def search_directors(
+        self,
+        query: str,
+        db: AsyncSession,
+        limit: int = 20,
+    ) -> list[tuple[str, int, float]]:
+        """Search directors by partial name match."""
+        pattern = f"%{query}%"
+        stmt = (
+            select(
+                Movie.director,
+                func.count().label("film_count"),
+                func.avg(Movie.vote_average).label("avg_vote"),
+            )
+            .where(Movie.director.isnot(None), Movie.director.ilike(pattern))
+            .group_by(Movie.director)
+            .order_by(desc("film_count"))
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return [(row[0], int(row[1]), float(row[2])) for row in result.all()]
+
+    async def popular_directors(
+        self,
+        db: AsyncSession,
+        limit: int = 30,
+    ) -> list[tuple[str, int, float]]:
+        """Return popular directors with at least 3 films, ordered by avg popularity."""
+        stmt = (
+            select(
+                Movie.director,
+                func.count().label("film_count"),
+                func.avg(Movie.vote_average).label("avg_vote"),
+            )
+            .where(Movie.director.isnot(None))
+            .group_by(Movie.director)
+            .having(func.count() >= 3)
+            .order_by(desc(func.avg(Movie.popularity)))
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return [(row[0], int(row[1]), float(row[2])) for row in result.all()]
+
+    async def filmography_by_director(
+        self,
+        db: AsyncSession,
+        *,
+        name: str,
+        user_id: int | None = None,
+    ) -> tuple[list[tuple[Movie, float | None]], dict]:
+        """Return a director's filmography with optional user rating overlay."""
+        director_filter = func.lower(Movie.director) == func.lower(name)
+
+        if user_id is not None:
+            user_rating_col = Rating.rating.label("user_rating")
+            stmt = (
+                select(Movie, user_rating_col)
+                .select_from(
+                    outerjoin(
+                        Movie,
+                        Rating,
+                        (Rating.movie_id == Movie.id) & (Rating.user_id == user_id),
+                    )
+                )
+                .where(director_filter)
+                .order_by(Movie.release_date.asc().nulls_last())
+            )
+            result = await db.execute(stmt)
+            rows = result.all()
+            films = [
+                (row[0], float(row[1]) if row[1] is not None else None)
+                for row in rows
+            ]
+        else:
+            stmt = (
+                select(Movie)
+                .where(director_filter)
+                .order_by(Movie.release_date.asc().nulls_last())
+            )
+            result = await db.execute(stmt)
+            films = [(m, None) for m in result.scalars().all()]
+
+        # Compute stats
+        all_genres: set[str] = set()
+        vote_sum = 0.0
+        user_ratings: list[float] = []
+        for movie, user_rating in films:
+            vote_sum += movie.vote_average
+            all_genres.update(movie.genres or [])
+            if user_rating is not None:
+                user_ratings.append(user_rating)
+
+        total_films = len(films)
+        stats = {
+            "total_films": total_films,
+            "avg_vote": round(vote_sum / total_films, 2) if total_films > 0 else 0.0,
+            "genres": sorted(all_genres),
+            "user_avg_rating": (
+                round(sum(user_ratings) / len(user_ratings), 2)
+                if user_ratings
+                else None
+            ),
+            "user_rated_count": len(user_ratings),
+        }
+
+        return films, stats

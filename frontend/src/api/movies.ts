@@ -2,11 +2,14 @@ import { apiFetch } from "./client";
 import type {
   DecadeMoviesResponse,
   DecadesResponse,
+  DirectorFilmographyResponse,
+  DirectorSearchResponse,
   GenresResponse,
   HiddenGemsResponse,
   MovieListResponse,
   MovieResponse,
   MovieSearchResponse,
+  PopularDirectorsResponse,
   SemanticSearchResponse,
   SimilarMoviesResponse,
   TopChartsResponse,
@@ -97,5 +100,25 @@ export function getDecadeMovies(decade: number, params: {
   const query = qs.toString();
   return apiFetch<DecadeMoviesResponse>(
     `/api/v1/movies/decades/${decade}${query ? `?${query}` : ""}`
+  );
+}
+
+export function searchDirectors(q: string, limit = 20) {
+  return apiFetch<DirectorSearchResponse>(
+    `/api/v1/movies/directors/search?q=${encodeURIComponent(q)}&limit=${limit}`
+  );
+}
+
+export function getPopularDirectors(limit = 30) {
+  return apiFetch<PopularDirectorsResponse>(
+    `/api/v1/movies/directors/popular?limit=${limit}`
+  );
+}
+
+export function getDirectorFilmography(name: string, userId?: number) {
+  const qs = new URLSearchParams({ name });
+  if (userId != null) qs.set("user_id", String(userId));
+  return apiFetch<DirectorFilmographyResponse>(
+    `/api/v1/movies/directors/filmography?${qs.toString()}`
   );
 }

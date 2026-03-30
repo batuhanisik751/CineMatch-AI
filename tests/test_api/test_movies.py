@@ -564,3 +564,156 @@ async def test_decade_movies_empty_results(client, mock_movie_service):
     data = resp.json()
     assert data["results"] == []
     assert data["total"] == 0
+
+
+# --- Director Spotlight ---
+
+
+async def test_directors_search_success(client):
+    resp = await client.get("/api/v1/movies/directors/search", params={"q": "nolan"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["query"] == "nolan"
+    assert len(data["results"]) == 1
+    assert data["results"][0]["name"] == "Christopher Nolan"
+    assert data["results"][0]["film_count"] == 12
+    assert data["results"][0]["avg_vote"] == 7.84
+
+
+async def test_directors_search_empty_query_422(client):
+    resp = await client.get("/api/v1/movies/directors/search", params={"q": ""})
+    assert resp.status_code == 422
+
+
+async def test_directors_search_custom_limit(client, mock_movie_service):
+    resp = await client.get(
+        "/api/v1/movies/directors/search", params={"q": "spielberg", "limit": 5}
+    )
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.search_directors.call_args
+    assert call_kwargs[1]["limit"] == 5 or call_kwargs.kwargs.get("limit") == 5
+
+
+async def test_directors_popular_success(client):
+    resp = await client.get("/api/v1/movies/directors/popular")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["limit"] == 30
+    assert len(data["results"]) == 2
+    assert data["results"][0]["name"] == "Christopher Nolan"
+    assert data["results"][1]["name"] == "Steven Spielberg"
+
+
+async def test_directors_popular_cache_miss(client, mock_movie_service, mock_cache_service):
+    resp = await client.get("/api/v1/movies/directors/popular")
+    assert resp.status_code == 200
+    mock_movie_service.popular_directors.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "popular_directors:30"
+    assert call_args[1]["ttl"] == 21600
+
+
+async def test_directors_popular_cache_hit(client, mock_movie_service, mock_cache_service):
+    cached_response = (
+        '{"results":[{"name":"Christopher Nolan","film_count":12,"avg_vote":7.84}],"limit":30}'
+    )
+    mock_cache_service.get.return_value = cached_response
+
+    resp = await client.get("/api/v1/movies/directors/popular")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["results"][0]["name"] == "Christopher Nolan"
+    mock_movie_service.popular_directors.assert_not_called()
+
+
+async def test_directors_filmography_success(client, sample_movie):
+    resp = await client.get(
+        "/api/v1/movies/directors/filmography", params={"name": "Lana Wachowski"}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["director"] == "Lana Wachowski"
+    assert data["stats"]["total_films"] == 1
+    assert data["stats"]["avg_vote"] == 8.2
+    assert "Action" in data["stats"]["genres"]
+    assert data["stats"]["user_avg_rating"] is None
+    assert data["stats"]["user_rated_count"] == 0
+    assert len(data["filmography"]) == 1
+    assert data["filmography"][0]["movie"]["title"] == sample_movie.title
+    assert data["filmography"][0]["user_rating"] is None
+
+
+async def test_directors_filmography_with_user_id(client, mock_movie_service, sample_movie):
+    mock_movie_service.filmography_by_director.return_value = (
+        [(sample_movie, 9.0)],
+        {
+            "total_films": 1,
+            "avg_vote": 8.2,
+            "genres": ["Action", "Sci-Fi"],
+            "user_avg_rating": 9.0,
+            "user_rated_count": 1,
+        },
+    )
+
+    resp = await client.get(
+        "/api/v1/movies/directors/filmography",
+        params={"name": "Lana Wachowski", "user_id": 42},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["filmography"][0]["user_rating"] == 9.0
+    assert data["stats"]["user_avg_rating"] == 9.0
+    assert data["stats"]["user_rated_count"] == 1
+
+    call_kwargs = mock_movie_service.filmography_by_director.call_args.kwargs
+    assert call_kwargs["user_id"] == 42
+
+
+async def test_directors_filmography_no_cache_with_user_id(
+    client, mock_movie_service, mock_cache_service
+):
+    resp = await client.get(
+        "/api/v1/movies/directors/filmography",
+        params={"name": "Lana Wachowski", "user_id": 42},
+    )
+    assert resp.status_code == 200
+    # Cache set should not be called when user_id is provided
+    mock_cache_service.set.assert_not_called()
+
+
+async def test_directors_filmography_cache_miss_without_user_id(
+    client, mock_movie_service, mock_cache_service
+):
+    resp = await client.get(
+        "/api/v1/movies/directors/filmography", params={"name": "Lana Wachowski"}
+    )
+    assert resp.status_code == 200
+    mock_movie_service.filmography_by_director.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "director_filmography:lana wachowski"
+    assert call_args[1]["ttl"] == 21600
+
+
+async def test_directors_filmography_missing_name_422(client):
+    resp = await client.get("/api/v1/movies/directors/filmography")
+    assert resp.status_code == 422
+
+
+async def test_directors_filmography_not_found(client, mock_movie_service):
+    mock_movie_service.filmography_by_director.return_value = (
+        [],
+        {
+            "total_films": 0,
+            "avg_vote": 0.0,
+            "genres": [],
+            "user_avg_rating": None,
+            "user_rated_count": 0,
+        },
+    )
+    resp = await client.get(
+        "/api/v1/movies/directors/filmography", params={"name": "Nobody Unknown"}
+    )
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Director not found"

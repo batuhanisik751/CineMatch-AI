@@ -21,6 +21,11 @@ from cinematch.schemas.movie import (
     DecadeMoviesResponse,
     DecadesResponse,
     DecadeSummary,
+    DirectorFilmographyResponse,
+    DirectorFilmResult,
+    DirectorSearchResponse,
+    DirectorStats,
+    DirectorSummary,
     GenreCount,
     GenresResponse,
     HiddenGemResult,
@@ -29,6 +34,7 @@ from cinematch.schemas.movie import (
     MovieResponse,
     MovieSearchResponse,
     MovieSummary,
+    PopularDirectorsResponse,
     SemanticSearchResponse,
     SemanticSearchResult,
     SimilarMovie,
@@ -323,6 +329,99 @@ async def get_decade_movies(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
         except Exception:
             logger.warning("Failed to cache decade movies", exc_info=True)
+
+    return response
+
+
+@router.get("/directors/search", response_model=DirectorSearchResponse)
+async def search_directors(
+    q: str = Query(min_length=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+):
+    rows = await movie_service.search_directors(q, db, limit=limit)
+    return DirectorSearchResponse(
+        results=[
+            DirectorSummary(name=name, film_count=count, avg_vote=round(avg, 2))
+            for name, count, avg in rows
+        ],
+        query=q,
+    )
+
+
+@router.get("/directors/popular", response_model=PopularDirectorsResponse)
+async def popular_directors(
+    limit: int = Query(default=30, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = f"popular_directors:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return PopularDirectorsResponse.model_validate_json(cached)
+
+    rows = await movie_service.popular_directors(db, limit=limit)
+
+    response = PopularDirectorsResponse(
+        results=[
+            DirectorSummary(name=name, film_count=count, avg_vote=round(avg, 2))
+            for name, count, avg in rows
+        ],
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache popular directors", exc_info=True)
+
+    return response
+
+
+@router.get("/directors/filmography", response_model=DirectorFilmographyResponse)
+async def director_filmography(
+    name: str = Query(min_length=1, max_length=255),
+    user_id: int | None = Query(default=None, ge=1),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    use_cache = user_id is None
+    cache_key = f"director_filmography:{name.lower()}"
+
+    if use_cache and cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return DirectorFilmographyResponse.model_validate_json(cached)
+
+    films, stats = await movie_service.filmography_by_director(
+        db, name=name, user_id=user_id
+    )
+
+    if not films:
+        raise HTTPException(status_code=404, detail="Director not found")
+
+    response = DirectorFilmographyResponse(
+        director=name,
+        stats=DirectorStats(**stats),
+        filmography=[
+            DirectorFilmResult(
+                movie=MovieSummary.model_validate(movie),
+                user_rating=rating,
+            )
+            for movie, rating in films
+        ],
+    )
+
+    if use_cache and cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache director filmography", exc_info=True)
 
     return response
 
