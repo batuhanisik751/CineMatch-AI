@@ -104,6 +104,31 @@ export interface TopChartsResponse {
   limit: number;
 }
 
+export interface DecadeSummary {
+  decade: number;
+  movie_count: number;
+  avg_rating: number;
+}
+
+export interface DecadesResponse {
+  decades: DecadeSummary[];
+}
+
+export interface DecadeMovieResult {
+  movie: MovieSummary;
+  avg_rating: number;
+  rating_count: number;
+}
+
+export interface DecadeMoviesResponse {
+  results: DecadeMovieResult[];
+  decade: number;
+  genre: string | null;
+  total: number;
+  offset: number;
+  limit: number;
+}
+
 export interface RatingResponse {
   user_id: number;
   movie_id: number;

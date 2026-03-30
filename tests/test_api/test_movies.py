@@ -440,3 +440,127 @@ async def test_top_charts_empty_results(client, mock_movie_service):
     data = resp.json()
     assert data["results"] == []
     assert data["genre"] == "Horror"
+
+
+# --- Decades ---
+
+
+async def test_decades_success(client):
+    resp = await client.get("/api/v1/movies/decades")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "decades" in data
+    assert len(data["decades"]) == 2
+
+
+async def test_decades_response_structure(client):
+    resp = await client.get("/api/v1/movies/decades")
+    data = resp.json()
+    item = data["decades"][0]
+    assert item["decade"] == 2000
+    assert item["movie_count"] == 150
+    assert item["avg_rating"] == 6.8
+
+
+async def test_decades_cache_hit(client, mock_movie_service, mock_cache_service):
+    cached_response = '{"decades":[{"decade":2000,"movie_count":150,"avg_rating":6.8}]}'
+    mock_cache_service.get.return_value = cached_response
+
+    resp = await client.get("/api/v1/movies/decades")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["decades"][0]["decade"] == 2000
+    mock_movie_service.get_decade_stats.assert_not_called()
+
+
+async def test_decades_cache_miss(client, mock_movie_service, mock_cache_service):
+    resp = await client.get("/api/v1/movies/decades")
+    assert resp.status_code == 200
+    mock_movie_service.get_decade_stats.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "decades"
+    assert call_args[1]["ttl"] == 21600
+
+
+async def test_decades_no_cache_service(app, client, mock_movie_service):
+    from cinematch.api.deps import get_cache_service
+
+    app.dependency_overrides[get_cache_service] = lambda: None
+    resp = await client.get("/api/v1/movies/decades")
+    assert resp.status_code == 200
+    mock_movie_service.get_decade_stats.assert_called_once()
+
+
+# --- Decade Movies ---
+
+
+async def test_decade_movies_default_params(client, sample_movie):
+    resp = await client.get("/api/v1/movies/decades/1990")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["decade"] == 1990
+    assert data["offset"] == 0
+    assert data["limit"] == 20
+    assert data["total"] == 1
+    assert len(data["results"]) == 1
+    assert data["results"][0]["movie"]["id"] == sample_movie.id
+
+
+async def test_decade_movies_with_genre(client, mock_movie_service):
+    resp = await client.get("/api/v1/movies/decades/1990", params={"genre": "Action"})
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.top_by_decade.call_args.kwargs
+    assert call_kwargs["genre"] == "Action"
+
+
+async def test_decade_movies_with_pagination(client, mock_movie_service):
+    resp = await client.get("/api/v1/movies/decades/2000", params={"offset": 20, "limit": 10})
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.top_by_decade.call_args.kwargs
+    assert call_kwargs["offset"] == 20
+    assert call_kwargs["limit"] == 10
+
+
+async def test_decade_movies_invalid_decade(client):
+    resp = await client.get("/api/v1/movies/decades/1995")
+    assert resp.status_code == 400
+    assert "Invalid decade" in resp.json()["detail"]
+
+
+async def test_decade_movies_invalid_decade_out_of_range(client):
+    resp = await client.get("/api/v1/movies/decades/1800")
+    assert resp.status_code == 400
+
+
+async def test_decade_movies_cache_hit(client, mock_movie_service, mock_cache_service):
+    cached_response = (
+        '{"results":[{"movie":{"id":1,"title":"The Matrix","genres":["Action","Sci-Fi"],'
+        '"vote_average":8.2,"release_date":"1999-03-31","poster_path":"/poster.jpg"},'
+        '"avg_rating":8.5,"rating_count":150}],"decade":1990,"genre":null,'
+        '"total":1,"offset":0,"limit":20}'
+    )
+    mock_cache_service.get.return_value = cached_response
+
+    resp = await client.get("/api/v1/movies/decades/1990")
+    assert resp.status_code == 200
+    mock_movie_service.top_by_decade.assert_not_called()
+
+
+async def test_decade_movies_cache_miss(client, mock_movie_service, mock_cache_service):
+    resp = await client.get("/api/v1/movies/decades/1990")
+    assert resp.status_code == 200
+    mock_movie_service.top_by_decade.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "decade_movies:1990:None:0:20"
+    assert call_args[1]["ttl"] == 21600
+
+
+async def test_decade_movies_empty_results(client, mock_movie_service):
+    mock_movie_service.top_by_decade.return_value = ([], 0)
+    resp = await client.get("/api/v1/movies/decades/1920")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["results"] == []
+    assert data["total"] == 0

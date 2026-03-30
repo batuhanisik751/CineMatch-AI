@@ -1,5 +1,7 @@
 import { apiFetch } from "./client";
 import type {
+  DecadeMoviesResponse,
+  DecadesResponse,
   GenresResponse,
   HiddenGemsResponse,
   MovieListResponse,
@@ -77,4 +79,23 @@ export function getHiddenGems(params: {
   if (params.genre) qs.set("genre", params.genre);
   if (params.limit != null) qs.set("limit", String(params.limit));
   return apiFetch<HiddenGemsResponse>(`/api/v1/movies/hidden-gems?${qs.toString()}`);
+}
+
+export function getDecades() {
+  return apiFetch<DecadesResponse>("/api/v1/movies/decades");
+}
+
+export function getDecadeMovies(decade: number, params: {
+  genre?: string;
+  offset?: number;
+  limit?: number;
+} = {}) {
+  const qs = new URLSearchParams();
+  if (params.genre) qs.set("genre", params.genre);
+  if (params.offset != null) qs.set("offset", String(params.offset));
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  const query = qs.toString();
+  return apiFetch<DecadeMoviesResponse>(
+    `/api/v1/movies/decades/${decade}${query ? `?${query}` : ""}`
+  );
 }

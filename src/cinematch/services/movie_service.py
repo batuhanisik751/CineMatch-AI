@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import cast, desc, extract, func, select, text
+from sqlalchemy import Integer, cast, desc, extract, func, select, text
 from sqlalchemy.dialects.postgresql import JSONB as JSONB_TYPE
 
 from cinematch.models.movie import Movie
@@ -241,3 +241,79 @@ class MovieService:
 
         result = await db.execute(stmt)
         return [(row[0], float(row[1]), int(row[2])) for row in result.all()]
+
+    async def get_decade_stats(
+        self,
+        db: AsyncSession,
+    ) -> list[tuple[int, int, float]]:
+        """Return available decades with movie count and average vote_average."""
+        decade_col = (
+            (func.floor(extract("year", Movie.release_date) / 10) * 10)
+            .cast(Integer)
+            .label("decade")
+        )
+
+        stmt = (
+            select(
+                decade_col,
+                func.count().label("movie_count"),
+                func.avg(Movie.vote_average).label("avg_rating"),
+            )
+            .where(Movie.release_date.isnot(None))
+            .group_by(decade_col)
+            .order_by(desc(decade_col))
+        )
+        result = await db.execute(stmt)
+        return [(int(row[0]), int(row[1]), float(row[2])) for row in result.all()]
+
+    async def top_by_decade(
+        self,
+        db: AsyncSession,
+        *,
+        decade: int,
+        genre: str | None = None,
+        min_ratings: int = 10,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[list[tuple[Movie, float, int]], int]:
+        """Return top-rated movies for a decade, ranked by in-system avg rating."""
+        year_min = decade
+        year_max = decade + 9
+
+        filters = [
+            extract("year", Movie.release_date) >= year_min,
+            extract("year", Movie.release_date) <= year_max,
+        ]
+        if genre is not None:
+            filters.append(Movie.genres.op("@>")(cast([genre], JSONB_TYPE)))
+
+        # Count query
+        count_stmt = select(func.count()).select_from(
+            select(Movie.id)
+            .join(Rating, Rating.movie_id == Movie.id)
+            .where(*filters)
+            .group_by(Movie.id)
+            .having(func.count(Rating.id) >= min_ratings)
+            .subquery()
+        )
+        count_result = await db.execute(count_stmt)
+        total = count_result.scalar_one()
+
+        # Data query
+        avg_rating_col = func.avg(Rating.rating).label("avg_rating")
+        rating_count_col = func.count(Rating.id).label("rating_count")
+
+        stmt = (
+            select(Movie, avg_rating_col, rating_count_col)
+            .join(Rating, Rating.movie_id == Movie.id)
+            .where(*filters)
+            .group_by(Movie.id)
+            .having(func.count(Rating.id) >= min_ratings)
+            .order_by(desc(avg_rating_col))
+            .offset(offset)
+            .limit(limit)
+        )
+
+        result = await db.execute(stmt)
+        rows = [(row[0], float(row[1]), int(row[2])) for row in result.all()]
+        return rows, total

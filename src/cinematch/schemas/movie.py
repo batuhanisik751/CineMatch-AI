@@ -127,3 +127,28 @@ class TopChartsResponse(BaseModel):
     results: list[TopChartResult]
     genre: str
     limit: int
+
+
+class DecadeSummary(BaseModel):
+    decade: int
+    movie_count: int
+    avg_rating: float
+
+
+class DecadesResponse(BaseModel):
+    decades: list[DecadeSummary]
+
+
+class DecadeMovieResult(BaseModel):
+    movie: MovieSummary
+    avg_rating: float
+    rating_count: int
+
+
+class DecadeMoviesResponse(BaseModel):
+    results: list[DecadeMovieResult]
+    decade: int
+    genre: str | None
+    total: int
+    offset: int
+    limit: int

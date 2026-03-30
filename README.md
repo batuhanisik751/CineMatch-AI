@@ -96,7 +96,7 @@ npm run dev
 
 Opens at http://localhost:3000 — connects to the backend API automatically.
 
-Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, mood-based discovery (preset moods + custom vibe input, personalized by blending mood with user taste), hybrid/content/collab recommendations with smart explanation tags ("Because you liked Inception", "Same director as Interstellar — Christopher Nolan", content vs. collab score breakdown bar), "Why This?" deep-dive explanation button (powered by Mistral), **Top Charts** (genre-tab selector showing the highest community-rated movies per genre, ranked by in-system average with numbered badges), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with rating histogram, top directors/actors, and monthly activity timeline.
+Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, mood-based discovery (preset moods + custom vibe input, personalized by blending mood with user taste), hybrid/content/collab recommendations with smart explanation tags ("Because you liked Inception", "Same director as Interstellar — Christopher Nolan", content vs. collab score breakdown bar), "Why This?" deep-dive explanation button (powered by Mistral), **Top Charts** (genre-tab selector showing the highest community-rated movies per genre, ranked by in-system average with numbered badges), **Decade Explorer** (browse film history by era — clickable decade grid with movie counts and avg ratings, drill into any decade for top-rated movies with genre filtering and ranked badges), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with rating histogram, top directors/actors, and monthly activity timeline.
 
 ## API Endpoints
 
@@ -109,6 +109,8 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/movies/discover?genre=&sort_by=popularity&year_min=&year_max=&offset=0&limit=20` | Browse movies with filters and pagination |
 | GET | `/api/v1/movies/genres` | All genres with movie counts |
 | GET | `/api/v1/movies/top?genre=Drama&limit=20` | Top-rated movies for a genre, ranked by community avg rating (min 50 ratings) |
+| GET | `/api/v1/movies/decades` | Available decades with movie counts and avg ratings |
+| GET | `/api/v1/movies/decades/{decade}?genre=&offset=0&limit=20` | Top-rated movies for a decade (e.g., `/decades/1990`) |
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/users/{id}` | User details |
 | GET | `/api/v1/users/{id}/stats` | User profile analytics (rating histogram, top directors/actors, timeline) |
@@ -177,6 +179,8 @@ Redis caches API responses with automatic invalidation:
 
 | Cache Key Pattern | TTL | Invalidation |
 |---|---|---|
+| `decades` | 6 hours | Manual |
+| `decade_movies:{decade}:{genre}:{offset}:{limit}` | 6 hours | Manual |
 | `top_charts:{genre}:{limit}` | 6 hours | Manual |
 | `movie:{id}` | 1 hour | Manual |
 | `similar:{id}:{top_k}` | 30 min | Never (content similarity is stable) |
@@ -197,7 +201,7 @@ src/cinematch/
 ├── api/
 │   ├── deps.py                   # Dependency injection (get_db, services)
 │   └── v1/                       # REST endpoints
-│       ├── movies.py             # GET /{id}, /search, /semantic-search, /discover, /genres, /{id}/similar
+│       ├── movies.py             # GET /{id}, /search, /semantic-search, /discover, /genres, /decades, /{id}/similar
 │       ├── ratings.py            # POST/GET /users/{id}/ratings
 │       ├── recommendations.py    # GET /users/{id}/recommendations, POST /recommendations/mood
 │       ├── users.py              # GET /users/{id}, /users/{id}/stats

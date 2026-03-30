@@ -17,6 +17,10 @@ from cinematch.api.deps import (
 from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import ServiceUnavailableError
 from cinematch.schemas.movie import (
+    DecadeMovieResult,
+    DecadeMoviesResponse,
+    DecadesResponse,
+    DecadeSummary,
     GenreCount,
     GenresResponse,
     HiddenGemResult,
@@ -238,6 +242,87 @@ async def top_charts_by_genre(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
         except Exception:
             logger.warning("Failed to cache top charts", exc_info=True)
+
+    return response
+
+
+@router.get("/decades", response_model=DecadesResponse)
+async def get_decades(
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = "decades"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return DecadesResponse.model_validate_json(cached)
+
+    rows = await movie_service.get_decade_stats(db)
+
+    response = DecadesResponse(
+        decades=[
+            DecadeSummary(decade=decade, movie_count=count, avg_rating=round(avg, 2))
+            for decade, count, avg in rows
+        ]
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache decades", exc_info=True)
+
+    return response
+
+
+@router.get("/decades/{decade}", response_model=DecadeMoviesResponse)
+async def get_decade_movies(
+    decade: int,
+    genre: str | None = Query(default=None, min_length=1, max_length=100),
+    offset: int = Query(default=0, ge=0, le=10000),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    if decade < 1880 or decade > 2020 or decade % 10 != 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid decade. Use format like 1990, 2000, 2010.",
+        )
+
+    cache_key = f"decade_movies:{decade}:{genre}:{offset}:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return DecadeMoviesResponse.model_validate_json(cached)
+
+    rows, total = await movie_service.top_by_decade(
+        db, decade=decade, genre=genre, offset=offset, limit=limit
+    )
+
+    response = DecadeMoviesResponse(
+        results=[
+            DecadeMovieResult(
+                movie=MovieSummary.model_validate(movie),
+                avg_rating=round(avg, 4),
+                rating_count=count,
+            )
+            for movie, avg, count in rows
+        ],
+        decade=decade,
+        genre=genre,
+        total=total,
+        offset=offset,
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache decade movies", exc_info=True)
 
     return response
 
