@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,11 +17,6 @@ import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
-
-const CHART_COLORS = [
-  "#D0BCFF", "#CCC2DC", "#EFB8C8", "#FFB4AB", "#FFD8E4",
-  "#B8C9FF", "#A8D8B9", "#FFD6A5", "#FDFFB6", "#CAFFBF",
-];
 
 export default function Profile() {
   const { userId } = useUserId();
@@ -158,46 +152,22 @@ export default function Profile() {
               <p className="text-on-surface-variant font-body">Insights from your viewing history and ratings.</p>
             </div>
 
-            {/* Row 1: Genre Distribution + Rating Distribution */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Genre Distribution */}
-              <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">Genre Distribution</h3>
-                <ResponsiveContainer width="100%" height={Math.max(200, stats.genre_distribution.slice(0, 10).length * 36)}>
-                  <BarChart data={stats.genre_distribution.slice(0, 10)} layout="vertical" margin={{ left: 10, right: 30, top: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="genre" width={90} tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ background: "#1C1B1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#E6E1E5" }}
-                      formatter={(value, _, entry) => [`${value} (${(entry as { payload: { percentage: number } }).payload.percentage}%)`, "Rated"]}
-                    />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                      {stats.genre_distribution.slice(0, 10).map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Rating Distribution */}
-              <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">Rating Distribution</h3>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={stats.rating_distribution} margin={{ left: -10, right: 10, top: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="rating" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{ background: "#1C1B1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#E6E1E5" }}
-                      formatter={(value) => [value, "Ratings"]}
-                      labelFormatter={(label) => `${label} stars`}
-                    />
-                    <Bar dataKey="count" fill="#D0BCFF" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+            {/* Rating Distribution */}
+            <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">Rating Distribution</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={stats.rating_distribution} margin={{ left: -10, right: 10, top: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis dataKey="rating" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ background: "#1C1B1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#E6E1E5" }}
+                    formatter={(value) => [value, "Ratings"]}
+                    labelFormatter={(label) => `${label} stars`}
+                  />
+                  <Bar dataKey="count" fill="#D0BCFF" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
 
             {/* Row 2: Top Directors + Top Actors */}
