@@ -30,6 +30,8 @@ from cinematch.schemas.movie import (
     SimilarMovie,
     SimilarMoviesResponse,
     SortOption,
+    TopChartResult,
+    TopChartsResponse,
     TrendingMovieResult,
     TrendingResponse,
 )
@@ -198,6 +200,44 @@ async def hidden_gems(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
         except Exception:
             logger.warning("Failed to cache hidden gems", exc_info=True)
+
+    return response
+
+
+@router.get("/top", response_model=TopChartsResponse)
+async def top_charts_by_genre(
+    genre: str = Query(min_length=1, max_length=100),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = f"top_charts:{genre}:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return TopChartsResponse.model_validate_json(cached)
+
+    rows = await movie_service.top_by_genre(db, genre=genre, limit=limit)
+
+    response = TopChartsResponse(
+        results=[
+            TopChartResult(
+                movie=MovieSummary.model_validate(movie),
+                avg_rating=round(avg, 4),
+                rating_count=count,
+            )
+            for movie, avg, count in rows
+        ],
+        genre=genre,
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache top charts", exc_info=True)
 
     return response
 

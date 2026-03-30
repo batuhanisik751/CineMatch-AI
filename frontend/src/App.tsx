@@ -6,6 +6,7 @@ import MovieDetail from "./pages/MovieDetail";
 import Profile from "./pages/Profile";
 import Recommendations from "./pages/Recommendations";
 import Search from "./pages/Search";
+import TopCharts from "./pages/TopCharts";
 import Trending from "./pages/Trending";
 import Watchlist from "./pages/Watchlist";
 
@@ -15,6 +16,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/discover" element={<Discover />} />
       <Route path="/trending" element={<Trending />} />
+      <Route path="/top-charts" element={<TopCharts />} />
       <Route path="/hidden-gems" element={<HiddenGems />} />
       <Route path="/search" element={<Search />} />
       <Route path="/movies/:id" element={<MovieDetail />} />

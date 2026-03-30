@@ -92,6 +92,18 @@ export interface HiddenGemsResponse {
   limit: number;
 }
 
+export interface TopChartResult {
+  movie: MovieSummary;
+  avg_rating: number;
+  rating_count: number;
+}
+
+export interface TopChartsResponse {
+  results: TopChartResult[];
+  genre: string;
+  limit: number;
+}
+
 export interface RatingResponse {
   user_id: number;
   movie_id: number;

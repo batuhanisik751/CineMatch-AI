@@ -7,6 +7,7 @@ import type {
   MovieSearchResponse,
   SemanticSearchResponse,
   SimilarMoviesResponse,
+  TopChartsResponse,
   TrendingResponse,
 } from "./types";
 
@@ -55,6 +56,12 @@ export function getGenres() {
 export function getTrendingMovies(window = 7, limit = 20) {
   return apiFetch<TrendingResponse>(
     `/api/v1/movies/trending?window=${window}&limit=${limit}`
+  );
+}
+
+export function getTopCharts(genre: string, limit = 20) {
+  return apiFetch<TopChartsResponse>(
+    `/api/v1/movies/top?genre=${encodeURIComponent(genre)}&limit=${limit}`
   );
 }
 

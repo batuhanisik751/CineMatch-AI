@@ -428,3 +428,76 @@ async def test_hidden_gems_custom_params(service, mock_db):
 
     assert len(results) == 1
     mock_db.execute.assert_called_once()
+
+
+# --- top_by_genre tests ---
+
+
+async def test_top_by_genre_returns_tuples(service, mock_db):
+    """Returns (Movie, float, int) tuples; execute called once."""
+    movie1 = _mock_movie(id=1, title="Top Thriller")
+
+    result_mock = MagicMock()
+    result_mock.all.return_value = [(movie1, 8.7, 120)]
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    results = await service.top_by_genre(mock_db, genre="Thriller")
+
+    assert len(results) == 1
+    assert results[0] == (movie1, 8.7, 120)
+    mock_db.execute.assert_called_once()
+
+
+async def test_top_by_genre_empty_results(service, mock_db):
+    """Returns empty list when no movies match."""
+    result_mock = MagicMock()
+    result_mock.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    results = await service.top_by_genre(mock_db, genre="Thriller")
+
+    assert results == []
+
+
+async def test_top_by_genre_respects_limit(service, mock_db):
+    """Custom limit is forwarded; execute called once."""
+    movie = _mock_movie(id=1, title="Top Action")
+
+    result_mock = MagicMock()
+    result_mock.all.return_value = [(movie, 9.0, 200)]
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    results = await service.top_by_genre(mock_db, genre="Action", limit=5)
+
+    assert len(results) == 1
+    mock_db.execute.assert_called_once()
+
+
+async def test_top_by_genre_preserves_order(service, mock_db):
+    """Results are returned in DB-dictated order (highest avg first)."""
+    movie1 = _mock_movie(id=1, title="Best Drama")
+    movie2 = _mock_movie(id=2, title="Second Drama")
+
+    result_mock = MagicMock()
+    result_mock.all.return_value = [(movie1, 9.1, 300), (movie2, 8.5, 150)]
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    results = await service.top_by_genre(mock_db, genre="Drama")
+
+    assert len(results) == 2
+    assert results[0][0] == movie1
+    assert results[1][0] == movie2
+
+
+async def test_top_by_genre_custom_min_ratings(service, mock_db):
+    """Custom min_ratings is accepted; execute called once."""
+    movie = _mock_movie(id=1, title="Indie Gem")
+
+    result_mock = MagicMock()
+    result_mock.all.return_value = [(movie, 8.2, 15)]
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    results = await service.top_by_genre(mock_db, genre="Comedy", min_ratings=10)
+
+    assert len(results) == 1
+    mock_db.execute.assert_called_once()

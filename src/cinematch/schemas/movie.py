@@ -115,3 +115,15 @@ class HiddenGemsResponse(BaseModel):
     min_rating: float
     max_votes: int
     limit: int
+
+
+class TopChartResult(BaseModel):
+    movie: MovieSummary
+    avg_rating: float
+    rating_count: int
+
+
+class TopChartsResponse(BaseModel):
+    results: list[TopChartResult]
+    genre: str
+    limit: int

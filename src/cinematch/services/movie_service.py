@@ -216,3 +216,28 @@ class MovieService:
 
         result = await db.execute(stmt)
         return list(result.scalars().all())
+
+    async def top_by_genre(
+        self,
+        db: AsyncSession,
+        *,
+        genre: str,
+        min_ratings: int = 50,
+        limit: int = 20,
+    ) -> list[tuple[Movie, float, int]]:
+        """Return top-rated movies for a genre, ranked by in-system average rating."""
+        avg_rating_col = func.avg(Rating.rating).label("avg_rating")
+        rating_count_col = func.count(Rating.id).label("rating_count")
+
+        stmt = (
+            select(Movie, avg_rating_col, rating_count_col)
+            .join(Rating, Rating.movie_id == Movie.id)
+            .where(Movie.genres.op("@>")(cast([genre], JSONB_TYPE)))
+            .group_by(Movie.id)
+            .having(func.count(Rating.id) >= min_ratings)
+            .order_by(desc(avg_rating_col))
+            .limit(limit)
+        )
+
+        result = await db.execute(stmt)
+        return [(row[0], float(row[1]), int(row[2])) for row in result.all()]

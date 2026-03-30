@@ -4,6 +4,7 @@ const items = [
   { to: "/", icon: "home", label: "Home" },
   { to: "/discover", icon: "explore", label: "Discover" },
   { to: "/trending", icon: "trending_up", label: "Trending" },
+  { to: "/top-charts", icon: "leaderboard", label: "Top Charts" },
   { to: "/hidden-gems", icon: "diamond", label: "Hidden Gems" },
   { to: "/recommendations", icon: "auto_awesome", label: "Recommendations" },
   { to: "/watchlist", icon: "bookmark", label: "Watchlist" },

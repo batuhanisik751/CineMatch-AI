@@ -357,3 +357,86 @@ async def test_hidden_gems_no_cache_service(app, client, mock_movie_service):
     resp = await client.get("/api/v1/movies/hidden-gems")
     assert resp.status_code == 200
     mock_movie_service.hidden_gems.assert_called_once()
+
+
+# --- Top Charts by Genre endpoint tests ---
+
+
+async def test_top_charts_success(client, sample_movie):
+    resp = await client.get("/api/v1/movies/top", params={"genre": "Thriller"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["genre"] == "Thriller"
+    assert data["limit"] == 20
+    assert len(data["results"]) == 1
+    result = data["results"][0]
+    assert result["movie"]["title"] == sample_movie.title
+    assert result["avg_rating"] == 8.5
+    assert result["rating_count"] == 150
+
+
+async def test_top_charts_missing_genre_returns_422(client):
+    resp = await client.get("/api/v1/movies/top")
+    assert resp.status_code == 422
+
+
+async def test_top_charts_custom_limit(client, mock_movie_service):
+    resp = await client.get("/api/v1/movies/top", params={"genre": "Action", "limit": 5})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["limit"] == 5
+    call_kwargs = mock_movie_service.top_by_genre.call_args.kwargs
+    assert call_kwargs["limit"] == 5
+
+
+async def test_top_charts_cache_miss(client, mock_movie_service, mock_cache_service):
+    resp = await client.get("/api/v1/movies/top", params={"genre": "Thriller"})
+    assert resp.status_code == 200
+    mock_movie_service.top_by_genre.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "top_charts:Thriller:20"
+    assert call_args[1]["ttl"] == 21600
+
+
+async def test_top_charts_cache_hit(client, mock_movie_service, mock_cache_service):
+    cached_response = (
+        '{"results":[{"movie":{"id":1,"title":"The Matrix","genres":["Action","Sci-Fi"],'
+        '"vote_average":8.2,"release_date":"1999-03-31","poster_path":"/poster.jpg"},'
+        '"avg_rating":8.5,"rating_count":150}],"genre":"Thriller","limit":20}'
+    )
+    mock_cache_service.get.return_value = cached_response
+
+    resp = await client.get("/api/v1/movies/top", params={"genre": "Thriller"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["results"][0]["movie"]["title"] == "The Matrix"
+    mock_movie_service.top_by_genre.assert_not_called()
+
+
+async def test_top_charts_invalid_limit_zero(client):
+    resp = await client.get("/api/v1/movies/top", params={"genre": "Action", "limit": 0})
+    assert resp.status_code == 422
+
+
+async def test_top_charts_invalid_limit_over_max(client):
+    resp = await client.get("/api/v1/movies/top", params={"genre": "Action", "limit": 101})
+    assert resp.status_code == 422
+
+
+async def test_top_charts_no_cache_service(app, client, mock_movie_service):
+    from cinematch.api.deps import get_cache_service
+
+    app.dependency_overrides[get_cache_service] = lambda: None
+    resp = await client.get("/api/v1/movies/top", params={"genre": "Drama"})
+    assert resp.status_code == 200
+    mock_movie_service.top_by_genre.assert_called_once()
+
+
+async def test_top_charts_empty_results(client, mock_movie_service):
+    mock_movie_service.top_by_genre.return_value = []
+    resp = await client.get("/api/v1/movies/top", params={"genre": "Horror"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["results"] == []
+    assert data["genre"] == "Horror"

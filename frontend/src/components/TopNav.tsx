@@ -33,6 +33,7 @@ export default function TopNav() {
         {navLink("/", "Home")}
         {navLink("/discover", "Discover")}
         {navLink("/trending", "Trending")}
+        {navLink("/top-charts", "Top Charts")}
         {navLink("/hidden-gems", "Hidden Gems")}
         {navLink("/recommendations", "Recommendations")}
         {navLink("/watchlist", "Watchlist")}
