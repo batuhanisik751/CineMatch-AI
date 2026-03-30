@@ -15,7 +15,7 @@ export default function Recommendations() {
   const [params, setParams] = useSearchParams();
   const { userId } = useUserId();
   const [strategy, setStrategy] = useState(params.get("strategy") || "hybrid");
-  const [topK, setTopK] = useState(20);
+  const [topK, setTopK] = useState(Number(params.get("topK")) || 20);
   const [recs, setRecs] = useState<RecommendationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,7 +30,7 @@ export default function Recommendations() {
   const fetchRecs = () => {
     setLoading(true);
     setError("");
-    setParams({ user: String(userId), strategy });
+    setParams({ user: String(userId), strategy, topK: String(topK) });
     getRecommendations(userId, topK, strategy)
       .then((data) => {
         setRecs(data.recommendations);

@@ -22,22 +22,37 @@ const PAGE_SIZE = 20;
 export default function Discover() {
   const [params, setParams] = useSearchParams();
 
+  // Derive filter state from URL params (single source of truth for back-nav)
+  const selectedGenre = params.get("genre") || null;
+  const sortBy = params.get("sort_by") || "popularity";
+  const offset = Number(params.get("offset")) || 0;
+  const searchMode: "title" | "vibe" = (params.get("mode") as "title" | "vibe") || "title";
+  const searchQuery = params.get("q") || "";
+
   const [genres, setGenres] = useState<GenreCount[]>([]);
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState(params.get("sort_by") || "popularity");
-  const [yearMin, setYearMin] = useState("");
-  const [yearMax, setYearMax] = useState("");
-  const [debouncedYearMin, setDebouncedYearMin] = useState("");
-  const [debouncedYearMax, setDebouncedYearMax] = useState("");
-  const [searchMode, setSearchMode] = useState<"title" | "vibe">(
-    (params.get("mode") as "title" | "vibe") || "title"
-  );
-  const [searchQuery, setSearchQuery] = useState(params.get("q") || "");
+  const [yearMin, setYearMin] = useState(params.get("year_min") || "");
+  const [yearMax, setYearMax] = useState(params.get("year_max") || "");
+  const [debouncedYearMin, setDebouncedYearMin] = useState(params.get("year_min") || "");
+  const [debouncedYearMax, setDebouncedYearMax] = useState(params.get("year_max") || "");
   const [movies, setMovies] = useState<MovieSummary[]>([]);
   const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Helper: update URL params while preserving existing ones
+  const updateParams = (updates: Record<string, string | null>) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null || value === "" || value === "0") {
+          next.delete(key);
+        } else {
+          next.set(key, value);
+        }
+      }
+      return next;
+    });
+  };
 
   const yearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
@@ -48,10 +63,12 @@ export default function Discover() {
     yearTimerRef.current = setTimeout(() => {
       setDebouncedYearMin(yearMin);
       setDebouncedYearMax(yearMax);
+      updateParams({ year_min: yearMin || null, year_max: yearMax || null });
     }, 600);
     return () => {
       if (yearTimerRef.current) clearTimeout(yearTimerRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yearMin, yearMax]);
 
   // Load genres once
@@ -113,21 +130,11 @@ export default function Discover() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setOffset(0);
-    // Update URL params for shareability
-    if (searchQuery.trim()) {
-      const p: Record<string, string> = { q: searchQuery.trim() };
-      if (searchMode === "vibe") p.mode = "vibe";
-      setParams(p);
-    } else {
-      setParams({});
-    }
+    updateParams({ offset: null });
   };
 
   const clearSearch = () => {
-    setSearchQuery("");
-    setOffset(0);
-    setParams({});
+    updateParams({ q: null, mode: null, offset: null });
   };
 
   return (
@@ -152,7 +159,7 @@ export default function Discover() {
             </div>
             <input
               value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setOffset(0); }}
+              onChange={(e) => updateParams({ q: e.target.value, offset: null })}
               className="w-full h-14 pl-14 pr-12 bg-surface-container-lowest border-none rounded-xl text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint shadow-lg transition-all duration-300 font-body text-base"
               placeholder={searchMode === "vibe" ? "Describe a movie vibe..." : "Search by title..."}
               type="text"
@@ -171,7 +178,7 @@ export default function Discover() {
           {/* Search mode toggle */}
           <div className="flex gap-2 mb-8">
             <button
-              onClick={() => { setSearchMode("title"); setOffset(0); }}
+              onClick={() => updateParams({ mode: null, offset: null })}
               className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
                 searchMode === "title"
                   ? "bg-primary-container text-on-primary-container shadow-md"
@@ -181,7 +188,7 @@ export default function Discover() {
               Search by title
             </button>
             <button
-              onClick={() => { setSearchMode("vibe"); setOffset(0); }}
+              onClick={() => updateParams({ mode: "vibe", offset: null })}
               className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
                 searchMode === "vibe"
                   ? "bg-primary-container text-on-primary-container shadow-md"
@@ -198,7 +205,7 @@ export default function Discover() {
               {/* Genre chips */}
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 <button
-                  onClick={() => { setSelectedGenre(null); setOffset(0); }}
+                  onClick={() => updateParams({ genre: null, offset: null })}
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
                     selectedGenre === null
                       ? "bg-primary-container text-on-primary-container shadow-md"
@@ -210,7 +217,7 @@ export default function Discover() {
                 {genres.map((g) => (
                   <button
                     key={g.genre}
-                    onClick={() => { setSelectedGenre(g.genre); setOffset(0); }}
+                    onClick={() => updateParams({ genre: g.genre, offset: null })}
                     className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
                       selectedGenre === g.genre
                         ? "bg-primary-container text-on-primary-container shadow-md"
@@ -231,7 +238,7 @@ export default function Discover() {
                   <div className="relative">
                     <select
                       value={sortBy}
-                      onChange={(e) => { setSortBy(e.target.value); setOffset(0); }}
+                      onChange={(e) => updateParams({ sort_by: e.target.value, offset: null })}
                       className="bg-surface-container-lowest border-none rounded-lg p-3 pr-10 text-on-surface appearance-none focus:ring-2 focus:ring-surface-tint font-body text-sm"
                     >
                       {SORT_OPTIONS.map((opt) => (
@@ -256,7 +263,7 @@ export default function Discover() {
                     max="2030"
                     placeholder="e.g. 2000"
                     value={yearMin}
-                    onChange={(e) => { setYearMin(e.target.value); setOffset(0); }}
+                    onChange={(e) => { setYearMin(e.target.value); updateParams({ offset: null }); }}
                     className="w-28 bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint font-body text-sm"
                   />
                 </div>
@@ -271,7 +278,7 @@ export default function Discover() {
                     max="2030"
                     placeholder="e.g. 2024"
                     value={yearMax}
-                    onChange={(e) => { setYearMax(e.target.value); setOffset(0); }}
+                    onChange={(e) => { setYearMax(e.target.value); updateParams({ offset: null }); }}
                     className="w-28 bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint font-body text-sm"
                   />
                 </div>
@@ -281,7 +288,7 @@ export default function Discover() {
 
           {/* Results */}
           {loading && <LoadingSpinner text={isSearchMode ? "Searching..." : "Loading movies..."} />}
-          {error && <ErrorPanel message={error} onRetry={() => setOffset(0)} />}
+          {error && <ErrorPanel message={error} onRetry={() => updateParams({ offset: null })} />}
 
           {!loading && !error && (
             <>
@@ -304,7 +311,7 @@ export default function Discover() {
               {!isSearchMode && totalPages > 1 && (
                 <div className="flex items-center justify-center gap-4 mt-12">
                   <button
-                    onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                    onClick={() => updateParams({ offset: String(Math.max(0, offset - PAGE_SIZE)) })}
                     disabled={offset === 0}
                     className="px-5 py-2.5 bg-surface-container-highest text-on-surface rounded-lg font-headline text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-high transition-colors"
                   >
@@ -314,7 +321,7 @@ export default function Discover() {
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
-                    onClick={() => setOffset(offset + PAGE_SIZE)}
+                    onClick={() => updateParams({ offset: String(offset + PAGE_SIZE) })}
                     disabled={offset + PAGE_SIZE >= total}
                     className="px-5 py-2.5 bg-surface-container-highest text-on-surface rounded-lg font-headline text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-high transition-colors"
                   >
