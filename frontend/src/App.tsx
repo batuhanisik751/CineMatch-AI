@@ -1,4 +1,5 @@
-import { Route, Routes } from "react-router-dom";
+import { useRef } from "react";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Actors from "./pages/Actors";
 import Decades from "./pages/Decades";
 import Directors from "./pages/Directors";
@@ -14,6 +15,17 @@ import Trending from "./pages/Trending";
 import Watchlist from "./pages/Watchlist";
 
 export default function App() {
+  const location = useLocation();
+  const navCountRef = useRef(0);
+  const prevLocationRef = useRef(location);
+
+  // Increment counter on every navigation (including browser back/forward)
+  // so keyed routes always get a fresh mount
+  if (location !== prevLocationRef.current) {
+    navCountRef.current++;
+    prevLocationRef.current = location;
+  }
+
   return (
     <Routes>
       <Route path="/" element={<Home />} />
@@ -21,9 +33,9 @@ export default function App() {
       <Route path="/trending" element={<Trending />} />
       <Route path="/top-charts" element={<TopCharts />} />
       <Route path="/hidden-gems" element={<HiddenGems />} />
-      <Route path="/decades" element={<Decades />} />
-      <Route path="/directors" element={<Directors />} />
-      <Route path="/actors" element={<Actors />} />
+      <Route path="/decades" element={<Decades key={navCountRef.current} />} />
+      <Route path="/directors" element={<Directors key={navCountRef.current} />} />
+      <Route path="/actors" element={<Actors key={navCountRef.current} />} />
       <Route path="/search" element={<Search />} />
       <Route path="/movies/:id" element={<MovieDetail />} />
       <Route path="/recommendations" element={<Recommendations />} />

@@ -29,12 +29,15 @@ export default function TopNav() {
       >
         CINEMA PRIVATE
       </Link>
-      <div className="hidden md:flex items-center gap-8">
+      <div className="hidden md:flex items-center gap-5">
         {navLink("/", "Home")}
         {navLink("/discover", "Discover")}
         {navLink("/trending", "Trending")}
         {navLink("/top-charts", "Top Charts")}
         {navLink("/hidden-gems", "Hidden Gems")}
+        {navLink("/decades", "Decades")}
+        {navLink("/directors", "Directors")}
+        {navLink("/actors", "Actors")}
         {navLink("/recommendations", "Recommendations")}
         {navLink("/watchlist", "Watchlist")}
         {navLink("/profile", "Profile")}
