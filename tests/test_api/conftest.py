@@ -89,6 +89,7 @@ def mock_movie_service(sample_movie):
     svc.list_movies.return_value = ([sample_movie], 1)
     svc.get_genre_counts.return_value = [("Action", 50), ("Sci-Fi", 30)]
     svc.semantic_search.return_value = []
+    svc.trending.return_value = [(sample_movie, 42)]
     return svc
 
 

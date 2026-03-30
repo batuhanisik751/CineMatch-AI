@@ -295,3 +295,72 @@ async def test_semantic_search_preserves_order(service, mock_db):
 
     assert [r[0].id for r in results] == [5, 8, 2]
     assert [r[1] for r in results] == [0.95, 0.88, 0.72]
+
+
+# --- trending tests ---
+
+
+async def test_trending_returns_movies_with_counts(service, mock_db):
+    """Returns (Movie, count) tuples from aggregate + batch fetch."""
+    movie1 = _mock_movie(id=1, title="Trending Movie 1")
+    movie2 = _mock_movie(id=2, title="Trending Movie 2")
+
+    agg_result = MagicMock()
+    agg_result.all.return_value = [(1, 50), (2, 30)]
+
+    mock_db.execute = AsyncMock(return_value=agg_result)
+    service.get_movies_by_ids = AsyncMock(return_value={1: movie1, 2: movie2})
+
+    results = await service.trending(mock_db)
+
+    assert len(results) == 2
+    assert results[0] == (movie1, 50)
+    assert results[1] == (movie2, 30)
+
+
+async def test_trending_empty_results(service, mock_db):
+    """Returns empty list when no ratings exist in the window."""
+    agg_result = MagicMock()
+    agg_result.all.return_value = []
+
+    mock_db.execute = AsyncMock(return_value=agg_result)
+    service.get_movies_by_ids = AsyncMock()
+
+    results = await service.trending(mock_db)
+
+    assert results == []
+    service.get_movies_by_ids.assert_not_called()
+
+
+async def test_trending_preserves_order(service, mock_db):
+    """Results ordered by rating count DESC, not by movie ID."""
+    movie5 = _mock_movie(id=5, title="Movie 5")
+    movie2 = _mock_movie(id=2, title="Movie 2")
+    movie8 = _mock_movie(id=8, title="Movie 8")
+
+    agg_result = MagicMock()
+    agg_result.all.return_value = [(5, 100), (2, 80), (8, 60)]
+
+    mock_db.execute = AsyncMock(return_value=agg_result)
+    service.get_movies_by_ids = AsyncMock(return_value={5: movie5, 2: movie2, 8: movie8})
+
+    results = await service.trending(mock_db)
+
+    assert [r[0].id for r in results] == [5, 2, 8]
+    assert [r[1] for r in results] == [100, 80, 60]
+
+
+async def test_trending_custom_window_and_limit(service, mock_db):
+    """Accepts custom window and limit parameters."""
+    movie1 = _mock_movie(id=1, title="Movie 1")
+
+    agg_result = MagicMock()
+    agg_result.all.return_value = [(1, 25)]
+
+    mock_db.execute = AsyncMock(return_value=agg_result)
+    service.get_movies_by_ids = AsyncMock(return_value={1: movie1})
+
+    results = await service.trending(mock_db, window=30, limit=5)
+
+    assert len(results) == 1
+    assert mock_db.execute.call_count == 1

@@ -68,6 +68,17 @@ export interface SemanticSearchResponse {
   query: string;
 }
 
+export interface TrendingMovieResult {
+  movie: MovieSummary;
+  rating_count: number;
+}
+
+export interface TrendingResponse {
+  results: TrendingMovieResult[];
+  window: number;
+  limit: number;
+}
+
 export interface RatingResponse {
   user_id: number;
   movie_id: number;

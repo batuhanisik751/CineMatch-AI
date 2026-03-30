@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from sqlalchemy import cast, desc, extract, func, select, text
 from sqlalchemy.dialects.postgresql import JSONB as JSONB_TYPE
 
 from cinematch.models.movie import Movie
+from cinematch.models.rating import Rating
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -161,3 +163,30 @@ class MovieService:
         stmt = select(Movie).where(Movie.id.in_(movie_ids))
         result = await db.execute(stmt)
         return {m.id: m for m in result.scalars().all()}
+
+    async def trending(
+        self,
+        db: AsyncSession,
+        *,
+        window: int = 7,
+        limit: int = 20,
+    ) -> list[tuple[Movie, int]]:
+        """Return the most-rated movies within the last `window` days."""
+        cutoff = datetime.now(UTC) - timedelta(days=window)
+        stmt = (
+            select(Rating.movie_id, func.count().label("cnt"))
+            .where(Rating.timestamp > cutoff)
+            .group_by(Rating.movie_id)
+            .order_by(desc("cnt"))
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        rows = result.all()
+
+        if not rows:
+            return []
+
+        id_count = {row[0]: row[1] for row in rows}
+        ordered_ids = [row[0] for row in rows]
+        movies_map = await self.get_movies_by_ids(ordered_ids, db)
+        return [(movies_map[mid], id_count[mid]) for mid in ordered_ids if mid in movies_map]

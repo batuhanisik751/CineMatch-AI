@@ -91,3 +91,14 @@ class SemanticSearchResponse(BaseModel):
     results: list[SemanticSearchResult]
     total: int
     query: str
+
+
+class TrendingMovieResult(BaseModel):
+    movie: MovieSummary
+    rating_count: int
+
+
+class TrendingResponse(BaseModel):
+    results: list[TrendingMovieResult]
+    window: int
+    limit: int

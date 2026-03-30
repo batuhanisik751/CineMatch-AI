@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import (
+    get_cache_service,
     get_content_recommender,
     get_db,
     get_embedding_service,
     get_movie_service,
 )
+from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import ServiceUnavailableError
 from cinematch.schemas.movie import (
     GenreCount,
@@ -24,10 +28,14 @@ from cinematch.schemas.movie import (
     SimilarMovie,
     SimilarMoviesResponse,
     SortOption,
+    TrendingMovieResult,
+    TrendingResponse,
 )
 from cinematch.services.content_recommender import ContentRecommender
 from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.movie_service import MovieService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -110,6 +118,43 @@ async def semantic_search(
         total=len(results),
         query=q,
     )
+
+
+@router.get("/trending", response_model=TrendingResponse)
+async def trending_movies(
+    window: int = Query(default=7, ge=1, le=90),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = f"trending:{window}:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return TrendingResponse.model_validate_json(cached)
+
+    trending_pairs = await movie_service.trending(db, window=window, limit=limit)
+
+    response = TrendingResponse(
+        results=[
+            TrendingMovieResult(
+                movie=MovieSummary.model_validate(movie),
+                rating_count=count,
+            )
+            for movie, count in trending_pairs
+        ],
+        window=window,
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=3600)
+        except Exception:
+            logger.warning("Failed to cache trending movies", exc_info=True)
+
+    return response
 
 
 @router.get("/{movie_id}", response_model=MovieResponse)

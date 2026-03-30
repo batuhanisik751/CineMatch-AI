@@ -195,3 +195,79 @@ async def test_semantic_search_no_results(client, mock_movie_service):
     data = resp.json()
     assert data["total"] == 0
     assert data["results"] == []
+
+
+# --- Trending endpoint tests ---
+
+
+async def test_trending_default_params(client, sample_movie):
+    resp = await client.get("/api/v1/movies/trending")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["window"] == 7
+    assert data["limit"] == 20
+    assert len(data["results"]) == 1
+    assert data["results"][0]["movie"]["title"] == sample_movie.title
+    assert data["results"][0]["rating_count"] == 42
+
+
+async def test_trending_custom_params(client, mock_movie_service):
+    resp = await client.get("/api/v1/movies/trending", params={"window": 30, "limit": 5})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["window"] == 30
+    assert data["limit"] == 5
+    mock_movie_service.trending.assert_called_once()
+    call_kwargs = mock_movie_service.trending.call_args.kwargs
+    assert call_kwargs["window"] == 30
+    assert call_kwargs["limit"] == 5
+
+
+async def test_trending_cache_miss(client, mock_movie_service, mock_cache_service):
+    resp = await client.get("/api/v1/movies/trending")
+    assert resp.status_code == 200
+    mock_movie_service.trending.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "trending:7:20"
+    assert call_args[1]["ttl"] == 3600
+
+
+async def test_trending_cache_hit(client, mock_movie_service, mock_cache_service):
+    cached_response = (
+        '{"results":[{"movie":{"id":1,"title":"The Matrix","genres":["Action","Sci-Fi"],'
+        '"vote_average":8.2,"release_date":"1999-03-31","poster_path":"/poster.jpg"},'
+        '"rating_count":42}],"window":7,"limit":20}'
+    )
+    mock_cache_service.get.return_value = cached_response
+
+    resp = await client.get("/api/v1/movies/trending")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["results"][0]["movie"]["title"] == "The Matrix"
+    mock_movie_service.trending.assert_not_called()
+
+
+async def test_trending_invalid_window(client):
+    resp = await client.get("/api/v1/movies/trending", params={"window": 0})
+    assert resp.status_code == 422
+
+    resp = await client.get("/api/v1/movies/trending", params={"window": 91})
+    assert resp.status_code == 422
+
+
+async def test_trending_invalid_limit(client):
+    resp = await client.get("/api/v1/movies/trending", params={"limit": 0})
+    assert resp.status_code == 422
+
+    resp = await client.get("/api/v1/movies/trending", params={"limit": 101})
+    assert resp.status_code == 422
+
+
+async def test_trending_no_cache_service(app, client, mock_movie_service):
+    from cinematch.api.deps import get_cache_service
+
+    app.dependency_overrides[get_cache_service] = lambda: None
+    resp = await client.get("/api/v1/movies/trending")
+    assert resp.status_code == 200
+    mock_movie_service.trending.assert_called_once()
