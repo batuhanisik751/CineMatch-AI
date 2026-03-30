@@ -79,6 +79,19 @@ export interface TrendingResponse {
   limit: number;
 }
 
+export interface HiddenGemResult {
+  movie: MovieSummary;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface HiddenGemsResponse {
+  results: HiddenGemResult[];
+  min_rating: number;
+  max_votes: number;
+  limit: number;
+}
+
 export interface RatingResponse {
   user_id: number;
   movie_id: number;

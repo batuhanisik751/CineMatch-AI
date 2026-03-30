@@ -1,6 +1,7 @@
 import { apiFetch } from "./client";
 import type {
   GenresResponse,
+  HiddenGemsResponse,
   MovieListResponse,
   MovieResponse,
   MovieSearchResponse,
@@ -55,4 +56,18 @@ export function getTrendingMovies(window = 7, limit = 20) {
   return apiFetch<TrendingResponse>(
     `/api/v1/movies/trending?window=${window}&limit=${limit}`
   );
+}
+
+export function getHiddenGems(params: {
+  min_rating?: number;
+  max_votes?: number;
+  genre?: string;
+  limit?: number;
+} = {}) {
+  const qs = new URLSearchParams();
+  if (params.min_rating != null) qs.set("min_rating", String(params.min_rating));
+  if (params.max_votes != null) qs.set("max_votes", String(params.max_votes));
+  if (params.genre) qs.set("genre", params.genre);
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  return apiFetch<HiddenGemsResponse>(`/api/v1/movies/hidden-gems?${qs.toString()}`);
 }

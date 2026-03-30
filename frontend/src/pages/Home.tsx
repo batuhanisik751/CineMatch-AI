@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { discoverMovies, semanticSearchMovies } from "../api/movies";
+import { discoverMovies, getHiddenGems, semanticSearchMovies } from "../api/movies";
 import { getMoodRecommendations } from "../api/recommendations";
 import type { MovieSummary } from "../api/types";
 import BottomNav from "../components/BottomNav";
@@ -19,6 +19,7 @@ export default function Home() {
   const [strategy, setStrategy] = useState("hybrid");
   const [popular, setPopular] = useState<MovieSummary[]>([]);
   const [topRated, setTopRated] = useState<MovieSummary[]>([]);
+  const [gems, setGems] = useState<MovieSummary[]>([]);
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
 
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
@@ -40,6 +41,13 @@ export default function Home() {
       .then((data) => {
         setTopRated(data.results);
         refreshForMovieIds(data.results.map((m) => m.id));
+      })
+      .catch(() => {});
+    getHiddenGems({ limit: 8 })
+      .then((data) => {
+        const movies = data.results.map((r) => r.movie);
+        setGems(movies);
+        refreshForMovieIds(movies.map((m) => m.id));
       })
       .catch(() => {});
   }, []);
@@ -264,6 +272,23 @@ export default function Home() {
                   </div>
                   <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                     {topRated.map((m) => (
+                      <div key={m.id} className="flex-shrink-0 w-44">
+                        <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {gems.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-headline font-bold text-xl text-on-surface">Hidden Gems</h3>
+                    <Link to="/hidden-gems" className="text-primary text-sm font-medium hover:underline">
+                      See all &rarr;
+                    </Link>
+                  </div>
+                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                    {gems.map((m) => (
                       <div key={m.id} className="flex-shrink-0 w-44">
                         <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
                       </div>
