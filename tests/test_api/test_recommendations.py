@@ -218,3 +218,59 @@ async def test_mood_recommendations_cache_hit(client, mock_hybrid_recommender, m
     assert data["mood"] == "thriller"
     # Should NOT call mood_recommend since cache hit
     mock_hybrid_recommender.mood_recommend.assert_not_called()
+
+
+# --- Smart explanation fields tests ---
+
+
+async def test_get_recommendations_includes_explanation_fields(
+    client, sample_movie, mock_movie_service
+):
+    """Response should include because_you_liked, feature_explanations, score_breakdown."""
+    resp = await client.get("/api/v1/users/1/recommendations")
+    assert resp.status_code == 200
+    data = resp.json()
+    rec = data["recommendations"][0]
+
+    # because_you_liked
+    assert "because_you_liked" in rec
+    assert rec["because_you_liked"]["movie_id"] == 10
+    assert rec["because_you_liked"]["title"] == "Inception"
+    assert rec["because_you_liked"]["your_rating"] == 9.0
+
+    # feature_explanations
+    assert "feature_explanations" in rec
+    assert len(rec["feature_explanations"]) > 0
+
+    # score_breakdown
+    assert "score_breakdown" in rec
+    assert rec["score_breakdown"]["content_score"] == 0.8
+    assert rec["score_breakdown"]["collab_score"] == 0.7
+    assert rec["score_breakdown"]["alpha"] == 0.5
+
+
+async def test_get_recommendations_populates_content_collab_from_breakdown(
+    client, sample_movie, mock_movie_service
+):
+    """content_score and collab_score at top level should be populated from breakdown."""
+    resp = await client.get("/api/v1/users/1/recommendations")
+    assert resp.status_code == 200
+    data = resp.json()
+    rec = data["recommendations"][0]
+
+    assert rec["content_score"] == 0.8
+    assert rec["collab_score"] == 0.7
+
+
+async def test_get_recommendations_null_explanation_for_no_seed(
+    client, sample_movie, mock_movie_service
+):
+    """Recommendation without seed influence should have null because_you_liked."""
+    resp = await client.get("/api/v1/users/1/recommendations")
+    assert resp.status_code == 200
+    data = resp.json()
+    # Second recommendation has no because_you_liked
+    if len(data["recommendations"]) > 1:
+        rec2 = data["recommendations"][1]
+        assert rec2["because_you_liked"] is None
+        assert rec2["feature_explanations"] == []

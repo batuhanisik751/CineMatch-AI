@@ -26,6 +26,8 @@ from cinematch.schemas.recommendation import (
     RecommendationExplanation,
     RecommendationItem,
     RecommendationsResponse,
+    ScoreBreakdownSchema,
+    SeedInfluenceSchema,
 )
 from cinematch.services.hybrid_recommender import HybridRecommender
 from cinematch.services.llm_service import LLMService
@@ -52,22 +54,43 @@ async def get_recommendations(
     if hybrid_rec is None:
         raise ServiceUnavailableError("Recommendation service")
     try:
-        rec_pairs = await hybrid_rec.recommend(user_id, db, top_k=top_k, strategy=strategy)
+        rec_results = await hybrid_rec.recommend(user_id, db, top_k=top_k, strategy=strategy)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     # Enrich with movie details
-    movie_ids = [mid for mid, _ in rec_pairs]
+    movie_ids = [r.movie_id for r in rec_results]
     movies_map = await movie_service.get_movies_by_ids(movie_ids, db)
 
     recommendations = []
-    for mid, score in rec_pairs:
-        movie = movies_map.get(mid)
+    for r in rec_results:
+        movie = movies_map.get(r.movie_id)
         if movie is not None:
             recommendations.append(
                 RecommendationItem(
                     movie=MovieSummary.model_validate(movie),
-                    score=score,
+                    score=r.score,
+                    content_score=(r.score_breakdown.content_score if r.score_breakdown else None),
+                    collab_score=(r.score_breakdown.collab_score if r.score_breakdown else None),
+                    because_you_liked=(
+                        SeedInfluenceSchema(
+                            movie_id=r.because_you_liked.movie_id,
+                            title=r.because_you_liked.title,
+                            your_rating=r.because_you_liked.your_rating,
+                        )
+                        if r.because_you_liked
+                        else None
+                    ),
+                    feature_explanations=r.feature_explanations,
+                    score_breakdown=(
+                        ScoreBreakdownSchema(
+                            content_score=r.score_breakdown.content_score,
+                            collab_score=r.score_breakdown.collab_score,
+                            alpha=r.score_breakdown.alpha,
+                        )
+                        if r.score_breakdown
+                        else None
+                    ),
                 )
             )
 

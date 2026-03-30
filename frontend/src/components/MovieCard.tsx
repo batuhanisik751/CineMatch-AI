@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { MovieSummary } from "../api/types";
+import type { MovieSummary, ScoreBreakdown } from "../api/types";
 
 function posterUrl(path: string | null, size = "w300") {
   if (!path) return null;
@@ -11,9 +11,12 @@ interface Props {
   matchPercent?: number;
   isBookmarked?: boolean;
   onToggleBookmark?: (movieId: number) => void;
+  becauseYouLiked?: string | null;
+  featureExplanations?: string[];
+  scoreBreakdown?: ScoreBreakdown | null;
 }
 
-export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleBookmark }: Props) {
+export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleBookmark, becauseYouLiked, featureExplanations, scoreBreakdown }: Props) {
   const year = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
   const poster = posterUrl(movie.poster_path);
 
@@ -89,6 +92,42 @@ export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleB
             </span>
           ))}
         </div>
+        {(becauseYouLiked || (featureExplanations && featureExplanations.length > 0) || scoreBreakdown) && (
+          <div className="flex flex-col gap-2 mt-1">
+            {becauseYouLiked && (
+              <div className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[14px] text-primary-fixed-dim">favorite</span>
+                <span className="text-[11px] text-on-surface-variant leading-tight">
+                  Because you liked <span className="text-on-surface font-semibold">{becauseYouLiked}</span>
+                </span>
+              </div>
+            )}
+            {featureExplanations && featureExplanations.slice(0, 2).map((exp, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[14px] text-primary-fixed-dim">info</span>
+                <span className="text-[11px] text-on-surface-variant leading-tight">{exp}</span>
+              </div>
+            ))}
+            {scoreBreakdown && matchPercent != null && matchPercent > 0 && (() => {
+              const contentContrib = scoreBreakdown.alpha * scoreBreakdown.content_score;
+              const collabContrib = (1 - scoreBreakdown.alpha) * scoreBreakdown.collab_score;
+              const total = contentContrib + collabContrib;
+              const contentPct = total > 0 ? Math.round((contentContrib / total) * 100) : 50;
+              return (
+                <div className="mt-1">
+                  <div className="flex h-1.5 rounded-full overflow-hidden bg-surface-container-highest">
+                    <div className="bg-primary-container" style={{ width: `${contentPct}%` }} />
+                    <div className="bg-tertiary-container" style={{ width: `${100 - contentPct}%` }} />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[9px] text-on-surface-variant">{contentPct}% taste</span>
+                    <span className="text-[9px] text-on-surface-variant">{100 - contentPct}% similar users</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
     </Link>
   );

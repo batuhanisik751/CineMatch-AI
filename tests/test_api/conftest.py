@@ -109,8 +109,27 @@ def mock_content_recommender():
 
 @pytest.fixture()
 def mock_hybrid_recommender():
+    from cinematch.services.hybrid_recommender import (
+        RecommendationResult,
+        ScoreBreakdown,
+        SeedInfluence,
+    )
+
     rec = AsyncMock()
-    rec.recommend.return_value = [(1, 0.95), (2, 0.88)]
+    rec.recommend.return_value = [
+        RecommendationResult(
+            movie_id=1,
+            score=0.95,
+            because_you_liked=SeedInfluence(movie_id=10, title="Inception", your_rating=9.0),
+            feature_explanations=["Matches your love of Action and Sci-Fi"],
+            score_breakdown=ScoreBreakdown(content_score=0.8, collab_score=0.7, alpha=0.5),
+        ),
+        RecommendationResult(
+            movie_id=2,
+            score=0.88,
+            score_breakdown=ScoreBreakdown(content_score=0.6, collab_score=0.9, alpha=0.5),
+        ),
+    ]
     rec.mood_recommend.return_value = ([(1, 0.92), (2, 0.85)], True)
     return rec
 

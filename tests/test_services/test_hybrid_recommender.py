@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from cinematch.services.hybrid_recommender import HybridRecommender
+from cinematch.services.hybrid_recommender import HybridRecommender, RecommendationResult
 
 
 def _db_execute_factory(
@@ -14,16 +14,12 @@ def _db_execute_factory(
     rated_ids: list[tuple] | None = None,
     titles: list[tuple] | None = None,
     genres: list[tuple] | None = None,
+    metadata: list[tuple] | None = None,
 ):
-    """Build a side_effect list for mock db.execute calls.
+    """Build a query-matching side_effect for mock db.execute calls.
 
-    The hybrid pipeline calls db.execute in this order:
-    1. _get_user_top_rated_diverse  (top rated with genres)
-    2. _get_user_rated_movie_ids    (rated ids)
-    3. _get_movie_titles            (seed titles)
-    4. _get_movie_titles            (candidate titles)
-    5. _get_movie_genres            (candidate genres for rerank)
-    6. _get_movie_genres            (candidate genres for MMR fallback — sometimes)
+    Uses query string inspection to return the right mock data regardless
+    of call ordering (which varies depending on LLM rerank path).
     """
     if top_rated is None:
         top_rated = [(101, 10, ["Action", "Sci-Fi"])]
@@ -38,21 +34,43 @@ def _db_execute_factory(
             (104, ["Drama"]),
             (105, ["Sci-Fi"]),
         ]
+    if metadata is None:
+        metadata = [
+            (101, ["Action", "Sci-Fi"], "Director A", ["Actor X"]),
+            (102, ["Action"], "Director A", ["Actor X"]),
+            (103, ["Comedy"], "Director B", ["Actor Y"]),
+            (104, ["Drama"], "Director C", ["Actor Z"]),
+            (105, ["Sci-Fi"], "Director D", ["Actor X"]),
+        ]
 
     def _make_result(data):
         r = MagicMock()
         r.fetchall.return_value = data
         return r
 
-    # Return enough results for all possible db.execute calls
-    return [
-        _make_result(top_rated),  # 1: top rated diverse
-        _make_result(rated_ids),  # 2: rated ids
-        _make_result([(101, "Movie A")] + titles),  # 3: seed titles
-        _make_result(titles),  # 4: candidate titles
-        _make_result(genres),  # 5: candidate genres (rerank)
-        _make_result(genres),  # 6: candidate genres (MMR fallback)
-    ]
+    title_call_count = 0
+
+    async def _side_effect(query, params=None):
+        nonlocal title_call_count
+        q = str(query)
+        if "r.movie_id, r.rating, m.genres" in q:
+            return _make_result(top_rated)
+        if "SELECT movie_id FROM ratings" in q:
+            return _make_result(rated_ids)
+        if "SELECT id, title FROM movies" in q:
+            title_call_count += 1
+            if title_call_count == 1:
+                return _make_result([(101, "Movie A")] + titles)
+            return _make_result(titles)
+        if "SELECT id, genres, director, cast_names" in q:
+            return _make_result(metadata)
+        if "SELECT id, genres FROM movies" in q:
+            return _make_result(genres)
+        if "SELECT movie_id, rating FROM ratings" in q:
+            return _make_result(top_rated)
+        return _make_result([])
+
+    return _side_effect
 
 
 @pytest.mark.asyncio
@@ -70,7 +88,7 @@ async def test_hybrid_recommend_combines_scores(hybrid_recommender, mock_db_sess
         )
 
     assert len(results) > 0
-    result_ids = [mid for mid, _ in results]
+    result_ids = [r.movie_id for r in results]
     assert 101 not in result_ids
 
 
@@ -89,6 +107,7 @@ async def test_hybrid_recommend_cold_start_uses_content_only(hybrid_recommender,
         )
 
     assert len(results) > 0
+    assert all(isinstance(r, RecommendationResult) for r in results)
 
 
 @pytest.mark.asyncio
@@ -109,7 +128,7 @@ async def test_hybrid_recommend_excludes_already_rated(hybrid_recommender, mock_
             user_id=1, db=mock_db_session, top_k=5, strategy="hybrid"
         )
 
-    result_ids = [mid for mid, _ in results]
+    result_ids = [r.movie_id for r in results]
     assert 101 not in result_ids
     assert 102 not in result_ids
 
@@ -136,8 +155,14 @@ async def test_collab_only_strategy(hybrid_recommender, mock_db_session):
         user_id=1, db=mock_db_session, top_k=3, strategy="collab"
     )
     assert len(results) == 3
-    result_ids = [mid for mid, _ in results]
+    result_ids = [r.movie_id for r in results]
     assert result_ids == [101, 103, 105]
+    # Collab-only should have alpha=0.0 and no seed influence
+    for r in results:
+        assert r.score_breakdown is not None
+        assert r.score_breakdown.alpha == 0.0
+        assert r.score_breakdown.content_score == 0.0
+        assert r.because_you_liked is None
 
 
 @pytest.mark.asyncio
@@ -480,3 +505,110 @@ async def test_mood_recommend_excludes_rated_movies(hybrid_recommender, mock_db_
 
     result_ids = {mid for mid, _ in results}
     assert result_ids.isdisjoint({101, 102, 103})
+
+
+# ------------------------------------------------------------------
+# Smart Recommendation Explanation tests
+# ------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_hybrid_recommend_returns_recommendation_results(hybrid_recommender, mock_db_session):
+    """All results should be RecommendationResult instances."""
+    mock_db_session.execute = AsyncMock(side_effect=_db_execute_factory())
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        mock_content.return_value = [(102, 0.9), (103, 0.8)]
+        results = await hybrid_recommender.recommend(
+            user_id=1, db=mock_db_session, top_k=5, strategy="hybrid"
+        )
+
+    assert all(isinstance(r, RecommendationResult) for r in results)
+
+
+@pytest.mark.asyncio
+async def test_hybrid_recommend_includes_score_breakdown(hybrid_recommender, mock_db_session):
+    """Hybrid strategy should populate score_breakdown with alpha=0.5."""
+    mock_db_session.execute = AsyncMock(side_effect=_db_execute_factory())
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        mock_content.return_value = [(102, 0.9), (103, 0.8)]
+        results = await hybrid_recommender.recommend(
+            user_id=1, db=mock_db_session, top_k=5, strategy="hybrid"
+        )
+
+    assert len(results) > 0
+    for r in results:
+        assert r.score_breakdown is not None
+        assert r.score_breakdown.alpha == 0.5
+        assert 0.0 <= r.score_breakdown.content_score <= 1.0
+        assert 0.0 <= r.score_breakdown.collab_score <= 1.0
+
+
+@pytest.mark.asyncio
+async def test_hybrid_recommend_includes_because_you_liked(hybrid_recommender, mock_db_session):
+    """Results from content scoring should have because_you_liked set."""
+    mock_db_session.execute = AsyncMock(side_effect=_db_execute_factory())
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        mock_content.return_value = [(102, 0.9), (103, 0.8)]
+        results = await hybrid_recommender.recommend(
+            user_id=1, db=mock_db_session, top_k=5, strategy="hybrid"
+        )
+
+    # At least some results should have because_you_liked (those from content scoring)
+    content_explained = [r for r in results if r.because_you_liked is not None]
+    assert len(content_explained) > 0
+    for r in content_explained:
+        assert r.because_you_liked.movie_id == 101  # the seed movie
+        assert r.because_you_liked.your_rating == 10.0
+        assert r.because_you_liked.title == "Movie A"
+
+
+@pytest.mark.asyncio
+async def test_content_only_has_alpha_one_breakdown(hybrid_recommender, mock_db_session):
+    """Content-only strategy should have alpha=1.0 and collab_score=0.0."""
+    mock_db_session.execute = AsyncMock(side_effect=_db_execute_factory())
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        mock_content.return_value = [(102, 0.9), (103, 0.8)]
+        results = await hybrid_recommender.recommend(
+            user_id=1, db=mock_db_session, top_k=5, strategy="content"
+        )
+
+    assert len(results) > 0
+    for r in results:
+        assert r.score_breakdown is not None
+        assert r.score_breakdown.alpha == 1.0
+        assert r.score_breakdown.collab_score == 0.0
+
+
+@pytest.mark.asyncio
+async def test_feature_explanation_director_match(hybrid_recommender, mock_db_session):
+    """When seed and candidate share a director, an explanation should appear."""
+    # Seed movie 101 has Director A; candidate 102 also has Director A
+    mock_db_session.execute = AsyncMock(side_effect=_db_execute_factory())
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        mock_content.return_value = [(102, 0.9), (103, 0.8)]
+        results = await hybrid_recommender.recommend(
+            user_id=1, db=mock_db_session, top_k=5, strategy="hybrid"
+        )
+
+    movie_102 = next((r for r in results if r.movie_id == 102), None)
+    if movie_102 is not None:
+        director_explanations = [
+            e for e in movie_102.feature_explanations if "director" in e.lower()
+        ]
+        assert len(director_explanations) > 0
+        assert "Director A" in director_explanations[0]

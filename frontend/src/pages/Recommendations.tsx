@@ -142,7 +142,15 @@ export default function Recommendations() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-10">
             {recs.map((rec) => (
               <div key={rec.movie.id} className="flex flex-col">
-                <MovieCard movie={rec.movie} matchPercent={Math.round(rec.score * 100)} isBookmarked={isInWatchlist(rec.movie.id)} onToggleBookmark={toggle} />
+                <MovieCard
+                  movie={rec.movie}
+                  matchPercent={Math.round(rec.score * 100)}
+                  isBookmarked={isInWatchlist(rec.movie.id)}
+                  onToggleBookmark={toggle}
+                  becauseYouLiked={rec.because_you_liked?.title ?? null}
+                  featureExplanations={rec.feature_explanations}
+                  scoreBreakdown={rec.score_breakdown}
+                />
                 <button
                   onClick={() => handleExplain(rec.movie.id, rec.movie.title, rec.score)}
                   className="mt-2 w-full text-xs font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary-container flex items-center justify-center gap-1 py-1 transition-colors"

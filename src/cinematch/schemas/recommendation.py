@@ -7,13 +7,32 @@ from pydantic import BaseModel, Field
 from cinematch.schemas.movie import MovieSummary
 
 
+class SeedInfluenceSchema(BaseModel):
+    """Which seed movie contributed most to a recommendation."""
+
+    movie_id: int
+    title: str
+    your_rating: float
+
+
+class ScoreBreakdownSchema(BaseModel):
+    """Decomposition of the hybrid score."""
+
+    content_score: float
+    collab_score: float
+    alpha: float
+
+
 class RecommendationItem(BaseModel):
-    """Single recommendation with scores."""
+    """Single recommendation with scores and explanations."""
 
     movie: MovieSummary
     score: float
     content_score: float | None = None
     collab_score: float | None = None
+    because_you_liked: SeedInfluenceSchema | None = None
+    feature_explanations: list[str] = Field(default_factory=list)
+    score_breakdown: ScoreBreakdownSchema | None = None
 
 
 class RecommendationsResponse(BaseModel):

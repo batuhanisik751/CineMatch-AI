@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import re
+from collections import Counter
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -17,6 +19,36 @@ if TYPE_CHECKING:
     from cinematch.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SeedInfluence:
+    """Which seed movie contributed most to a candidate's content score."""
+
+    movie_id: int
+    title: str
+    your_rating: float
+
+
+@dataclass
+class ScoreBreakdown:
+    """Decomposition of the hybrid score."""
+
+    content_score: float
+    collab_score: float
+    alpha: float
+
+
+@dataclass
+class RecommendationResult:
+    """Rich recommendation result with explanation metadata."""
+
+    movie_id: int
+    score: float
+    because_you_liked: SeedInfluence | None = None
+    feature_explanations: list[str] = field(default_factory=list)
+    score_breakdown: ScoreBreakdown | None = None
+
 
 # Articles to strip when comparing franchise base titles
 _ARTICLES = re.compile(r"^(the|a|an)\s+", re.IGNORECASE)
@@ -53,7 +85,7 @@ class HybridRecommender:
         db: AsyncSession,
         top_k: int = 20,
         strategy: str = "hybrid",
-    ) -> list[tuple[int, float]]:
+    ) -> list[RecommendationResult]:
         """Main entry point. Strategy: 'hybrid', 'content', or 'collab'."""
         if strategy == "hybrid":
             return await self._hybrid_recommend(user_id, db, top_k)
@@ -68,7 +100,7 @@ class HybridRecommender:
         user_id: int,
         db: AsyncSession,
         top_k: int,
-    ) -> list[tuple[int, float]]:
+    ) -> list[RecommendationResult]:
         """Full hybrid: alpha * content + (1 - alpha) * collab, with diversity."""
         alpha = self._alpha if self._collab.is_known_user(user_id) else 1.0
 
@@ -82,37 +114,44 @@ class HybridRecommender:
         # Step 2: user's top-rated movies (genre-diverse)
         user_top = await self._get_user_top_rated_diverse(user_id, db, limit=10)
         if not user_top:
-            return collab_results[:top_k]
+            return [
+                RecommendationResult(
+                    movie_id=mid,
+                    score=score,
+                    score_breakdown=ScoreBreakdown(
+                        content_score=0.0,
+                        collab_score=score,
+                        alpha=0.0,
+                    ),
+                )
+                for mid, score in collab_results[:top_k]
+            ]
 
-        # Step 3: content candidates from user's favorites
-        content_raw: dict[int, list[float]] = {}
-        for rated_movie_id, user_rating in user_top:
-            similar = await self._content.get_similar_movies(rated_movie_id, db, top_k=50)
-            weight = user_rating / 10.0
-            for mid, similarity in similar:
-                content_raw.setdefault(mid, []).append(similarity * weight)
+        # Step 3: content candidates from user's favorites (with seed tracking)
+        content_scores, best_seed = await self._score_content_candidates(user_top, db)
 
-        # Step 4: aggregate content scores
-        content_scores: dict[int, float] = {
-            mid: float(np.mean(sims)) for mid, sims in content_raw.items()
-        }
-
-        # Step 5: merge pools, exclude already-rated
+        # Step 4: merge pools, exclude already-rated
         rated_ids = await self._get_user_rated_movie_ids(user_id, db)
         all_candidates = (set(collab_scores) | set(content_scores)) - rated_ids
 
-        # Step 6: normalize
+        # Step 5: normalize
         collab_norm = self._min_max_normalize(collab_scores)
         content_norm = self._min_max_normalize(content_scores)
 
-        # Step 7: compute hybrid scores
+        # Step 6: compute hybrid scores + breakdowns
         scored: dict[int, float] = {}
+        breakdowns: dict[int, ScoreBreakdown] = {}
         for mid in all_candidates:
             c_score = content_norm.get(mid, 0.0)
             f_score = collab_norm.get(mid, 0.0)
             scored[mid] = alpha * c_score + (1 - alpha) * f_score
+            breakdowns[mid] = ScoreBreakdown(
+                content_score=round(c_score, 4),
+                collab_score=round(f_score, 4),
+                alpha=alpha,
+            )
 
-        # Step 8: franchise/sequel penalty
+        # Step 7: franchise/sequel penalty
         seed_titles = await self._get_movie_titles([mid for mid, _ in user_top], db)
         seed_bases = {self._base_title(t) for t in seed_titles.values()}
         candidate_titles = await self._get_movie_titles(list(scored.keys()), db)
@@ -120,38 +159,53 @@ class HybridRecommender:
             if mid in scored and self._base_title(title) in seed_bases:
                 scored[mid] *= self._sequel_penalty
 
-        # Step 9: sort and over-fetch for re-ranking
+        # Step 8: sort and over-fetch for re-ranking
         fetch_n = max(top_k, self._rerank_candidates)
         ranked = sorted(scored.items(), key=lambda r: r[1], reverse=True)[:fetch_n]
 
-        # Step 10: LLM re-ranking (with MMR fallback)
+        # Step 9: LLM re-ranking (with MMR fallback)
         final = await self._rerank(ranked, candidate_titles, seed_titles, user_top, db, top_k)
 
-        return final
+        # Step 10: generate feature explanations for final results
+        final_ids = [mid for mid, _ in final]
+        feature_explanations = await self._generate_feature_explanations(
+            final_ids,
+            user_top,
+            best_seed,
+            seed_titles,
+            db,
+        )
+
+        # Assemble rich results
+        return self._build_results(final, best_seed, seed_titles, breakdowns, feature_explanations)
 
     async def _content_only_recommend(
         self,
         user_id: int,
         db: AsyncSession,
         top_k: int,
-    ) -> list[tuple[int, float]]:
+    ) -> list[RecommendationResult]:
         """Content-only: recommend based on user's top-rated movies."""
         user_top = await self._get_user_top_rated_diverse(user_id, db, limit=10)
         if not user_top:
             return []
 
-        content_raw: dict[int, list[float]] = {}
-        for rated_movie_id, user_rating in user_top:
-            similar = await self._content.get_similar_movies(rated_movie_id, db, top_k=50)
-            weight = user_rating / 10.0
-            for mid, similarity in similar:
-                content_raw.setdefault(mid, []).append(similarity * weight)
-
-        content_scores = {mid: float(np.mean(sims)) for mid, sims in content_raw.items()}
+        content_scores, best_seed = await self._score_content_candidates(user_top, db)
 
         rated_ids = await self._get_user_rated_movie_ids(user_id, db)
         scored: dict[int, float] = {
             mid: score for mid, score in content_scores.items() if mid not in rated_ids
+        }
+
+        # Build breakdowns (content-only: alpha=1.0, collab=0.0)
+        content_norm = self._min_max_normalize(scored)
+        breakdowns: dict[int, ScoreBreakdown] = {
+            mid: ScoreBreakdown(
+                content_score=round(content_norm.get(mid, 0.0), 4),
+                collab_score=0.0,
+                alpha=1.0,
+            )
+            for mid in scored
         }
 
         # Franchise penalty
@@ -166,20 +220,184 @@ class HybridRecommender:
         ranked = sorted(scored.items(), key=lambda r: r[1], reverse=True)[:fetch_n]
 
         final = await self._rerank(ranked, candidate_titles, seed_titles, user_top, db, top_k)
-        return final
+
+        # Generate feature explanations for final results
+        final_ids = [mid for mid, _ in final]
+        feature_explanations = await self._generate_feature_explanations(
+            final_ids,
+            user_top,
+            best_seed,
+            seed_titles,
+            db,
+        )
+
+        return self._build_results(final, best_seed, seed_titles, breakdowns, feature_explanations)
 
     def _collab_only_recommend(
         self,
         user_id: int,
         top_k: int,
-    ) -> list[tuple[int, float]]:
+    ) -> list[RecommendationResult]:
         """Collab-only: delegate to CollabRecommender."""
         if not self._collab.is_known_user(user_id):
             raise ValueError(
                 f"User {user_id} has no collaborative filtering data yet. "
                 "Use 'hybrid' or 'content' strategy for cold-start users."
             )
-        return self._collab.recommend_for_user(user_id, top_k=top_k)
+        return [
+            RecommendationResult(
+                movie_id=mid,
+                score=score,
+                score_breakdown=ScoreBreakdown(
+                    content_score=0.0,
+                    collab_score=score,
+                    alpha=0.0,
+                ),
+            )
+            for mid, score in self._collab.recommend_for_user(user_id, top_k=top_k)
+        ]
+
+    # ------------------------------------------------------------------
+    # Content scoring with seed tracking
+    # ------------------------------------------------------------------
+
+    async def _score_content_candidates(
+        self,
+        user_top: list[tuple[int, float]],
+        db: AsyncSession,
+    ) -> tuple[dict[int, float], dict[int, tuple[int, float, float]]]:
+        """Score candidates from seed movies.
+
+        Returns ``(content_scores, best_seed)`` where *best_seed* maps each
+        candidate movie_id to ``(seed_id, weighted_similarity, seed_rating)``.
+        """
+        content_raw: dict[int, list[float]] = {}
+        best_seed: dict[int, tuple[int, float, float]] = {}
+        for rated_movie_id, user_rating in user_top:
+            similar = await self._content.get_similar_movies(rated_movie_id, db, top_k=50)
+            weight = user_rating / 10.0
+            for mid, similarity in similar:
+                weighted = similarity * weight
+                content_raw.setdefault(mid, []).append(weighted)
+                if mid not in best_seed or weighted > best_seed[mid][1]:
+                    best_seed[mid] = (rated_movie_id, weighted, user_rating)
+
+        content_scores: dict[int, float] = {
+            mid: float(np.mean(sims)) for mid, sims in content_raw.items()
+        }
+        return content_scores, best_seed
+
+    # ------------------------------------------------------------------
+    # Result assembly
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_results(
+        final: list[tuple[int, float]],
+        best_seed: dict[int, tuple[int, float, float]],
+        seed_titles: dict[int, str],
+        breakdowns: dict[int, ScoreBreakdown],
+        feature_explanations: dict[int, list[str]],
+    ) -> list[RecommendationResult]:
+        """Wrap reranked tuples into rich ``RecommendationResult`` objects."""
+        results: list[RecommendationResult] = []
+        for mid, score in final:
+            seed = best_seed.get(mid)
+            influence = None
+            if seed is not None:
+                seed_id, _, seed_rating = seed
+                influence = SeedInfluence(
+                    movie_id=seed_id,
+                    title=seed_titles.get(seed_id, f"Movie #{seed_id}"),
+                    your_rating=seed_rating,
+                )
+            results.append(
+                RecommendationResult(
+                    movie_id=mid,
+                    score=score,
+                    because_you_liked=influence,
+                    feature_explanations=feature_explanations.get(mid, []),
+                    score_breakdown=breakdowns.get(mid),
+                )
+            )
+        return results
+
+    # ------------------------------------------------------------------
+    # Feature-based explanations (Level 2)
+    # ------------------------------------------------------------------
+
+    async def _generate_feature_explanations(
+        self,
+        final_ids: list[int],
+        user_top: list[tuple[int, float]],
+        best_seed: dict[int, tuple[int, float, float]],
+        seed_titles: dict[int, str],
+        db: AsyncSession,
+    ) -> dict[int, list[str]]:
+        """Generate template-based explanation strings for final recommendations."""
+        if not final_ids:
+            return {}
+
+        seed_ids = [mid for mid, _ in user_top]
+        all_ids = list(set(final_ids) | set(seed_ids))
+        metadata = await self._get_movie_metadata(all_ids, db)
+
+        # Build user preference profile from seeds
+        genre_counts: Counter[str] = Counter()
+        director_to_seed: dict[str, str] = {}  # director -> seed title
+        actor_counts: Counter[str] = Counter()
+
+        for seed_id, rating in user_top:
+            meta = metadata.get(seed_id)
+            if meta is None:
+                continue
+            for g in meta["genres"]:
+                genre_counts[g] += 1
+            if meta["director"]:
+                director_to_seed.setdefault(
+                    meta["director"], seed_titles.get(seed_id, f"Movie #{seed_id}")
+                )
+            if rating >= 8.0:
+                for actor in meta["cast_names"]:
+                    actor_counts[actor] += 1
+
+        top_genres = {g for g, c in genre_counts.items() if c >= 2}
+        top_actors = {a for a, c in actor_counts.items() if c >= 2}
+
+        explanations: dict[int, list[str]] = {}
+        for mid in final_ids:
+            meta = metadata.get(mid)
+            if meta is None:
+                continue
+            tags: list[str] = []
+
+            # Director match
+            if meta["director"] and meta["director"] in director_to_seed and len(tags) < 2:
+                seed_title = director_to_seed[meta["director"]]
+                tags.append(f"Same director as {seed_title} \u2014 {meta['director']}")
+
+            # Genre overlap
+            if top_genres and len(tags) < 2:
+                overlap = [g for g in meta["genres"] if g in top_genres]
+                if len(overlap) >= 2:
+                    tags.append(f"Matches your love of {overlap[0]} and {overlap[1]}")
+                elif len(overlap) == 1:
+                    tags.append(f"Matches your love of {overlap[0]}")
+
+            # Cast match
+            if top_actors and len(tags) < 2:
+                for actor in meta["cast_names"]:
+                    if actor in top_actors:
+                        count = actor_counts[actor]
+                        tags.append(
+                            f"Stars {actor}, who appears in {count} of your top-rated films"
+                        )
+                        break
+
+            if tags:
+                explanations[mid] = tags
+
+        return explanations
 
     # ------------------------------------------------------------------
     # Re-ranking: LLM primary, MMR fallback
@@ -457,6 +675,27 @@ class HybridRecommender:
             {"ids": movie_ids},
         )
         return {r[0]: (r[1] if r[1] else []) for r in result.fetchall()}
+
+    async def _get_movie_metadata(
+        self,
+        movie_ids: list[int],
+        db: AsyncSession,
+    ) -> dict[int, dict]:
+        """Batch fetch genres, director, cast_names for movies."""
+        if not movie_ids:
+            return {}
+        result = await db.execute(
+            text("SELECT id, genres, director, cast_names FROM movies WHERE id = ANY(:ids)"),
+            {"ids": movie_ids},
+        )
+        return {
+            r[0]: {
+                "genres": r[1] or [],
+                "director": r[2],
+                "cast_names": r[3] or [],
+            }
+            for r in result.fetchall()
+        }
 
     @staticmethod
     def _base_title(title: str) -> str:

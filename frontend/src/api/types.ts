@@ -84,11 +84,26 @@ export interface UserRatingsResponse {
   limit: number;
 }
 
+export interface SeedInfluence {
+  movie_id: number;
+  title: string;
+  your_rating: number;
+}
+
+export interface ScoreBreakdown {
+  content_score: number;
+  collab_score: number;
+  alpha: number;
+}
+
 export interface RecommendationItem {
   movie: MovieSummary;
   score: number;
   content_score: number | null;
   collab_score: number | null;
+  because_you_liked: SeedInfluence | null;
+  feature_explanations: string[];
+  score_breakdown: ScoreBreakdown | null;
 }
 
 export interface RecommendationsResponse {
