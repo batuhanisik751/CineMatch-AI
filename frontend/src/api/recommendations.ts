@@ -1,5 +1,9 @@
 import { apiFetch } from "./client";
-import type { RecommendationExplanation, RecommendationsResponse } from "./types";
+import type {
+  MoodRecommendationResponse,
+  RecommendationExplanation,
+  RecommendationsResponse,
+} from "./types";
 
 export function getRecommendations(userId: number, topK = 20, strategy = "hybrid") {
   return apiFetch<RecommendationsResponse>(
@@ -11,4 +15,16 @@ export function getExplanation(userId: number, movieId: number, score: number) {
   return apiFetch<RecommendationExplanation>(
     `/api/v1/users/${userId}/recommendations/explain/${movieId}?score=${score}`
   );
+}
+
+export function getMoodRecommendations(params: {
+  mood: string;
+  user_id: number;
+  alpha?: number;
+  limit?: number;
+}) {
+  return apiFetch<MoodRecommendationResponse>("/api/v1/recommendations/mood", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
 }

@@ -36,7 +36,7 @@ def sample_movie() -> MagicMock:
 
 @pytest.fixture()
 def user_top_rated() -> list[tuple[str, float]]:
-    return [("Inception", 5.0), ("Blade Runner", 4.5), ("Interstellar", 4.0)]
+    return [("Inception", 10), ("Blade Runner", 9), ("Interstellar", 8)]
 
 
 async def test_explain_recommendation_success(llm_service, sample_movie, user_top_rated):
@@ -123,7 +123,7 @@ def sample_candidates():
 
 @pytest.fixture()
 def sample_history():
-    return [{"title": "The Matrix", "rating": 5.0}]
+    return [{"title": "The Matrix", "rating": 10}]
 
 
 async def test_rerank_candidates_success(llm_service, sample_candidates, sample_history):

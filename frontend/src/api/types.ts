@@ -137,6 +137,20 @@ export interface RecommendationExplanation {
   score: number;
 }
 
+export interface MoodRecommendationItem {
+  movie: MovieSummary;
+  similarity: number;
+}
+
+export interface MoodRecommendationResponse {
+  user_id: number;
+  mood: string;
+  alpha: number;
+  is_personalized: boolean;
+  results: MoodRecommendationItem[];
+  total: number;
+}
+
 export interface StatsGenreCount {
   genre: string;
   count: number;

@@ -120,3 +120,101 @@ async def test_explain_recommendation_with_score_param(client, mock_llm_service)
     assert resp.status_code == 200
     data = resp.json()
     assert data["score"] == 0.85
+
+
+# --- Mood recommendations endpoint tests ---
+
+
+async def test_mood_recommendations_success(client, mock_hybrid_recommender, mock_movie_service):
+    resp = await client.post(
+        "/api/v1/recommendations/mood",
+        json={"mood": "dark gritty crime drama", "user_id": 1},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user_id"] == 1
+    assert data["mood"] == "dark gritty crime drama"
+    assert data["is_personalized"] is True
+    assert data["alpha"] == 0.3
+    assert len(data["results"]) > 0
+    assert "movie" in data["results"][0]
+    assert "similarity" in data["results"][0]
+    mock_hybrid_recommender.mood_recommend.assert_called_once()
+
+
+async def test_mood_recommendations_cold_start(client, mock_hybrid_recommender, mock_movie_service):
+    mock_hybrid_recommender.mood_recommend.return_value = ([(1, 0.8)], False)
+    resp = await client.post(
+        "/api/v1/recommendations/mood",
+        json={"mood": "feel-good comedy", "user_id": 999},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["is_personalized"] is False
+
+
+async def test_mood_recommendations_missing_mood(client):
+    resp = await client.post(
+        "/api/v1/recommendations/mood",
+        json={"user_id": 1},
+    )
+    assert resp.status_code == 422
+
+
+async def test_mood_recommendations_empty_mood(client):
+    resp = await client.post(
+        "/api/v1/recommendations/mood",
+        json={"mood": "", "user_id": 1},
+    )
+    assert resp.status_code == 422
+
+
+async def test_mood_recommendations_alpha_out_of_range(client):
+    resp = await client.post(
+        "/api/v1/recommendations/mood",
+        json={"mood": "thriller", "user_id": 1, "alpha": 1.5},
+    )
+    assert resp.status_code == 422
+
+
+async def test_mood_recommendations_service_unavailable(app, client):
+    from cinematch.api.deps import get_hybrid_recommender
+
+    app.dependency_overrides[get_hybrid_recommender] = lambda: None
+    resp = await client.post(
+        "/api/v1/recommendations/mood",
+        json={"mood": "thriller", "user_id": 1},
+    )
+    assert resp.status_code == 503
+    assert "Recommendation service" in resp.json()["detail"]
+
+
+async def test_mood_recommendations_with_custom_alpha(
+    client, mock_hybrid_recommender, mock_movie_service
+):
+    resp = await client.post(
+        "/api/v1/recommendations/mood",
+        json={"mood": "epic adventure", "user_id": 1, "alpha": 0.7, "limit": 10},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["alpha"] == 0.7
+    call_kwargs = mock_hybrid_recommender.mood_recommend.call_args
+    assert call_kwargs.kwargs.get("alpha") == 0.7
+    assert call_kwargs.kwargs.get("top_k") == 10
+
+
+async def test_mood_recommendations_cache_hit(client, mock_hybrid_recommender, mock_cache_service):
+    cached_response = (
+        '{"user_id":1,"mood":"thriller","alpha":0.3,"is_personalized":true,"results":[],"total":0}'
+    )
+    mock_cache_service.get.return_value = cached_response
+    resp = await client.post(
+        "/api/v1/recommendations/mood",
+        json={"mood": "thriller", "user_id": 1},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["mood"] == "thriller"
+    # Should NOT call mood_recommend since cache hit
+    mock_hybrid_recommender.mood_recommend.assert_not_called()

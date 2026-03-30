@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { discoverMovies } from "../api/movies";
+import { discoverMovies, semanticSearchMovies } from "../api/movies";
+import { getMoodRecommendations } from "../api/recommendations";
 import type { MovieSummary } from "../api/types";
 import BottomNav from "../components/BottomNav";
+import MoodCarousel from "../components/MoodCarousel";
+import MoodPills from "../components/MoodPills";
 import MovieCard from "../components/MovieCard";
 import TopNav from "../components/TopNav";
+import type { MoodPreset } from "../constants/moods";
 import { useUserId } from "../hooks/useUserId";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -16,6 +20,14 @@ export default function Home() {
   const [popular, setPopular] = useState<MovieSummary[]>([]);
   const [topRated, setTopRated] = useState<MovieSummary[]>([]);
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
+
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [moodMovies, setMoodMovies] = useState<MovieSummary[]>([]);
+  const [moodLoading, setMoodLoading] = useState(false);
+  const [moodPersonalized, setMoodPersonalized] = useState(false);
+  const [customVibe, setCustomVibe] = useState("");
+  const moodAbort = useRef<AbortController | null>(null);
+  const moodFallback = useRef(false);
 
   useEffect(() => {
     discoverMovies({ sort_by: "popularity", limit: 8 })
@@ -40,6 +52,61 @@ export default function Home() {
   const handleRecs = (e: React.FormEvent) => {
     e.preventDefault();
     navigate(`/recommendations?user=${userId}&strategy=${strategy}`);
+  };
+
+  const fetchMoodMovies = (moodQuery: string, label: string) => {
+    moodAbort.current?.abort();
+    const controller = new AbortController();
+    moodAbort.current = controller;
+    setSelectedMood(label);
+    setMoodLoading(true);
+    setMoodPersonalized(false);
+
+    const applyResults = (movies: MovieSummary[], personalized: boolean) => {
+      if (controller.signal.aborted) return;
+      setMoodMovies(movies);
+      setMoodPersonalized(personalized);
+      refreshForMovieIds(movies.map((m) => m.id));
+    };
+
+    const fallbackToSemantic = () =>
+      semanticSearchMovies(moodQuery, 20).then((data) =>
+        applyResults(data.results.map((r) => r.movie), false)
+      );
+
+    const request = !moodFallback.current && userId
+      ? getMoodRecommendations({ mood: moodQuery, user_id: userId })
+          .then((data) => applyResults(data.results.map((r) => r.movie), data.is_personalized))
+          .catch(() => {
+            moodFallback.current = true;
+            return fallbackToSemantic();
+          })
+      : fallbackToSemantic();
+
+    request
+      .catch(() => {
+        if (!controller.signal.aborted) setMoodMovies([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setMoodLoading(false);
+      });
+  };
+
+  const handleMoodSelect = (mood: MoodPreset) => {
+    if (selectedMood === mood.label) {
+      setSelectedMood(null);
+      setMoodMovies([]);
+      setMoodPersonalized(false);
+      return;
+    }
+    fetchMoodMovies(mood.query, mood.label);
+  };
+
+  const handleCustomVibe = (e: React.FormEvent) => {
+    e.preventDefault();
+    const vibe = customVibe.trim();
+    if (!vibe) return;
+    fetchMoodMovies(vibe, vibe);
   };
 
   return (
@@ -75,8 +142,45 @@ export default function Home() {
                 type="text"
               />
             </form>
+            <MoodPills
+              onSelect={handleMoodSelect}
+              activeMood={selectedMood}
+              loading={moodLoading}
+            />
+            <form
+              onSubmit={handleCustomVibe}
+              className="w-full max-w-xl mx-auto mt-6 flex gap-3"
+            >
+              <input
+                value={customVibe}
+                onChange={(e) => setCustomVibe(e.target.value)}
+                className="flex-1 h-12 px-5 bg-surface-container-lowest border border-outline-variant/20 rounded-full text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint transition-all duration-300 font-body text-sm"
+                placeholder="Or describe your own vibe..."
+                type="text"
+                maxLength={200}
+              />
+              <button
+                type="submit"
+                disabled={!customVibe.trim() || moodLoading}
+                className="h-12 px-6 bg-primary text-on-primary rounded-full font-label font-bold text-sm tracking-wide hover:shadow-[0_0_20px_rgba(255,193,7,0.3)] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Discover
+              </button>
+            </form>
           </div>
         </section>
+
+        {/* Mood Results */}
+        {(selectedMood || moodLoading) && (
+          <MoodCarousel
+            mood={selectedMood ?? ""}
+            movies={moodMovies}
+            loading={moodLoading}
+            isPersonalized={moodPersonalized}
+            isBookmarked={isInWatchlist}
+            onToggleBookmark={toggle}
+          />
+        )}
 
         {/* Recommendations Section */}
         <section className="max-w-7xl mx-auto px-6 pb-32">

@@ -12,8 +12,8 @@ from cinematch.models.rating import Rating
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-# All possible 0.5-step rating buckets.
-_RATING_BUCKETS = [f"{v / 10:.1f}" for v in range(5, 55, 5)]
+# All possible integer rating buckets (1–10).
+_RATING_BUCKETS = [str(v) for v in range(1, 11)]
 
 
 class UserStatsService:
@@ -74,7 +74,7 @@ class UserStatsService:
             .group_by(Rating.rating)
             .order_by(Rating.rating)
         )
-        rating_map = {f"{float(r.rating):.1f}": int(r.cnt) for r in rating_result.all()}
+        rating_map = {str(int(r.rating)): int(r.cnt) for r in rating_result.all()}
         rating_distribution = [
             {"rating": b, "count": rating_map.get(b, 0)} for b in _RATING_BUCKETS
         ]

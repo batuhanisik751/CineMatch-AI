@@ -2,19 +2,27 @@
 
 from __future__ import annotations
 
+import hashlib
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import (
+    get_cache_service,
     get_db,
     get_hybrid_recommender,
     get_llm_service,
     get_movie_service,
     get_rating_service,
 )
+from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import NotFoundError, ServiceUnavailableError
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.recommendation import (
+    MoodRecommendationItem,
+    MoodRecommendationRequest,
+    MoodRecommendationResponse,
     RecommendationExplanation,
     RecommendationItem,
     RecommendationsResponse,
@@ -23,6 +31,8 @@ from cinematch.services.hybrid_recommender import HybridRecommender
 from cinematch.services.llm_service import LLMService
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_service import RatingService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -118,3 +128,62 @@ async def explain_recommendation(
         explanation=explanation,
         score=effective_score,
     )
+
+
+@router.post(
+    "/recommendations/mood",
+    response_model=MoodRecommendationResponse,
+)
+async def mood_recommendations(
+    body: MoodRecommendationRequest,
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    hybrid_rec: HybridRecommender | None = Depends(get_hybrid_recommender),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """Recommend movies matching a mood, optionally personalized to user taste."""
+    if hybrid_rec is None:
+        raise ServiceUnavailableError("Recommendation service")
+
+    # Check cache
+    mood_hash = hashlib.md5(body.mood.lower().encode()).hexdigest()[:8]  # noqa: S324
+    cache_key = f"mood_rec:{body.user_id}:{mood_hash}:{body.alpha}:{body.limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return MoodRecommendationResponse.model_validate_json(cached)
+
+    rec_pairs, is_personalized = await hybrid_rec.mood_recommend(
+        body.mood, body.user_id, db, alpha=body.alpha, top_k=body.limit
+    )
+
+    movie_ids = [mid for mid, _ in rec_pairs]
+    movies_map = await movie_service.get_movies_by_ids(movie_ids, db)
+
+    results = []
+    for mid, sim in rec_pairs:
+        movie = movies_map.get(mid)
+        if movie is not None:
+            results.append(
+                MoodRecommendationItem(
+                    movie=MovieSummary.model_validate(movie),
+                    similarity=sim,
+                )
+            )
+
+    response = MoodRecommendationResponse(
+        user_id=body.user_id,
+        mood=body.mood,
+        alpha=body.alpha,
+        is_personalized=is_personalized,
+        results=results,
+        total=len(results),
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            logger.warning("Failed to cache mood recommendations", exc_info=True)
+
+    return response

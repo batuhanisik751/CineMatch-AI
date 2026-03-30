@@ -110,3 +110,28 @@ class ContentRecommender:
             results.append((mid, float(dist)))
 
         return results[:top_k]
+
+    def faiss_search_by_vector(
+        self,
+        query_vec: np.ndarray,
+        top_k: int = 20,
+        exclude_ids: set[int] | None = None,
+    ) -> list[tuple[int, float]]:
+        """Search FAISS index with an arbitrary query vector."""
+        exclude = exclude_ids or set()
+        fetch_k = top_k + len(exclude)
+        vec = query_vec.reshape(1, -1).astype(np.float32)
+        distances, indices = self._faiss_index.search(vec, fetch_k)
+
+        results: list[tuple[int, float]] = []
+        for dist, idx in zip(distances[0], indices[0]):
+            if idx == -1:
+                continue
+            mid = self._faiss_id_map[idx]
+            if mid in exclude:
+                continue
+            results.append((mid, float(dist)))
+            if len(results) >= top_k:
+                break
+
+        return results

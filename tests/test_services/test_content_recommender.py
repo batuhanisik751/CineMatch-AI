@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
+import numpy as np
 import pytest
 
-from tests.test_services.conftest import _make_normalized_vectors
+from tests.test_services.conftest import SAMPLE_MOVIE_IDS, _make_normalized_vectors
 
 
 @pytest.mark.asyncio
@@ -103,3 +104,44 @@ async def test_get_similar_movies_faiss_when_pgvector_disabled(
         movie_id=101, db=mock_db_session, top_k=3, use_pgvector=False
     )
     assert len(results) > 0
+
+
+# ----- faiss_search_by_vector tests -----
+
+
+def test_faiss_search_by_vector_returns_results(content_recommender, sample_embeddings):
+    """Searching with a known vector returns movie IDs and scores."""
+    query_vec = sample_embeddings[0]  # vector for movie 101
+    results = content_recommender.faiss_search_by_vector(query_vec, top_k=3)
+    assert len(results) > 0
+    assert len(results) <= 3
+    for mid, score in results:
+        assert mid in SAMPLE_MOVIE_IDS
+        assert isinstance(score, float)
+
+
+def test_faiss_search_by_vector_excludes_ids(content_recommender, sample_embeddings):
+    """Excluded movie IDs should not appear in results."""
+    query_vec = sample_embeddings[0]
+    exclude = {102, 103}
+    results = content_recommender.faiss_search_by_vector(query_vec, top_k=5, exclude_ids=exclude)
+    result_ids = {mid for mid, _ in results}
+    assert result_ids.isdisjoint(exclude)
+
+
+def test_faiss_search_by_vector_respects_top_k(content_recommender, sample_embeddings):
+    """Results should not exceed top_k."""
+    query_vec = sample_embeddings[0]
+    results = content_recommender.faiss_search_by_vector(query_vec, top_k=2)
+    assert len(results) <= 2
+
+
+def test_faiss_search_by_vector_with_random_vector(content_recommender):
+    """An arbitrary normalized vector should still return valid results."""
+    rng = np.random.RandomState(99)
+    vec = rng.randn(384).astype(np.float32)
+    vec = vec / np.linalg.norm(vec)
+    results = content_recommender.faiss_search_by_vector(vec, top_k=3)
+    assert len(results) > 0
+    for mid, score in results:
+        assert mid in SAMPLE_MOVIE_IDS

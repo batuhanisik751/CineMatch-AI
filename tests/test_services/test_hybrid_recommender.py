@@ -26,7 +26,7 @@ def _db_execute_factory(
     6. _get_movie_genres            (candidate genres for MMR fallback — sometimes)
     """
     if top_rated is None:
-        top_rated = [(101, 5.0, ["Action", "Sci-Fi"])]
+        top_rated = [(101, 10, ["Action", "Sci-Fi"])]
     if rated_ids is None:
         rated_ids = [(101,)]
     if titles is None:
@@ -95,7 +95,7 @@ async def test_hybrid_recommend_cold_start_uses_content_only(hybrid_recommender,
 async def test_hybrid_recommend_excludes_already_rated(hybrid_recommender, mock_db_session):
     mock_db_session.execute = AsyncMock(
         side_effect=_db_execute_factory(
-            top_rated=[(101, 5.0, ["Action"]), (102, 4.0, ["Drama"])],
+            top_rated=[(101, 10, ["Action"]), (102, 8, ["Drama"])],
             rated_ids=[(101,), (102,)],
         )
     )
@@ -361,3 +361,122 @@ async def test_hybrid_llm_failure_falls_back_to_mmr(
         results = await rec.recommend(user_id=1, db=mock_db_session, top_k=5, strategy="hybrid")
 
     assert len(results) > 0
+
+
+# ------------------------------------------------------------------
+# Mood-based recommendation tests
+# ------------------------------------------------------------------
+
+
+def _mood_db_execute_factory(
+    top_rated: list[tuple] | None = None,
+    rated_ids: list[tuple] | None = None,
+):
+    """Build side_effect for mood_recommend db.execute calls.
+
+    Mood recommend calls db.execute in this order:
+    1. _get_user_top_rated_diverse
+    2. _get_user_rated_movie_ids
+    """
+    if top_rated is None:
+        top_rated = [(101, 9, ["Action", "Sci-Fi"]), (102, 8, ["Drama"])]
+    if rated_ids is None:
+        rated_ids = [(101,), (102,)]
+
+    def _make_result(data):
+        r = MagicMock()
+        r.fetchall.return_value = data
+        return r
+
+    return [
+        _make_result(top_rated),
+        _make_result(rated_ids),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_mood_recommend_cold_start(hybrid_recommender, mock_db_session):
+    """User with no ratings gets pure mood results, is_personalized=False."""
+    empty_result = MagicMock()
+    empty_result.fetchall.return_value = []
+
+    # First call: top_rated (empty), second call: rated_ids (empty)
+    mock_db_session.execute = AsyncMock(side_effect=[empty_result, empty_result])
+
+    results, is_personalized = await hybrid_recommender.mood_recommend(
+        mood_text="dark gritty crime drama",
+        user_id=999,
+        db=mock_db_session,
+        alpha=0.3,
+        top_k=3,
+    )
+
+    assert not is_personalized
+    assert len(results) > 0
+    for mid, score in results:
+        assert isinstance(mid, int)
+        assert isinstance(score, float)
+
+
+@pytest.mark.asyncio
+async def test_mood_recommend_with_ratings(hybrid_recommender, mock_db_session):
+    """User with ratings gets personalized results, is_personalized=True."""
+    mock_db_session.execute = AsyncMock(side_effect=_mood_db_execute_factory())
+
+    results, is_personalized = await hybrid_recommender.mood_recommend(
+        mood_text="heartwarming feel-good comedy",
+        user_id=1,
+        db=mock_db_session,
+        alpha=0.3,
+        top_k=3,
+    )
+
+    assert is_personalized
+    assert len(results) > 0
+    # Should exclude already-rated movies
+    result_ids = {mid for mid, _ in results}
+    assert 101 not in result_ids
+    assert 102 not in result_ids
+
+
+@pytest.mark.asyncio
+async def test_mood_recommend_alpha_zero_is_pure_mood(hybrid_recommender, mock_db_session):
+    """alpha=0 should produce results based purely on mood, not user taste."""
+    mock_db_session.execute = AsyncMock(side_effect=_mood_db_execute_factory())
+
+    results_alpha0, is_p = await hybrid_recommender.mood_recommend(
+        mood_text="suspenseful thriller", user_id=1, db=mock_db_session, alpha=0.0, top_k=3
+    )
+
+    assert is_p  # Still True because user has ratings (blending just weights mood 100%)
+    assert len(results_alpha0) > 0
+
+
+@pytest.mark.asyncio
+async def test_mood_recommend_alpha_one_is_pure_taste(hybrid_recommender, mock_db_session):
+    """alpha=1 should produce results based purely on user taste, ignoring mood."""
+    mock_db_session.execute = AsyncMock(side_effect=_mood_db_execute_factory())
+
+    results, is_p = await hybrid_recommender.mood_recommend(
+        mood_text="any text ignored", user_id=1, db=mock_db_session, alpha=1.0, top_k=3
+    )
+
+    assert is_p
+    assert len(results) > 0
+
+
+@pytest.mark.asyncio
+async def test_mood_recommend_excludes_rated_movies(hybrid_recommender, mock_db_session):
+    """Mood results should never include movies the user has already rated."""
+    mock_db_session.execute = AsyncMock(
+        side_effect=_mood_db_execute_factory(
+            rated_ids=[(101,), (102,), (103,)],
+        )
+    )
+
+    results, _ = await hybrid_recommender.mood_recommend(
+        mood_text="epic adventure", user_id=1, db=mock_db_session, top_k=5
+    )
+
+    result_ids = {mid for mid, _ in results}
+    assert result_ids.isdisjoint({101, 102, 103})

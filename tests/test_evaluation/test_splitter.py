@@ -14,7 +14,7 @@ def sample_ratings():
         {
             "user_id": [1, 1, 2, 2, 1],
             "movie_id": [10, 20, 10, 30, 30],
-            "rating": [4.0, 3.5, 5.0, 2.0, 4.5],
+            "rating": [8, 7, 10, 4, 9],
             "timestamp": pd.to_datetime(
                 [
                     "2020-01-01",

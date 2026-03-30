@@ -48,7 +48,7 @@ async def test_get_user_stats_empty(client, mock_user_stats_service):
         "total_ratings": 0,
         "average_rating": 0.0,
         "genre_distribution": [],
-        "rating_distribution": [{"rating": f"{v / 10:.1f}", "count": 0} for v in range(5, 55, 5)],
+        "rating_distribution": [{"rating": str(v), "count": 0} for v in range(1, 11)],
         "top_directors": [],
         "top_actors": [],
         "rating_timeline": [],

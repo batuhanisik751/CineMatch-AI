@@ -41,8 +41,8 @@ async def test_get_user_stats_with_ratings(service, mock_db):
     genre_result.all.return_value = [("Action", 3), ("Comedy", 2)]
 
     # C: rating distribution
-    rating_row_1 = MagicMock(rating=4.0, cnt=3)
-    rating_row_2 = MagicMock(rating=5.0, cnt=2)
+    rating_row_1 = MagicMock(rating=8, cnt=3)
+    rating_row_2 = MagicMock(rating=10, cnt=2)
     rating_result = MagicMock()
     rating_result.all.return_value = [rating_row_1, rating_row_2]
 
@@ -112,14 +112,14 @@ async def test_rating_distribution_fills_missing_buckets(service, mock_db):
     """Only some rating values present — all 10 buckets should still appear."""
     totals_row = MagicMock()
     totals_row.total = 2
-    totals_row.average = 4.5
+    totals_row.average = 9
     totals_result = MagicMock()
     totals_result.one.return_value = totals_row
 
     genre_result = MagicMock()
     genre_result.all.return_value = [("Drama", 2)]
 
-    rating_row = MagicMock(rating=4.5, cnt=2)
+    rating_row = MagicMock(rating=9, cnt=2)
     rating_result = MagicMock()
     rating_result.all.return_value = [rating_row]
 
@@ -147,9 +147,9 @@ async def test_rating_distribution_fills_missing_buckets(service, mock_db):
 
     assert len(stats["rating_distribution"]) == 10
     bucket_map = {b["rating"]: b["count"] for b in stats["rating_distribution"]}
-    assert bucket_map["4.5"] == 2
-    assert bucket_map["0.5"] == 0
-    assert bucket_map["5.0"] == 0
+    assert bucket_map["9"] == 2
+    assert bucket_map["1"] == 0
+    assert bucket_map["10"] == 0
 
 
 async def test_genre_percentages_calculated_correctly(service, mock_db):

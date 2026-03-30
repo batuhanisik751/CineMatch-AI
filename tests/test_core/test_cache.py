@@ -57,9 +57,15 @@ async def test_delete_removes_key(cache_service, mock_redis):
 
 @pytest.mark.asyncio
 async def test_invalidate_user_recs(cache_service, mock_redis):
-    mock_redis.scan.return_value = (0, ["recs:42:hybrid:20", "recs:42:content:10"])
+    # scan is called twice: once for recs:42:* and once for mood_rec:42:*
+    mock_redis.scan.side_effect = [
+        (0, ["recs:42:hybrid:20", "recs:42:content:10"]),
+        (0, ["mood_rec:42:abc:0.3:20"]),
+    ]
     await cache_service.invalidate_user_recs(42)
-    mock_redis.delete.assert_called_once_with("recs:42:hybrid:20", "recs:42:content:10")
+    assert mock_redis.delete.call_count == 2
+    mock_redis.delete.assert_any_call("recs:42:hybrid:20", "recs:42:content:10")
+    mock_redis.delete.assert_any_call("mood_rec:42:abc:0.3:20")
 
 
 @pytest.mark.asyncio

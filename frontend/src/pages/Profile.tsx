@@ -79,18 +79,10 @@ export default function Profile() {
   };
 
   const stars = (rating: number) => {
-    const full = Math.floor(rating);
-    const half = rating % 1 >= 0.5;
-    const empty = 5 - full - (half ? 1 : 0);
     return (
-      <div className="flex items-center justify-center gap-0.5 text-primary-fixed-dim">
-        {Array.from({ length: full }).map((_, i) => (
-          <span key={`f${i}`} className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-        ))}
-        {half && <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star_half</span>}
-        {Array.from({ length: empty }).map((_, i) => (
-          <span key={`e${i}`} className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0" }}>star</span>
-        ))}
+      <div className="flex items-center justify-center gap-1 text-primary-fixed-dim">
+        <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+        <span className="text-sm font-bold text-on-surface">{rating}/10</span>
       </div>
     );
   };

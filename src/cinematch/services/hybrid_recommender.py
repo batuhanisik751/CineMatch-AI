@@ -88,7 +88,7 @@ class HybridRecommender:
         content_raw: dict[int, list[float]] = {}
         for rated_movie_id, user_rating in user_top:
             similar = await self._content.get_similar_movies(rated_movie_id, db, top_k=50)
-            weight = user_rating / 5.0
+            weight = user_rating / 10.0
             for mid, similarity in similar:
                 content_raw.setdefault(mid, []).append(similarity * weight)
 
@@ -143,7 +143,7 @@ class HybridRecommender:
         content_raw: dict[int, list[float]] = {}
         for rated_movie_id, user_rating in user_top:
             similar = await self._content.get_similar_movies(rated_movie_id, db, top_k=50)
-            weight = user_rating / 5.0
+            weight = user_rating / 10.0
             for mid, similarity in similar:
                 content_raw.setdefault(mid, []).append(similarity * weight)
 
@@ -292,6 +292,65 @@ class HybridRecommender:
             remaining.pop(best_idx)
 
         return selected
+
+    # ------------------------------------------------------------------
+    # Mood-based recommendation
+    # ------------------------------------------------------------------
+
+    async def mood_recommend(
+        self,
+        mood_text: str,
+        user_id: int,
+        db: AsyncSession,
+        alpha: float = 0.3,
+        top_k: int = 20,
+    ) -> tuple[list[tuple[int, float]], bool]:
+        """Recommend movies matching a mood, optionally blended with user taste.
+
+        Returns ``(results, is_personalized)`` where *is_personalized* is
+        ``False`` for cold-start users (no ratings).
+        """
+        mood_vec = self._content._embedding_service.embed_text(mood_text)
+
+        user_top = await self._get_user_top_rated_diverse(user_id, db, limit=10)
+        if not user_top:
+            rated_ids = await self._get_user_rated_movie_ids(user_id, db)
+            results = self._content.faiss_search_by_vector(mood_vec, top_k, exclude_ids=rated_ids)
+            return results, False
+
+        # Build user taste vector from FAISS-stored embeddings
+        weighted_vecs: list[np.ndarray] = []
+        total_weight = 0.0
+        for movie_id, rating in user_top:
+            faiss_idx = self._content._id_to_faiss_idx.get(movie_id)
+            if faiss_idx is None:
+                continue
+            vec = self._content._faiss_index.reconstruct(int(faiss_idx))
+            weight = rating / 10.0
+            weighted_vecs.append(vec * weight)
+            total_weight += weight
+
+        if not weighted_vecs:
+            # All rated movies missing from FAISS — fall back to pure mood
+            rated_ids = await self._get_user_rated_movie_ids(user_id, db)
+            results = self._content.faiss_search_by_vector(mood_vec, top_k, exclude_ids=rated_ids)
+            return results, False
+
+        user_taste_vec = np.sum(weighted_vecs, axis=0) / total_weight
+        # L2-normalize
+        norm = np.linalg.norm(user_taste_vec)
+        if norm > 0:
+            user_taste_vec = user_taste_vec / norm
+
+        # Blend and re-normalize
+        query_vec = alpha * user_taste_vec + (1 - alpha) * mood_vec
+        norm = np.linalg.norm(query_vec)
+        if norm > 0:
+            query_vec = query_vec / norm
+
+        rated_ids = await self._get_user_rated_movie_ids(user_id, db)
+        results = self._content.faiss_search_by_vector(query_vec, top_k, exclude_ids=rated_ids)
+        return results, True
 
     # ------------------------------------------------------------------
     # Diverse seed selection

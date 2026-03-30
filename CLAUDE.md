@@ -4,7 +4,7 @@
 - `docker compose up -d` — start local services (PostgreSQL + pgvector, Redis)
 - `docker compose down` — stop local services
 - `pip install -e ".[dev]"` — install all dependencies (including dev/test)
-- `uvicorn cinematch.main:app --reload --host 0.0.0.0 --port 8000` — backend dev server
+- `PYTHONPATH=src uvicorn cinematch.main:app --reload --host 0.0.0.0 --port 8000` — backend dev server
 - `pytest tests/ -v` — run all tests
 - `pytest tests/path/to/test.py -k test_name` — run single test
 - `pytest tests/path/to/test.py -v` — run test file with verbose output

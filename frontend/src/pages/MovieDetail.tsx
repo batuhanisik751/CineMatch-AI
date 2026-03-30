@@ -179,7 +179,7 @@ export default function MovieDetail() {
                 <form onSubmit={handleRate} className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-on-surface-variant text-sm">Your Rating</span>
-                    <span className="text-primary font-bold text-xl">{userRating || "—"}</span>
+                    <span className="text-primary font-bold text-xl">{userRating ? `${userRating}/10` : "—"}</span>
                   </div>
                   <StarRating value={userRating} onChange={setUserRating} />
                   <button type="submit" className="w-full bg-primary-container/20 border border-primary-container/40 text-primary py-3 rounded-md font-bold hover:bg-primary-container hover:text-on-primary-container transition-all">

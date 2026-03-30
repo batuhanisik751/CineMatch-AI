@@ -93,7 +93,7 @@ class LLMService:
         candidates: list[dict],
         user_history: list[dict],
     ) -> str:
-        history_lines = "\n".join(f"- {h['title']} (rated {h['rating']}/5)" for h in user_history)
+        history_lines = "\n".join(f"- {h['title']} (rated {h['rating']}/10)" for h in user_history)
         candidate_lines = "\n".join(
             f"- ID:{c['id']} | {c['title']} | "
             f"Genres: {', '.join(c['genres']) if c['genres'] else 'Unknown'} | "
@@ -167,7 +167,7 @@ class LLMService:
         genres = ", ".join(movie.genres) if movie.genres else "Unknown"
         overview = movie.overview or "No overview available"
 
-        rated_lines = "\n".join(f"- {title} (rated {rating}/5)" for title, rating in user_top_rated)
+        rated_lines = "\n".join(f"- {title} (rated {rating}/10)" for title, rating in user_top_rated)
 
         return (
             "You are a movie recommendation assistant. Explain why this movie "

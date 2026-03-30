@@ -124,8 +124,9 @@ def seed_database(processed_dir: str | None = None) -> None:
             for _, row in batch.iterrows():
                 ts = row["timestamp"]
                 ts_str = ts.strftime("%Y-%m-%d %H:%M:%S") if isinstance(ts, pd.Timestamp) else str(ts)
+                scaled_rating = int(float(row['rating']) * 2)
                 values_parts.append(
-                    f"({int(row['user_id'])}, {int(row['movie_id'])}, {float(row['rating'])}, '{ts_str}')"
+                    f"({int(row['user_id'])}, {int(row['movie_id'])}, {scaled_rating}, '{ts_str}')"
                 )
             session.execute(
                 text(f"INSERT INTO ratings (user_id, movie_id, rating, timestamp) VALUES {', '.join(values_parts)}")

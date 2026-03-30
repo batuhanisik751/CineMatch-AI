@@ -47,11 +47,11 @@ def train_als(
     print(f"  Users: {n_users:,}, Items: {n_items:,}")
 
     # Build sparse user-item matrix
-    # Confidence = 1 + alpha * rating (alpha=40 is standard)
+    # Confidence = 1 + alpha * rating (alpha=20 for 1-10 scale)
     print("Building sparse user-item matrix...")
     user_indices = np.array([user_map[uid] for uid in ratings["user_id"]])
     item_indices = np.array([item_map[mid] for mid in ratings["movie_id"]])
-    confidence_values = (1 + 40 * ratings["rating"].values).astype(np.float32)
+    confidence_values = (1 + 20 * ratings["rating"].values).astype(np.float32)
 
     user_items = sp.csr_matrix(
         (confidence_values, (user_indices, item_indices)),

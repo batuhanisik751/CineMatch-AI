@@ -109,7 +109,7 @@ def run_evaluation(
     user_items = sp.load_npz(str(processed_dir / "als_user_items.npz"))
 
     # Build test set: users with >= 5 highly-rated test items
-    test_high = test[test["rating"] >= 4.0]
+    test_high = test[test["rating"] >= 8]
     user_counts = test_high.groupby("user_id").size()
     eligible_users = user_counts[user_counts >= 5].index.tolist()
     print(f"  Eligible users (>=5 high test ratings): {len(eligible_users):,}")

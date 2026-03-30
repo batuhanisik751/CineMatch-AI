@@ -10,6 +10,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from cinematch.api.deps import (
+    get_cache_service,
     get_content_recommender,
     get_db,
     get_embedding_service,
@@ -45,7 +46,7 @@ def _make_movie(id: int = 1, title: str = "The Matrix") -> MagicMock:
     return m
 
 
-def _make_rating(user_id: int = 1, movie_id: int = 1, rating: float = 4.5) -> MagicMock:
+def _make_rating(user_id: int = 1, movie_id: int = 1, rating: int = 9) -> MagicMock:
     r = MagicMock()
     r.id = 1
     r.user_id = user_id
@@ -110,7 +111,16 @@ def mock_content_recommender():
 def mock_hybrid_recommender():
     rec = AsyncMock()
     rec.recommend.return_value = [(1, 0.95), (2, 0.88)]
+    rec.mood_recommend.return_value = ([(1, 0.92), (2, 0.85)], True)
     return rec
+
+
+@pytest.fixture()
+def mock_cache_service():
+    svc = AsyncMock()
+    svc.get.return_value = None
+    svc.set.return_value = None
+    return svc
 
 
 @pytest.fixture()
@@ -184,7 +194,7 @@ def mock_user_stats_service():
             {"genre": "Action", "count": 3, "percentage": 60.0},
             {"genre": "Comedy", "count": 2, "percentage": 40.0},
         ],
-        "rating_distribution": [{"rating": f"{v / 10:.1f}", "count": 0} for v in range(5, 55, 5)],
+        "rating_distribution": [{"rating": str(v), "count": 0} for v in range(1, 11)],
         "top_directors": [{"name": "Nolan", "count": 3}],
         "top_actors": [{"name": "DiCaprio", "count": 2}],
         "rating_timeline": [{"month": "2024-01", "count": 5}],
@@ -207,6 +217,7 @@ def app(
     mock_embedding_service,
     mock_user_stats_service,
     mock_watchlist_service,
+    mock_cache_service,
     mock_db,
 ):
     test_app = create_app()
@@ -220,6 +231,7 @@ def app(
     test_app.dependency_overrides[get_embedding_service] = lambda: mock_embedding_service
     test_app.dependency_overrides[get_user_stats_service] = lambda: mock_user_stats_service
     test_app.dependency_overrides[get_watchlist_service] = lambda: mock_watchlist_service
+    test_app.dependency_overrides[get_cache_service] = lambda: mock_cache_service
 
     return test_app
 

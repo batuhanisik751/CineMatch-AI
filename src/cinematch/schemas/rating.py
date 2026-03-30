@@ -11,7 +11,7 @@ class RatingCreate(BaseModel):
     """Request body for creating/updating a rating."""
 
     movie_id: int
-    rating: float = Field(ge=0.5, le=5.0)
+    rating: int = Field(ge=1, le=10)
 
 
 class RatingResponse(BaseModel):
@@ -19,7 +19,7 @@ class RatingResponse(BaseModel):
 
     user_id: int
     movie_id: int
-    rating: float
+    rating: int
     timestamp: datetime
     movie_title: str | None = None
 
