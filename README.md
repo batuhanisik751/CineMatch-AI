@@ -96,7 +96,7 @@ npm run dev
 
 Opens at http://localhost:3000 — connects to the backend API automatically.
 
-Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, mood-based discovery (preset moods + custom vibe input, personalized by blending mood with user taste), hybrid/content/collab recommendations, "Why This?" explanation button on each recommended movie (powered by Mistral), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with genre distribution, rating histogram, top directors/actors, and monthly activity timeline.
+Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, mood-based discovery (preset moods + custom vibe input, personalized by blending mood with user taste), hybrid/content/collab recommendations with smart explanation tags ("Because you liked Inception", "Same director as Interstellar — Christopher Nolan", content vs. collab score breakdown bar), "Why This?" deep-dive explanation button (powered by Mistral), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with genre distribution, rating histogram, top directors/actors, and monthly activity timeline.
 
 ## API Endpoints
 
@@ -111,7 +111,7 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/users/{id}` | User details |
 | GET | `/api/v1/users/{id}/stats` | User profile analytics (genre distribution, rating histogram, top directors/actors, timeline) |
-| GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Recommendations (strategy: `hybrid`, `content`, `collab`) |
+| GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Recommendations with smart explanations (strategy: `hybrid`, `content`, `collab`) |
 | POST | `/api/v1/recommendations/mood` | Mood-based discovery (body: `{"mood": "dark gritty thriller", "user_id": 1, "alpha": 0.3, "limit": 20}`) |
 | GET | `/api/v1/users/{id}/recommendations/explain/{movie_id}?score=0.9` | LLM explanation for a recommendation |
 | POST | `/api/v1/users/{id}/ratings` | Add/update a rating (body: `{"movie_id": 1, "rating": 4.5}`) |
@@ -146,10 +146,11 @@ If Ollama is not running, the app still works — recommendations use the algori
 5. **Diverse Seed Selection:** User's top-rated movies are picked to span different genres, not just the N highest ratings.
 6. **LLM Re-ranking:** Top 50 candidates are sent to Mistral, which re-ranks for thematic variety, sequel avoidance, and deeper taste matching. Returns the best 20.
 7. **MMR Fallback:** If the LLM is unavailable, Maximal Marginal Relevance (MMR) with genre Jaccard similarity ensures diversity algorithmically.
-8. **Fuzzy Search:** Movie search uses ILIKE for exact matches, with automatic pg_trgm fuzzy fallback for typos (e.g., "Casr" finds "Cars").
-9. **Semantic "Vibe" Search:** Users can search by mood or description (e.g., "funny movie about time travel"). The query text is embedded using the same sentence-transformer model and matched against movie embeddings via pgvector cosine similarity. No LLM needed — pure vector search.
-10. **Mood-Based Discovery:** Users pick a mood preset (e.g., "Feel-Good", "Mind-Bending", "Edge of Your Seat") or type a custom vibe. The mood text is embedded, then blended with the user's taste vector (weighted average of their top-rated movies' embeddings): `query = alpha * taste + (1-alpha) * mood`. The blended vector is L2-normalized and searched via FAISS. Cold-start users get pure mood results. Alpha defaults to 0.3 (mood-weighted with light personalization).
-11. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only). Cold-start users (not in ALS training data) get a 400 error on `collab` with guidance to use `hybrid` or `content` instead. The `hybrid` strategy handles cold-start automatically by falling back to content-only.
+8. **Smart Explanations:** Every recommendation includes lightweight, always-available explanation metadata — no LLM required. Three levels: (a) seed influence tracking ("Because you liked Inception"), (b) feature-based templates comparing genres, directors, and cast against the user's top-rated movies, and (c) score decomposition showing the content vs. collaborative contribution breakdown.
+9. **Fuzzy Search:** Movie search uses ILIKE for exact matches, with automatic pg_trgm fuzzy fallback for typos (e.g., "Casr" finds "Cars").
+10. **Semantic "Vibe" Search:** Users can search by mood or description (e.g., "funny movie about time travel"). The query text is embedded using the same sentence-transformer model and matched against movie embeddings via pgvector cosine similarity. No LLM needed — pure vector search.
+11. **Mood-Based Discovery:** Users pick a mood preset (e.g., "Feel-Good", "Mind-Bending", "Edge of Your Seat") or type a custom vibe. The mood text is embedded, then blended with the user's taste vector (weighted average of their top-rated movies' embeddings): `query = alpha * taste + (1-alpha) * mood`. The blended vector is L2-normalized and searched via FAISS. Cold-start users get pure mood results. Alpha defaults to 0.3 (mood-weighted with light personalization).
+12. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only). Cold-start users (not in ALS training data) get a 400 error on `collab` with guidance to use `hybrid` or `content` instead. The `hybrid` strategy handles cold-start automatically by falling back to content-only.
 
 ## Data Pipeline
 
