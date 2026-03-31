@@ -34,6 +34,16 @@ export const MOOD_PRESETS = [
     query: "suspenseful tense thriller edge of your seat gripping",
     icon: "bolt",
   },
+  {
+    label: "Tearjerker",
+    query: "emotional tearjerker sad moving drama that makes you cry",
+    icon: "water_drop",
+  },
+  {
+    label: "Nostalgic",
+    query: "nostalgic retro classic beloved timeless movies from the past",
+    icon: "hourglass_bottom",
+  },
 ] as const;
 
 export type MoodPreset = (typeof MOOD_PRESETS)[number];

@@ -8,6 +8,7 @@ import Directors from "./pages/Directors";
 import Discover from "./pages/Discover";
 import HiddenGems from "./pages/HiddenGems";
 import Home from "./pages/Home";
+import Moods from "./pages/Moods";
 import Keywords from "./pages/Keywords";
 import MovieDetail from "./pages/MovieDetail";
 import Profile from "./pages/Profile";
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/trending" element={<Trending />} />
       <Route path="/top-charts" element={<TopCharts />} />
       <Route path="/hidden-gems" element={<HiddenGems />} />
+      <Route path="/moods" element={<Moods />} />
       <Route path="/decades" element={<Decades key={navCountRef.current} />} />
       <Route path="/directors" element={<Directors key={navCountRef.current} />} />
       <Route path="/actors" element={<Actors key={navCountRef.current} />} />
