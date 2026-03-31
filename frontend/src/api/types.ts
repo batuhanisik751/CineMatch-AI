@@ -329,6 +329,41 @@ export interface ActorFilmographyResponse {
   filmography: ActorFilmResult[];
 }
 
+export interface KeywordSummary {
+  keyword: string;
+  count: number;
+}
+
+export interface PopularKeywordsResponse {
+  results: KeywordSummary[];
+  limit: number;
+}
+
+export interface KeywordSearchResponse {
+  results: KeywordSummary[];
+  query: string;
+}
+
+export interface KeywordStats {
+  total_movies: number;
+  avg_vote: number;
+  top_genres: string[];
+}
+
+export interface KeywordMovieResult {
+  movie: MovieSummary;
+  vote_average: number;
+}
+
+export interface KeywordMoviesResponse {
+  results: KeywordMovieResult[];
+  keyword: string;
+  stats: KeywordStats;
+  total: number;
+  offset: number;
+  limit: number;
+}
+
 export interface SurpriseResponse {
   user_id: number;
   excluded_genres: string[];

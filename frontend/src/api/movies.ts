@@ -8,11 +8,14 @@ import type {
   DirectorSearchResponse,
   GenresResponse,
   HiddenGemsResponse,
+  KeywordMoviesResponse,
+  KeywordSearchResponse,
   MovieListResponse,
   MovieResponse,
   MovieSearchResponse,
   PopularActorsResponse,
   PopularDirectorsResponse,
+  PopularKeywordsResponse,
   SemanticSearchResponse,
   SimilarMoviesResponse,
   TopChartsResponse,
@@ -143,5 +146,29 @@ export function getActorFilmography(name: string, userId?: number) {
   if (userId != null) qs.set("user_id", String(userId));
   return apiFetch<ActorFilmographyResponse>(
     `/api/v1/movies/actors/filmography?${qs.toString()}`
+  );
+}
+
+export function getPopularKeywords(limit = 50) {
+  return apiFetch<PopularKeywordsResponse>(
+    `/api/v1/movies/keywords/popular?limit=${limit}`
+  );
+}
+
+export function searchKeywords(q: string, limit = 20) {
+  return apiFetch<KeywordSearchResponse>(
+    `/api/v1/movies/keywords/search?q=${encodeURIComponent(q)}&limit=${limit}`
+  );
+}
+
+export function getKeywordMovies(
+  keyword: string,
+  params: { offset?: number; limit?: number } = {}
+) {
+  const qs = new URLSearchParams({ keyword });
+  if (params.offset != null) qs.set("offset", String(params.offset));
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  return apiFetch<KeywordMoviesResponse>(
+    `/api/v1/movies/keywords/movies?${qs.toString()}`
   );
 }

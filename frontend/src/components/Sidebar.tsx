@@ -9,6 +9,7 @@ const items = [
   { to: "/decades", icon: "history", label: "Decades" },
   { to: "/directors", icon: "movie_filter", label: "Directors" },
   { to: "/actors", icon: "theater_comedy", label: "Actors" },
+  { to: "/keywords", icon: "sell", label: "Keywords" },
   { to: "/recommendations", icon: "auto_awesome", label: "Recommendations" },
   { to: "/watchlist", icon: "bookmark", label: "Watchlist" },
   { to: "/profile", icon: "person", label: "Profile" },

@@ -6,6 +6,7 @@ import Directors from "./pages/Directors";
 import Discover from "./pages/Discover";
 import HiddenGems from "./pages/HiddenGems";
 import Home from "./pages/Home";
+import Keywords from "./pages/Keywords";
 import MovieDetail from "./pages/MovieDetail";
 import Profile from "./pages/Profile";
 import Recommendations from "./pages/Recommendations";
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/decades" element={<Decades key={navCountRef.current} />} />
       <Route path="/directors" element={<Directors key={navCountRef.current} />} />
       <Route path="/actors" element={<Actors key={navCountRef.current} />} />
+      <Route path="/keywords" element={<Keywords key={navCountRef.current} />} />
       <Route path="/search" element={<Search />} />
       <Route path="/movies/:id" element={<MovieDetail />} />
       <Route path="/recommendations" element={<Recommendations />} />

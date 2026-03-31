@@ -222,3 +222,38 @@ class ActorFilmographyResponse(BaseModel):
     actor: str
     stats: ActorStats
     filmography: list[ActorFilmResult]
+
+
+class KeywordSummary(BaseModel):
+    keyword: str
+    count: int
+
+
+class PopularKeywordsResponse(BaseModel):
+    results: list[KeywordSummary]
+    limit: int
+
+
+class KeywordSearchResponse(BaseModel):
+    results: list[KeywordSummary]
+    query: str
+
+
+class KeywordStats(BaseModel):
+    total_movies: int
+    avg_vote: float
+    top_genres: list[str]
+
+
+class KeywordMovieResult(BaseModel):
+    movie: MovieSummary
+    vote_average: float
+
+
+class KeywordMoviesResponse(BaseModel):
+    results: list[KeywordMovieResult]
+    keyword: str
+    stats: KeywordStats
+    total: int
+    offset: int
+    limit: int

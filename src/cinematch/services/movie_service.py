@@ -527,6 +527,93 @@ class MovieService:
 
         return films, stats
 
+    async def popular_keywords(
+        self,
+        db: AsyncSession,
+        limit: int = 50,
+        min_count: int = 5,
+    ) -> list[tuple[str, int]]:
+        """Return most frequent keywords with their movie counts."""
+        stmt = text(
+            "SELECT keyword, COUNT(*)::int AS count "
+            "FROM movies, jsonb_array_elements_text(keywords) AS keyword "
+            "GROUP BY keyword "
+            "HAVING COUNT(*) >= :min_count "
+            "ORDER BY count DESC "
+            "LIMIT :limit"
+        )
+        result = await db.execute(stmt, {"min_count": min_count, "limit": limit})
+        return [(row[0], row[1]) for row in result.all()]
+
+    async def search_keywords(
+        self,
+        query: str,
+        db: AsyncSession,
+        limit: int = 20,
+    ) -> list[tuple[str, int]]:
+        """Search keywords by partial name match."""
+        pattern = f"%{query}%"
+        stmt = text(
+            "SELECT keyword, COUNT(*)::int AS count "
+            "FROM movies, jsonb_array_elements_text(keywords) AS keyword "
+            "WHERE keyword ILIKE :pattern "
+            "GROUP BY keyword "
+            "ORDER BY count DESC "
+            "LIMIT :limit"
+        )
+        result = await db.execute(stmt, {"pattern": pattern, "limit": limit})
+        return [(row[0], row[1]) for row in result.all()]
+
+    async def movies_by_keyword(
+        self,
+        db: AsyncSession,
+        *,
+        keyword: str,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[list[Movie], int, dict]:
+        """Return movies containing a specific keyword with stats."""
+        keyword_filter = Movie.keywords.op("@>")(cast([keyword], JSONB_TYPE))
+
+        # Count query
+        count_stmt = select(func.count()).select_from(Movie).where(keyword_filter)
+        count_result = await db.execute(count_stmt)
+        total = count_result.scalar_one()
+
+        # Data query
+        stmt = (
+            select(Movie)
+            .where(keyword_filter)
+            .order_by(Movie.popularity.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        movies = list(result.scalars().all())
+
+        # Stats
+        avg_stmt = select(func.avg(Movie.vote_average)).where(keyword_filter)
+        avg_result = await db.execute(avg_stmt)
+        avg_vote = avg_result.scalar_one() or 0.0
+
+        # Top genres among matching movies
+        genre_stmt = text(
+            "SELECT genre, COUNT(*)::int AS cnt "
+            "FROM movies, jsonb_array_elements_text(genres) AS genre "
+            "WHERE movies.keywords @> :kw_array::jsonb "
+            "GROUP BY genre ORDER BY cnt DESC LIMIT 5"
+        )
+        genre_result = await db.execute(genre_stmt, {"kw_array": f'["{keyword}"]'})
+        top_genres = [row[0] for row in genre_result.all()]
+
+        stats = {
+            "total_movies": total,
+            "avg_vote": round(float(avg_vote), 2),
+            "top_genres": top_genres,
+        }
+
+        return movies, total, stats
+
     async def surprise_movies(
         self,
         db: AsyncSession,

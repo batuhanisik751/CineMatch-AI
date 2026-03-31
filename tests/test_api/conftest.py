@@ -109,6 +109,13 @@ def mock_movie_service(sample_movie):
             "user_rated_count": 0,
         },
     )
+    svc.popular_keywords.return_value = [("time travel", 42), ("dystopia", 35)]
+    svc.search_keywords.return_value = [("time travel", 42)]
+    svc.movies_by_keyword.return_value = (
+        [sample_movie],
+        1,
+        {"total_movies": 1, "avg_vote": 8.2, "top_genres": ["Action", "Sci-Fi"]},
+    )
     svc.surprise_movies.return_value = [sample_movie]
     svc.search_actors.return_value = [("Keanu Reeves", 8, 7.15)]
     svc.popular_actors.return_value = [

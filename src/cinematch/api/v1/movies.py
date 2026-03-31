@@ -35,12 +35,18 @@ from cinematch.schemas.movie import (
     GenresResponse,
     HiddenGemResult,
     HiddenGemsResponse,
+    KeywordMovieResult,
+    KeywordMoviesResponse,
+    KeywordSearchResponse,
+    KeywordStats,
+    KeywordSummary,
     MovieListResponse,
     MovieResponse,
     MovieSearchResponse,
     MovieSummary,
     PopularActorsResponse,
     PopularDirectorsResponse,
+    PopularKeywordsResponse,
     SemanticSearchResponse,
     SemanticSearchResult,
     SimilarMovie,
@@ -517,6 +523,92 @@ async def actor_filmography(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
         except Exception:
             logger.warning("Failed to cache actor filmography", exc_info=True)
+
+    return response
+
+
+@router.get("/keywords/popular", response_model=PopularKeywordsResponse)
+async def popular_keywords(
+    limit: int = Query(default=50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = f"popular_keywords:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return PopularKeywordsResponse.model_validate_json(cached)
+
+    rows = await movie_service.popular_keywords(db, limit=limit)
+
+    response = PopularKeywordsResponse(
+        results=[KeywordSummary(keyword=kw, count=count) for kw, count in rows],
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache popular keywords", exc_info=True)
+
+    return response
+
+
+@router.get("/keywords/search", response_model=KeywordSearchResponse)
+async def search_keywords(
+    q: str = Query(min_length=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+):
+    rows = await movie_service.search_keywords(q, db, limit=limit)
+    return KeywordSearchResponse(
+        results=[KeywordSummary(keyword=kw, count=count) for kw, count in rows],
+        query=q,
+    )
+
+
+@router.get("/keywords/movies", response_model=KeywordMoviesResponse)
+async def keyword_movies(
+    keyword: str = Query(min_length=1, max_length=255),
+    offset: int = Query(default=0, ge=0, le=10000),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = f"keyword_movies:{keyword.lower()}:{offset}:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return KeywordMoviesResponse.model_validate_json(cached)
+
+    movies, total, stats = await movie_service.movies_by_keyword(
+        db, keyword=keyword, offset=offset, limit=limit
+    )
+
+    response = KeywordMoviesResponse(
+        results=[
+            KeywordMovieResult(
+                movie=MovieSummary.model_validate(movie),
+                vote_average=movie.vote_average,
+            )
+            for movie in movies
+        ],
+        keyword=keyword,
+        stats=KeywordStats(**stats),
+        total=total,
+        offset=offset,
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache keyword movies", exc_info=True)
 
     return response
 

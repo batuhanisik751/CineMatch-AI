@@ -862,3 +862,79 @@ async def test_actors_filmography_not_found(client, mock_movie_service):
     resp = await client.get("/api/v1/movies/actors/filmography", params={"name": "Nobody Unknown"})
     assert resp.status_code == 404
     assert resp.json()["detail"] == "Actor not found"
+
+
+# --- Keyword Tag Cloud ---
+
+
+async def test_popular_keywords_success(client):
+    resp = await client.get("/api/v1/movies/keywords/popular")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["limit"] == 50
+    assert len(data["results"]) == 2
+    assert data["results"][0]["keyword"] == "time travel"
+    assert data["results"][0]["count"] == 42
+    assert data["results"][1]["keyword"] == "dystopia"
+
+
+async def test_popular_keywords_cache_hit(client, mock_movie_service, mock_cache_service):
+    cached_response = '{"results":[{"keyword":"time travel","count":42}],"limit":50}'
+    mock_cache_service.get.return_value = cached_response
+
+    resp = await client.get("/api/v1/movies/keywords/popular")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["results"][0]["keyword"] == "time travel"
+    mock_movie_service.popular_keywords.assert_not_called()
+
+
+async def test_popular_keywords_cache_miss(client, mock_movie_service, mock_cache_service):
+    resp = await client.get("/api/v1/movies/keywords/popular")
+    assert resp.status_code == 200
+    mock_movie_service.popular_keywords.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "popular_keywords:50"
+    assert call_args[1]["ttl"] == 21600
+
+
+async def test_search_keywords_success(client):
+    resp = await client.get("/api/v1/movies/keywords/search", params={"q": "time"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["query"] == "time"
+    assert len(data["results"]) == 1
+    assert data["results"][0]["keyword"] == "time travel"
+    assert data["results"][0]["count"] == 42
+
+
+async def test_search_keywords_empty_query_422(client):
+    resp = await client.get("/api/v1/movies/keywords/search", params={"q": ""})
+    assert resp.status_code == 422
+
+
+async def test_keyword_movies_success(client, sample_movie):
+    resp = await client.get("/api/v1/movies/keywords/movies", params={"keyword": "time travel"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["keyword"] == "time travel"
+    assert data["total"] == 1
+    assert data["offset"] == 0
+    assert data["limit"] == 20
+    assert len(data["results"]) == 1
+    assert data["results"][0]["movie"]["id"] == sample_movie.id
+    assert data["stats"]["total_movies"] == 1
+    assert data["stats"]["avg_vote"] == 8.2
+    assert "Action" in data["stats"]["top_genres"]
+
+
+async def test_keyword_movies_pagination(client, mock_movie_service):
+    resp = await client.get(
+        "/api/v1/movies/keywords/movies",
+        params={"keyword": "dystopia", "offset": 20, "limit": 10},
+    )
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.movies_by_keyword.call_args.kwargs
+    assert call_kwargs["offset"] == 20
+    assert call_kwargs["limit"] == 10

@@ -39,6 +39,7 @@ class Movie(Base):
     __table_args__ = (
         Index("idx_movies_genres", "genres", postgresql_using="gin"),
         Index("idx_movies_cast_names", "cast_names", postgresql_using="gin"),
+        Index("idx_movies_keywords", "keywords", postgresql_using="gin"),
     )
 
     def __repr__(self) -> str:
