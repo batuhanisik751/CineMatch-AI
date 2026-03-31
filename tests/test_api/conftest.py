@@ -118,6 +118,16 @@ def mock_movie_service(sample_movie):
     )
     svc.surprise_movies.return_value = [sample_movie]
     svc.advanced_search.return_value = ([sample_movie], 1)
+    svc.collection_completions.return_value = [
+        {
+            "creator_type": "director",
+            "creator_name": "Lana Wachowski",
+            "rated_count": 3,
+            "avg_rating": 8.0,
+            "total_by_creator": 5,
+            "missing": [sample_movie],
+        }
+    ]
     svc.search_actors.return_value = [("Keanu Reeves", 8, 7.15)]
     svc.popular_actors.return_value = [
         ("Keanu Reeves", 8, 7.15),

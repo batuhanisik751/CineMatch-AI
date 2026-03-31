@@ -383,3 +383,18 @@ export interface AdvancedSearchResponse {
   offset: number;
   limit: number;
 }
+
+export interface CollectionGroup {
+  creator_type: string;
+  creator_name: string;
+  rated_count: number;
+  avg_rating: number;
+  total_by_creator: number;
+  missing: MovieSummary[];
+}
+
+export interface CompletionsResponse {
+  user_id: number;
+  groups: CollectionGroup[];
+  total_missing: number;
+}

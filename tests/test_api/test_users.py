@@ -112,3 +112,40 @@ async def test_surprise_me_default_limit(
     resp = await client.get("/api/v1/users/1/surprise")
     assert resp.status_code == 200
     assert resp.json()["limit"] == 5
+
+
+async def test_completions_success(client, mock_movie_service):
+    """Completions endpoint returns collection groups."""
+    resp = await client.get("/api/v1/users/1/completions?limit=10")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user_id"] == 1
+    assert len(data["groups"]) == 1
+    group = data["groups"][0]
+    assert group["creator_type"] == "director"
+    assert group["creator_name"] == "Lana Wachowski"
+    assert group["rated_count"] == 3
+    assert group["avg_rating"] == 8.0
+    assert group["total_by_creator"] == 5
+    assert len(group["missing"]) == 1
+    assert group["missing"][0]["title"] == "The Matrix"
+    assert data["total_missing"] == 1
+    mock_movie_service.collection_completions.assert_called_once()
+
+
+async def test_completions_empty(client, mock_movie_service):
+    """User with no qualifying creators gets empty groups."""
+    mock_movie_service.collection_completions.return_value = []
+    resp = await client.get("/api/v1/users/999/completions")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["groups"] == []
+    assert data["total_missing"] == 0
+
+
+async def test_completions_custom_limit(client, mock_movie_service):
+    """Limit parameter is passed through to service."""
+    resp = await client.get("/api/v1/users/1/completions?limit=25")
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.collection_completions.call_args
+    assert call_kwargs.kwargs["limit"] == 25

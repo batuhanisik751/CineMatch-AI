@@ -10,7 +10,13 @@ from cinematch.api.deps import get_db, get_movie_service, get_user_stats_service
 from cinematch.models.rating import Rating
 from cinematch.models.user import User
 from cinematch.schemas.movie import MovieSummary
-from cinematch.schemas.user import SurpriseResponse, UserResponse, UserStatsResponse
+from cinematch.schemas.user import (
+    CollectionGroup,
+    CompletionsResponse,
+    SurpriseResponse,
+    UserResponse,
+    UserStatsResponse,
+)
 from cinematch.services.movie_service import MovieService
 from cinematch.services.user_stats_service import UserStatsService
 
@@ -67,4 +73,32 @@ async def surprise_me(
         excluded_genres=top_genres,
         results=[MovieSummary.model_validate(m) for m in movies],
         limit=limit,
+    )
+
+
+@router.get("/{user_id}/completions", response_model=CompletionsResponse)
+async def get_completions(
+    user_id: int,
+    limit: int = Query(default=10, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+):
+    """Suggest unrated films by directors/actors the user has rated >= 3 films for."""
+    groups = await movie_service.collection_completions(db, user_id=user_id, limit=limit)
+
+    total_missing = sum(len(g["missing"]) for g in groups)
+    return CompletionsResponse(
+        user_id=user_id,
+        groups=[
+            CollectionGroup(
+                creator_type=g["creator_type"],
+                creator_name=g["creator_name"],
+                rated_count=g["rated_count"],
+                avg_rating=g["avg_rating"],
+                total_by_creator=g["total_by_creator"],
+                missing=[MovieSummary.model_validate(m) for m in g["missing"]],
+            )
+            for g in groups
+        ],
+        total_missing=total_missing,
     )

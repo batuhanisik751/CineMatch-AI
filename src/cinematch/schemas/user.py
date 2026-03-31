@@ -68,3 +68,22 @@ class SurpriseResponse(BaseModel):
     excluded_genres: list[str]
     results: list[MovieSummary]
     limit: int
+
+
+class CollectionGroup(BaseModel):
+    """A creator (director/actor) with their unrated films."""
+
+    creator_type: str
+    creator_name: str
+    rated_count: int
+    avg_rating: float
+    total_by_creator: int
+    missing: list[MovieSummary]
+
+
+class CompletionsResponse(BaseModel):
+    """Response for collection completion suggestions."""
+
+    user_id: int
+    groups: list[CollectionGroup]
+    total_missing: int

@@ -697,3 +697,133 @@ class MovieService:
 
         result = await db.execute(stmt)
         return list(result.scalars().all()), total
+
+    async def collection_completions(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: int,
+        limit: int = 10,
+    ) -> list[dict]:
+        """Find directors/actors where user rated >= 3 films and return unrated ones."""
+        rated_subq = select(Rating.movie_id).where(Rating.user_id == user_id)
+        groups: list[dict] = []
+
+        # --- Directors where user rated >= 3 films ---
+        dir_stmt = (
+            select(
+                Movie.director,
+                func.count().label("rated_count"),
+                func.avg(Rating.rating).label("avg_rating"),
+            )
+            .join(Rating, (Rating.movie_id == Movie.id) & (Rating.user_id == user_id))
+            .where(Movie.director.isnot(None))
+            .group_by(Movie.director)
+            .having(func.count() >= 3)
+            .order_by(desc("avg_rating"))
+        )
+        dir_result = await db.execute(dir_stmt)
+        for director_name, rated_count, avg_rating in dir_result.all():
+            total_stmt = (
+                select(func.count())
+                .select_from(Movie)
+                .where(func.lower(Movie.director) == func.lower(director_name))
+            )
+            total_result = await db.execute(total_stmt)
+            total_by_creator = total_result.scalar_one()
+
+            missing_stmt = (
+                select(Movie)
+                .where(func.lower(Movie.director) == func.lower(director_name))
+                .where(Movie.id.notin_(rated_subq))
+                .order_by(Movie.vote_average.desc())
+            )
+            missing_result = await db.execute(missing_stmt)
+            missing_movies = list(missing_result.scalars().all())
+
+            if missing_movies:
+                groups.append(
+                    {
+                        "creator_type": "director",
+                        "creator_name": director_name,
+                        "rated_count": int(rated_count),
+                        "avg_rating": round(float(avg_rating), 1),
+                        "total_by_creator": total_by_creator,
+                        "missing": missing_movies,
+                    }
+                )
+
+        # --- Actors where user rated >= 3 films ---
+        actor_name_col = func.jsonb_array_elements_text(Movie.cast_names).label("actor_name")
+        actor_unnested = (
+            select(actor_name_col, Movie.id.label("movie_id"), Rating.rating)
+            .join(Rating, (Rating.movie_id == Movie.id) & (Rating.user_id == user_id))
+            .where(Movie.cast_names != cast("[]", JSONB_TYPE))
+            .subquery()
+        )
+        actor_stmt = (
+            select(
+                actor_unnested.c.actor_name,
+                func.count(func.distinct(actor_unnested.c.movie_id)).label("rated_count"),
+                func.avg(actor_unnested.c.rating).label("avg_rating"),
+            )
+            .group_by(actor_unnested.c.actor_name)
+            .having(func.count(func.distinct(actor_unnested.c.movie_id)) >= 3)
+            .order_by(desc("avg_rating"))
+            .limit(20)
+        )
+        actor_result = await db.execute(actor_stmt)
+        for actor_name_val, rated_count, avg_rating in actor_result.all():
+            total_stmt = (
+                select(func.count())
+                .select_from(Movie)
+                .where(
+                    Movie.cast_names.op("@>")(
+                        func.jsonb_build_array(actor_name_val).cast(JSONB_TYPE)
+                    )
+                )
+            )
+            total_result = await db.execute(total_stmt)
+            total_by_creator = total_result.scalar_one()
+
+            missing_stmt = (
+                select(Movie)
+                .where(
+                    Movie.cast_names.op("@>")(
+                        func.jsonb_build_array(actor_name_val).cast(JSONB_TYPE)
+                    )
+                )
+                .where(Movie.id.notin_(rated_subq))
+                .order_by(Movie.vote_average.desc())
+            )
+            missing_result = await db.execute(missing_stmt)
+            missing_movies = list(missing_result.scalars().all())
+
+            if missing_movies:
+                groups.append(
+                    {
+                        "creator_type": "actor",
+                        "creator_name": actor_name_val,
+                        "rated_count": int(rated_count),
+                        "avg_rating": round(float(avg_rating), 1),
+                        "total_by_creator": total_by_creator,
+                        "missing": missing_movies,
+                    }
+                )
+
+        # Sort all groups by avg_rating descending
+        groups.sort(key=lambda g: g["avg_rating"], reverse=True)
+
+        # Limit total missing movies across all groups
+        total_missing = 0
+        trimmed: list[dict] = []
+        for g in groups:
+            remaining = limit - total_missing
+            if remaining <= 0:
+                break
+            if len(g["missing"]) > remaining:
+                g["missing"] = g["missing"][:remaining]
+            total_missing += len(g["missing"])
+            trimmed.append(g)
+
+        return trimmed
