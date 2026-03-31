@@ -7,6 +7,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
+import { useDismissed } from "../hooks/useDismissed";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Decades() {
@@ -19,6 +20,7 @@ export default function Decades() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
+  const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
 
   // Load decades on mount
   useEffect(() => {
@@ -44,7 +46,7 @@ export default function Decades() {
       .then((data) => {
         setResults(data.results);
         setTotal(data.total);
-        refreshForMovieIds(data.results.map((r) => r.movie.id));
+        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); }
       })
       .catch((e) => setError(e.detail || e.message || "Failed to load movies"))
       .finally(() => setLoading(false));
@@ -191,7 +193,7 @@ export default function Decades() {
                         <MovieCard
                           movie={item.movie}
                           isBookmarked={isInWatchlist(item.movie.id)}
-                          onToggleBookmark={toggle}
+                          onToggleBookmark={toggle} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
                         />
                         <div className="mt-2 flex items-center gap-3 text-xs text-on-surface-variant font-medium">
                           <span>

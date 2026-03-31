@@ -10,6 +10,7 @@ import MoodPills from "../components/MoodPills";
 import MovieCard from "../components/MovieCard";
 import TopNav from "../components/TopNav";
 import type { MoodPreset } from "../constants/moods";
+import { useDismissed } from "../hooks/useDismissed";
 import { useUserId } from "../hooks/useUserId";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -22,6 +23,7 @@ export default function Home() {
   const [topRated, setTopRated] = useState<MovieSummary[]>([]);
   const [gems, setGems] = useState<MovieSummary[]>([]);
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
+  const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
 
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [moodMovies, setMoodMovies] = useState<MovieSummary[]>([]);
@@ -42,20 +44,26 @@ export default function Home() {
     discoverMovies({ sort_by: "popularity", limit: 8 })
       .then((data) => {
         setPopular(data.results);
-        refreshForMovieIds(data.results.map((m) => m.id));
+        const ids = data.results.map((m) => m.id);
+        refreshForMovieIds(ids);
+        refreshDismissedForMovieIds(ids);
       })
       .catch(() => {});
     discoverMovies({ sort_by: "vote_average", limit: 8 })
       .then((data) => {
         setTopRated(data.results);
-        refreshForMovieIds(data.results.map((m) => m.id));
+        const ids = data.results.map((m) => m.id);
+        refreshForMovieIds(ids);
+        refreshDismissedForMovieIds(ids);
       })
       .catch(() => {});
     getHiddenGems({ limit: 8 })
       .then((data) => {
         const movies = data.results.map((r) => r.movie);
         setGems(movies);
-        refreshForMovieIds(movies.map((m) => m.id));
+        const ids = movies.map((m) => m.id);
+        refreshForMovieIds(ids);
+        refreshDismissedForMovieIds(ids);
       })
       .catch(() => {});
   }, []);
@@ -68,6 +76,7 @@ export default function Home() {
         setFeed(data);
         const allIds = data.sections.flatMap((s) => s.movies.map((m) => m.id));
         refreshForMovieIds(allIds);
+        refreshDismissedForMovieIds(allIds);
       })
       .catch(() => setFeed(null))
       .finally(() => setFeedLoading(false));
@@ -105,7 +114,9 @@ export default function Home() {
       if (controller.signal.aborted) return;
       setMoodMovies(movies);
       setMoodPersonalized(personalized);
-      refreshForMovieIds(movies.map((m) => m.id));
+      const ids = movies.map((m) => m.id);
+      refreshForMovieIds(ids);
+      refreshDismissedForMovieIds(ids);
     };
 
     const fallbackToSemantic = () =>
@@ -155,7 +166,9 @@ export default function Home() {
       .then((data) => {
         setSurpriseMovies(data.results);
         setSurpriseGenres(data.excluded_genres);
-        refreshForMovieIds(data.results.map((m) => m.id));
+        const ids = data.results.map((m) => m.id);
+        refreshForMovieIds(ids);
+        refreshDismissedForMovieIds(ids);
       })
       .catch(() => setSurpriseMovies([]))
       .finally(() => setSurpriseLoading(false));
@@ -239,6 +252,8 @@ export default function Home() {
             isPersonalized={moodPersonalized}
             isBookmarked={isInWatchlist}
             onToggleBookmark={toggle}
+            isDismissed={isDismissed}
+            onDismiss={toggleDismiss}
           />
         )}
 
@@ -271,6 +286,8 @@ export default function Home() {
                     movie={m}
                     isBookmarked={isInWatchlist(m.id)}
                     onToggleBookmark={toggle}
+                    isDismissed={isDismissed(m.id)}
+                    onDismiss={toggleDismiss}
                   />
                 </div>
               ))}
@@ -358,6 +375,8 @@ export default function Home() {
                               movie={m}
                               isBookmarked={isInWatchlist(m.id)}
                               onToggleBookmark={toggle}
+                              isDismissed={isDismissed(m.id)}
+                              onDismiss={toggleDismiss}
                             />
                           </div>
                         ))}
@@ -394,7 +413,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {popular.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} />
                           </div>
                         ))}
                       </div>
@@ -411,7 +430,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {topRated.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} />
                           </div>
                         ))}
                       </div>
@@ -428,7 +447,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {gems.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} />
                           </div>
                         ))}
                       </div>

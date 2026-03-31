@@ -8,6 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
+import { useDismissed } from "../hooks/useDismissed";
 import { useUserId } from "../hooks/useUserId";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -29,6 +30,7 @@ export default function Recommendations() {
   const [explainLoading, setExplainLoading] = useState(false);
   const [explainError, setExplainError] = useState("");
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
+  const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
 
   const fetchRecs = () => {
     setLoading(true);
@@ -38,7 +40,9 @@ export default function Recommendations() {
       .then((data) => {
         setRecs(data.recommendations);
         setFetched(true);
-        refreshForMovieIds(data.recommendations.map((r) => r.movie.id));
+        const ids = data.recommendations.map((r) => r.movie.id);
+        refreshForMovieIds(ids);
+        refreshDismissedForMovieIds(ids);
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -179,6 +183,8 @@ export default function Recommendations() {
                   matchPercent={Math.round(rec.score * 100)}
                   isBookmarked={isInWatchlist(rec.movie.id)}
                   onToggleBookmark={toggle}
+                  isDismissed={isDismissed(rec.movie.id)}
+                  onDismiss={toggleDismiss}
                   becauseYouLiked={rec.because_you_liked?.title ?? null}
                   featureExplanations={rec.feature_explanations}
                   scoreBreakdown={rec.score_breakdown}

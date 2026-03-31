@@ -8,6 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
+import { useDismissed } from "../hooks/useDismissed";
 import { useUserId } from "../hooks/useUserId";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -27,6 +28,7 @@ export default function FromSeedRecommendations() {
   const [explainLoading, setExplainLoading] = useState(false);
   const [explainError, setExplainError] = useState("");
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
+  const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
 
   useEffect(() => {
     if (!movieId) return;
@@ -35,7 +37,9 @@ export default function FromSeedRecommendations() {
     getFromSeedRecommendations(userId, Number(movieId))
       .then((res) => {
         setData(res);
-        refreshForMovieIds(res.recommendations.map((r) => r.movie.id));
+        const ids = res.recommendations.map((r) => r.movie.id);
+        refreshForMovieIds(ids);
+        refreshDismissedForMovieIds(ids);
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -110,7 +114,9 @@ export default function FromSeedRecommendations() {
                 getFromSeedRecommendations(userId, Number(movieId))
                   .then((res) => {
                     setData(res);
-                    refreshForMovieIds(res.recommendations.map((r) => r.movie.id));
+                    const ids = res.recommendations.map((r) => r.movie.id);
+        refreshForMovieIds(ids);
+        refreshDismissedForMovieIds(ids);
                   })
                   .catch((e) => setError(e.detail || e.message))
                   .finally(() => setLoading(false));
@@ -128,6 +134,8 @@ export default function FromSeedRecommendations() {
                   matchPercent={Math.round(rec.score * 100)}
                   isBookmarked={isInWatchlist(rec.movie.id)}
                   onToggleBookmark={toggle}
+                  isDismissed={isDismissed(rec.movie.id)}
+                  onDismiss={toggleDismiss}
                   becauseYouLiked={rec.because_you_liked?.title ?? null}
                   featureExplanations={rec.feature_explanations}
                   scoreBreakdown={rec.score_breakdown}

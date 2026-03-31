@@ -42,7 +42,9 @@ def generate_embeddings(
     # Load movies
     movies_path = processed_dir / "movies_clean.parquet"
     if not movies_path.exists():
-        raise FileNotFoundError(f"movies_clean.parquet not found at {movies_path}. Run cleaner first.")
+        raise FileNotFoundError(
+            f"movies_clean.parquet not found at {movies_path}. Run cleaner first."
+        )
 
     print(f"Loading movies from {movies_path}...")
     movies = pd.read_parquet(movies_path)

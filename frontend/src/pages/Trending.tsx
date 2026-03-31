@@ -7,6 +7,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
+import { useDismissed } from "../hooks/useDismissed";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 const WINDOW_OPTIONS = [
@@ -22,6 +23,7 @@ export default function Trending() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
+  const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
 
   const fetchTrending = (w: number) => {
     setLoading(true);
@@ -29,7 +31,7 @@ export default function Trending() {
     getTrendingMovies(w, 40)
       .then((data) => {
         setResults(data.results);
-        refreshForMovieIds(data.results.map((r) => r.movie.id));
+        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); }
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -88,7 +90,7 @@ export default function Trending() {
                     <MovieCard
                       movie={item.movie}
                       isBookmarked={isInWatchlist(item.movie.id)}
-                      onToggleBookmark={toggle}
+                      onToggleBookmark={toggle} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
                     />
                     <p className="mt-2 text-xs text-on-surface-variant font-medium">
                       <span className="material-symbols-outlined text-sm align-middle mr-1">bar_chart</span>

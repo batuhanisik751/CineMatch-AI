@@ -24,6 +24,7 @@ from cinematch.core.exceptions import (
 from cinematch.core.logging import setup_logging
 from cinematch.services.collab_recommender import CollabRecommender
 from cinematch.services.content_recommender import ContentRecommender
+from cinematch.services.dismissal_service import DismissalService
 from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.feed_service import FeedService
 from cinematch.services.hybrid_recommender import HybridRecommender
@@ -122,6 +123,12 @@ async def lifespan(app: FastAPI):
     app.state.rating_service = RatingService()
     app.state.user_stats_service = UserStatsService()
     app.state.watchlist_service = WatchlistService()
+    app.state.dismissal_service = DismissalService()
+
+    # Inject dismissal service into hybrid recommender (created earlier in try block)
+    hybrid = getattr(app.state, "hybrid_recommender", None)
+    if hybrid is not None:
+        hybrid._dismissal_service = app.state.dismissal_service
 
     # Feed service (works with or without recommendation artifacts)
     app.state.feed_service = FeedService(
@@ -130,6 +137,7 @@ async def lifespan(app: FastAPI):
         content_recommender=getattr(app.state, "content_recommender", None),
         collab_recommender=getattr(app.state, "collab_recommender", None),
         hybrid_recommender=getattr(app.state, "hybrid_recommender", None),
+        dismissal_service=app.state.dismissal_service,
     )
 
     # Redis cache (optional — app works without it)

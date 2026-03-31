@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from cinematch.services.collab_recommender import CollabRecommender
     from cinematch.services.content_recommender import ContentRecommender
+    from cinematch.services.dismissal_service import DismissalService
     from cinematch.services.hybrid_recommender import HybridRecommender
     from cinematch.services.movie_service import MovieService
     from cinematch.services.user_stats_service import UserStatsService
@@ -34,12 +35,14 @@ class FeedService:
         content_recommender: ContentRecommender | None,
         collab_recommender: CollabRecommender | None,
         hybrid_recommender: HybridRecommender | None,
+        dismissal_service: DismissalService | None = None,
     ) -> None:
         self._movies = movie_service
         self._stats = user_stats_service
         self._content = content_recommender
         self._collab = collab_recommender
         self._hybrid = hybrid_recommender
+        self._dismissal_service = dismissal_service
 
     async def generate_feed(
         self,
@@ -54,10 +57,13 @@ class FeedService:
             return await self._cold_start_feed(user_id, db)
 
         # Fetch rated IDs once for all sections
-        result = await db.execute(
-            select(Rating.movie_id).where(Rating.user_id == user_id)
-        )
+        result = await db.execute(select(Rating.movie_id).where(Rating.user_id == user_id))
         rated_ids = {row[0] for row in result.all()}
+
+        # Also exclude dismissed movies
+        if self._dismissal_service is not None:
+            dismissed_ids = await self._dismissal_service.get_dismissed_movie_ids(user_id, db)
+            rated_ids = rated_ids | dismissed_ids
 
         # Build sections in order, skip on failure
         builders = [
@@ -69,7 +75,7 @@ class FeedService:
         ]
 
         built: list[FeedSection] = []
-        for builder in builders[: sections]:
+        for builder in builders[:sections]:
             try:
                 section = await builder(user_id, db, rated_ids, stats)
                 if section is not None and len(section.movies) > 0:
@@ -87,9 +93,7 @@ class FeedService:
     # Cold-start fallback
     # ------------------------------------------------------------------
 
-    async def _cold_start_feed(
-        self, user_id: int, db: AsyncSession
-    ) -> FeedResponse:
+    async def _cold_start_feed(self, user_id: int, db: AsyncSession) -> FeedResponse:
         """Generic feed for users with no ratings."""
         built: list[FeedSection] = []
 
@@ -109,9 +113,7 @@ class FeedService:
 
         # Top Rated
         try:
-            top_movies, _ = await self._movies.list_movies(
-                db, sort_by="vote_average", limit=10
-            )
+            top_movies, _ = await self._movies.list_movies(db, sort_by="vote_average", limit=10)
             if top_movies:
                 built.append(
                     FeedSection(
@@ -158,9 +160,7 @@ class FeedService:
         if self._hybrid is None or self._content is None:
             return None
 
-        top_rated = await self._hybrid._get_user_top_rated_diverse(
-            user_id, db, limit=5
-        )
+        top_rated = await self._hybrid._get_user_top_rated_diverse(user_id, db, limit=5)
         if not top_rated:
             return None
 
@@ -176,9 +176,7 @@ class FeedService:
 
         movies_map = await self._movies.get_movies_by_ids(movie_ids, db)
         movies = [
-            MovieSummary.model_validate(movies_map[mid])
-            for mid in movie_ids
-            if mid in movies_map
+            MovieSummary.model_validate(movies_map[mid]) for mid in movie_ids if mid in movies_map
         ]
 
         return FeedSection(
@@ -227,9 +225,7 @@ class FeedService:
 
         movies_map = await self._movies.get_movies_by_ids(movie_ids, db)
         movies = [
-            MovieSummary.model_validate(movies_map[mid])
-            for mid in movie_ids
-            if mid in movies_map
+            MovieSummary.model_validate(movies_map[mid]) for mid in movie_ids if mid in movies_map
         ]
 
         return FeedSection(

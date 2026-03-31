@@ -29,7 +29,7 @@ def train_als(
     # Load ratings
     ratings_path = processed_dir / "ratings_clean.parquet"
     if not ratings_path.exists():
-        raise FileNotFoundError(f"ratings_clean.parquet not found. Run cleaner first.")
+        raise FileNotFoundError("ratings_clean.parquet not found. Run cleaner first.")
 
     print(f"Loading ratings from {ratings_path}...")
     ratings = pd.read_parquet(ratings_path)
@@ -89,7 +89,7 @@ def train_als(
     print(f"  als_item_map.pkl ({len(item_map):,} items)")
 
     sp.save_npz(settings.als_user_items_path, user_items)
-    print(f"  als_user_items.npz")
+    print("  als_user_items.npz")
 
     print("[OK] ALS training complete.")
 

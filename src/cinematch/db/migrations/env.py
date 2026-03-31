@@ -13,7 +13,14 @@ from cinematch.config import get_settings
 from cinematch.db.base import Base
 
 # Import all models so Alembic can detect them
-from cinematch.models import Movie, Rating, RecommendationCache, User, WatchlistItem  # noqa: F401
+from cinematch.models import (  # noqa: F401
+    Dismissal,
+    Movie,
+    Rating,
+    RecommendationCache,
+    User,
+    WatchlistItem,
+)
 
 config = context.config
 

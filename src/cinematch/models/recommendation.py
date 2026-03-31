@@ -23,9 +23,7 @@ class RecommendationCache(Base):
     )
     score: Mapped[float] = mapped_column(Float, nullable=False)
     strategy: Mapped[str] = mapped_column(String(20), nullable=False)
-    computed_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now()
-    )
+    computed_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     __table_args__ = (
         UniqueConstraint("user_id", "movie_id", "strategy", name="uq_user_movie_strategy"),
@@ -33,4 +31,7 @@ class RecommendationCache(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<RecommendationCache(user={self.user_id}, movie={self.movie_id}, strategy='{self.strategy}')>"
+        return (
+            f"<RecommendationCache(user={self.user_id}, "
+            f"movie={self.movie_id}, strategy='{self.strategy}')>"
+        )

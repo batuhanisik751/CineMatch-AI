@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Area,
   AreaChart,
@@ -10,8 +11,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { getDismissals, undismissMovie } from "../api/dismissals";
 import { getUserRatings } from "../api/ratings";
-import type { RatingResponse, UserResponse, UserStatsResponse } from "../api/types";
+import type { DismissalItemResponse, RatingResponse, UserResponse, UserStatsResponse } from "../api/types";
 import { getUser, getUserStats } from "../api/users";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
@@ -27,6 +29,9 @@ export default function Profile() {
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [dismissedItems, setDismissedItems] = useState<DismissalItemResponse[]>([]);
+  const [dismissedTotal, setDismissedTotal] = useState(0);
+  const [showDismissed, setShowDismissed] = useState(false);
   const limit = 20;
 
   const fetchUser = async () => {
@@ -43,6 +48,10 @@ export default function Profile() {
       setTotal(r.total);
       setStats(s);
       setOffset(0);
+      // Fetch dismissed movies count (best-effort)
+      getDismissals(userId, 0, 20)
+        .then((d) => { setDismissedItems(d.items); setDismissedTotal(d.total); })
+        .catch(() => {});
     } catch {
       // User hasn't rated anything yet — that's fine, not an error
       setUser(null);
@@ -235,6 +244,75 @@ export default function Profile() {
                     <Area type="monotone" dataKey="count" stroke="#D0BCFF" fill="url(#timelineGrad)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Dismissed Movies */}
+        {dismissedTotal > 0 && (
+          <section className="flex flex-col gap-6">
+            <button
+              onClick={() => setShowDismissed((v) => !v)}
+              className="flex items-center gap-3 group"
+            >
+              <div>
+                <h2 className="font-headline text-3xl font-black italic tracking-tighter text-on-surface mb-1 text-left">Not Interested</h2>
+                <p className="text-on-surface-variant font-body text-left">
+                  {dismissedTotal} movie{dismissedTotal !== 1 ? "s" : ""} you've dismissed from recommendations
+                </p>
+              </div>
+              <span className={`material-symbols-outlined text-2xl text-on-surface-variant group-hover:text-primary transition-all ${showDismissed ? "rotate-180" : ""}`}>
+                expand_more
+              </span>
+            </button>
+
+            {showDismissed && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {dismissedItems.map((item) => (
+                  <div
+                    key={item.movie_id}
+                    className="relative group rounded-xl overflow-hidden bg-surface-container-low border border-outline-variant/10"
+                  >
+                    <Link to={`/movies/${item.movie_id}`} className="block">
+                      <div className="aspect-[2/3] overflow-hidden">
+                        {item.poster_path ? (
+                          <img
+                            src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
+                            alt={item.movie_title ?? ""}
+                            className="w-full h-full object-cover opacity-50 group-hover:opacity-75 transition-opacity duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-surface-container flex items-center justify-center">
+                            <span className="material-symbols-outlined text-4xl text-outline">movie</span>
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                    <button
+                      onClick={() => {
+                        undismissMovie(userId, item.movie_id)
+                          .then(() => {
+                            setDismissedItems((prev) => prev.filter((d) => d.movie_id !== item.movie_id));
+                            setDismissedTotal((prev) => prev - 1);
+                          })
+                          .catch(() => {});
+                      }}
+                      className="absolute top-2 right-2 bg-[#131314]/70 backdrop-blur-md p-1.5 rounded border border-white/10 hover:bg-error/60 transition-colors z-10"
+                      title="Undo dismiss"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-error">undo</span>
+                    </button>
+                    <div className="p-3">
+                      <p className="text-sm font-headline font-bold text-on-surface leading-tight truncate">
+                        {item.movie_title ?? `Movie #${item.movie_id}`}
+                      </p>
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        {new Date(item.dismissed_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </section>

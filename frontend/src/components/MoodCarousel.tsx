@@ -8,6 +8,8 @@ interface Props {
   isPersonalized?: boolean;
   isBookmarked?: (id: number) => boolean;
   onToggleBookmark?: (id: number) => void;
+  isDismissed?: (id: number) => boolean;
+  onDismiss?: (id: number) => void;
 }
 
 export default function MoodCarousel({
@@ -17,6 +19,8 @@ export default function MoodCarousel({
   isPersonalized,
   isBookmarked,
   onToggleBookmark,
+  isDismissed,
+  onDismiss,
 }: Props) {
   if (!loading && movies.length === 0) return null;
 
@@ -49,6 +53,8 @@ export default function MoodCarousel({
                 movie={m}
                 isBookmarked={isBookmarked?.(m.id)}
                 onToggleBookmark={onToggleBookmark}
+                isDismissed={isDismissed?.(m.id)}
+                onDismiss={onDismiss}
               />
             </div>
           ))}

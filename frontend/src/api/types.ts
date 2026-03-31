@@ -211,6 +211,36 @@ export interface WatchlistBulkStatusResponse {
   movie_ids: number[];
 }
 
+export interface DismissalResponse {
+  user_id: number;
+  movie_id: number;
+  dismissed_at: string;
+  movie_title: string | null;
+}
+
+export interface DismissalItemResponse {
+  user_id: number;
+  movie_id: number;
+  dismissed_at: string;
+  movie_title: string | null;
+  poster_path: string | null;
+  genres: string[];
+  vote_average: number;
+  release_date: string | null;
+}
+
+export interface DismissalListResponse {
+  user_id: number;
+  items: DismissalItemResponse[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface DismissalBulkStatusResponse {
+  movie_ids: number[];
+}
+
 export interface RecommendationExplanation {
   movie_id: number;
   title: string;

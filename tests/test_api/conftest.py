@@ -13,6 +13,7 @@ from cinematch.api.deps import (
     get_cache_service,
     get_content_recommender,
     get_db,
+    get_dismissal_service,
     get_embedding_service,
     get_feed_service,
     get_hybrid_recommender,
@@ -285,6 +286,48 @@ def mock_user_stats_service():
     return svc
 
 
+def _make_dismissal(user_id: int = 1, movie_id: int = 1) -> MagicMock:
+    d = MagicMock()
+    d.id = 1
+    d.user_id = user_id
+    d.movie_id = movie_id
+    d.dismissed_at = datetime(2024, 6, 15, 12, 0, 0, tzinfo=UTC)
+    d.movie_title = None
+    d.poster_path = None
+    d.genres = []
+    d.vote_average = 0.0
+    d.release_date = None
+    return d
+
+
+@pytest.fixture()
+def sample_dismissal():
+    return _make_dismissal()
+
+
+@pytest.fixture()
+def mock_dismissal_service(sample_dismissal):
+    svc = AsyncMock()
+    svc.dismiss_movie.return_value = sample_dismissal
+    svc.undismiss_movie.return_value = True
+    svc.get_dismissed_movie_ids.return_value = {1}
+    svc.get_dismissals.return_value = (
+        [
+            (
+                sample_dismissal,
+                "The Matrix",
+                "/poster.jpg",
+                ["Action", "Sci-Fi"],
+                8.2,
+                date(1999, 3, 31),
+            )
+        ],
+        1,
+    )
+    svc.bulk_check.return_value = {1}
+    return svc
+
+
 @pytest.fixture()
 def mock_feed_service(sample_movie):
     from cinematch.schemas.movie import MovieSummary
@@ -341,6 +384,7 @@ def app(
     mock_embedding_service,
     mock_user_stats_service,
     mock_watchlist_service,
+    mock_dismissal_service,
     mock_cache_service,
     mock_feed_service,
     mock_db,
@@ -356,6 +400,7 @@ def app(
     test_app.dependency_overrides[get_embedding_service] = lambda: mock_embedding_service
     test_app.dependency_overrides[get_user_stats_service] = lambda: mock_user_stats_service
     test_app.dependency_overrides[get_watchlist_service] = lambda: mock_watchlist_service
+    test_app.dependency_overrides[get_dismissal_service] = lambda: mock_dismissal_service
     test_app.dependency_overrides[get_cache_service] = lambda: mock_cache_service
     test_app.dependency_overrides[get_feed_service] = lambda: mock_feed_service
 

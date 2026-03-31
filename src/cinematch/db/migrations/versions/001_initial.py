@@ -5,16 +5,17 @@ Revises: None
 Create Date: 2026-03-25
 
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
+from alembic import op
 from pgvector.sqlalchemy import Vector
 
 revision: str = "001_initial"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -33,7 +34,9 @@ def upgrade() -> None:
         sa.Column("overview", sa.Text(), nullable=True),
         sa.Column("genres", sa.dialects.postgresql.JSONB(), nullable=False, server_default="[]"),
         sa.Column("keywords", sa.dialects.postgresql.JSONB(), nullable=False, server_default="[]"),
-        sa.Column("cast_names", sa.dialects.postgresql.JSONB(), nullable=False, server_default="[]"),
+        sa.Column(
+            "cast_names", sa.dialects.postgresql.JSONB(), nullable=False, server_default="[]"
+        ),
         sa.Column("director", sa.String(255), nullable=True),
         sa.Column("release_date", sa.Date(), nullable=True),
         sa.Column("vote_average", sa.Float(), nullable=False, server_default="0.0"),
@@ -41,7 +44,9 @@ def upgrade() -> None:
         sa.Column("popularity", sa.Float(), nullable=False, server_default="0.0"),
         sa.Column("poster_path", sa.String(255), nullable=True),
         sa.Column("embedding", Vector(384), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
 
     op.create_index("idx_movies_tmdb_id", "movies", ["tmdb_id"])
@@ -64,7 +69,9 @@ def upgrade() -> None:
         "users",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("movielens_id", sa.Integer(), unique=True, nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
 
     op.create_index("idx_users_movielens_id", "users", ["movielens_id"])
@@ -73,8 +80,12 @@ def upgrade() -> None:
     op.create_table(
         "ratings",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("movie_id", sa.Integer(), sa.ForeignKey("movies.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "movie_id", sa.Integer(), sa.ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("rating", sa.Float(), nullable=False),
         sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("user_id", "movie_id", name="uq_user_movie"),
@@ -89,15 +100,23 @@ def upgrade() -> None:
     op.create_table(
         "recommendations_cache",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("movie_id", sa.Integer(), sa.ForeignKey("movies.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "movie_id", sa.Integer(), sa.ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("score", sa.Float(), nullable=False),
         sa.Column("strategy", sa.String(20), nullable=False),
-        sa.Column("computed_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "computed_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.UniqueConstraint("user_id", "movie_id", "strategy", name="uq_user_movie_strategy"),
     )
 
-    op.create_index("idx_recs_cache_user_strategy", "recommendations_cache", ["user_id", "strategy"])
+    op.create_index(
+        "idx_recs_cache_user_strategy", "recommendations_cache", ["user_id", "strategy"]
+    )
 
 
 def downgrade() -> None:

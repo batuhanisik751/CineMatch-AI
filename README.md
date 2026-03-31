@@ -96,7 +96,7 @@ npm run dev
 
 Opens at http://localhost:3000 — connects to the backend API automatically.
 
-Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, mood-based discovery (9 preset moods + custom vibe input, personalized by blending mood with user taste, dedicated Moods page with multi-select carousels), hybrid/content/collab recommendations with smart explanation tags ("Because you liked Inception", "Same director as Interstellar — Christopher Nolan", content vs. collab score breakdown bar), "Why This?" deep-dive explanation button (powered by Mistral), **Top Charts** (genre-tab selector showing the highest community-rated movies per genre, ranked by in-system average with numbered badges), **Decade Explorer** (browse film history by era — clickable decade grid with movie counts and avg ratings, drill into any decade for top-rated movies with genre filtering and ranked badges), **Director Spotlight** (search or browse popular directors, view full filmography sorted chronologically with your personal ratings overlaid, director stats including total films, average rating, genres, and your average score), **Actor Filmography** (search or browse popular actors, view their complete filmography with your personal ratings overlaid — same two-level drill-down pattern, backed by GIN-indexed JSONB containment queries on cast_names), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with rating histogram, top directors/actors, and monthly activity timeline, **Surprise Me** (serendipity mode — one-click random recommendations from genres outside the user's typical taste profile, with shuffle-again capability), **Keyword Explorer** (interactive tag cloud of crowd-sourced keyword tags like "time travel", "heist", "dystopia" — click any tag to browse matching movies sorted by popularity, with stats showing total movies, average rating, and top genres; includes keyword search with debounced filtering), **Advanced Search** (multi-criteria discovery combining genre, decade, rating range, director, keyword, and cast filters in a single query — all filters are URL-driven for bookmarkable queries, with debounced text inputs, removable active filter chips, and pagination), **Complete the Collection** (identifies directors and actors where you've rated 3+ films, shows unrated movies by those creators with completion progress bars — drives completionism for invested fans), **Personalized Home Feed** (replaces static home carousels with dynamically named sections tailored to user taste — "Because you rated X highly", "Trending with users like you", "Hidden gems in {genre}", "Something different", "New to you in the {decade}s" — cold-start users see generic trending/top-rated/hidden-gems sections), **More Like This** (pick any movie as a seed and get personalized recommendations branching from it — blends content similarity with collaborative filtering, filters already-rated movies, applies franchise penalty and MMR diversity reranking, with full score breakdowns and feature explanations).
+Features: movie discovery with genre/year/sort filters, title search with typo tolerance, semantic "vibe" search by description, mood-based discovery (9 preset moods + custom vibe input, personalized by blending mood with user taste, dedicated Moods page with multi-select carousels), hybrid/content/collab recommendations with smart explanation tags ("Because you liked Inception", "Same director as Interstellar — Christopher Nolan", content vs. collab score breakdown bar), "Why This?" deep-dive explanation button (powered by Mistral), **Top Charts** (genre-tab selector showing the highest community-rated movies per genre, ranked by in-system average with numbered badges), **Decade Explorer** (browse film history by era — clickable decade grid with movie counts and avg ratings, drill into any decade for top-rated movies with genre filtering and ranked badges), **Director Spotlight** (search or browse popular directors, view full filmography sorted chronologically with your personal ratings overlaid, director stats including total films, average rating, genres, and your average score), **Actor Filmography** (search or browse popular actors, view their complete filmography with your personal ratings overlaid — same two-level drill-down pattern, backed by GIN-indexed JSONB containment queries on cast_names), rating history with movie names, watchlist/save-for-later with bookmark buttons across all pages, profile analytics dashboard with rating histogram, top directors/actors, and monthly activity timeline, **Surprise Me** (serendipity mode — one-click random recommendations from genres outside the user's typical taste profile, with shuffle-again capability), **Keyword Explorer** (interactive tag cloud of crowd-sourced keyword tags like "time travel", "heist", "dystopia" — click any tag to browse matching movies sorted by popularity, with stats showing total movies, average rating, and top genres; includes keyword search with debounced filtering), **Advanced Search** (multi-criteria discovery combining genre, decade, rating range, director, keyword, and cast filters in a single query — all filters are URL-driven for bookmarkable queries, with debounced text inputs, removable active filter chips, and pagination), **Complete the Collection** (identifies directors and actors where you've rated 3+ films, shows unrated movies by those creators with completion progress bars — drives completionism for invested fans), **Personalized Home Feed** (replaces static home carousels with dynamically named sections tailored to user taste — "Because you rated X highly", "Trending with users like you", "Hidden gems in {genre}", "Something different", "New to you in the {decade}s" — cold-start users see generic trending/top-rated/hidden-gems sections), **More Like This** (pick any movie as a seed and get personalized recommendations branching from it — blends content similarity with collaborative filtering, filters already-rated movies, applies franchise penalty and MMR diversity reranking, with full score breakdowns and feature explanations), **Recommendation Diversity Controls** (user-facing toggle to adjust how adventurous vs. safe recommendations are — Safe/Balanced/Adventurous maps to MMR lambda values 0.9/0.7/0.4, controlling the relevance-diversity tradeoff in re-ranking), **"Not Interested" / Negative Feedback** (dismiss movies you don't want to see — dismissed movies are filtered from all recommendation, feed, and mood-based results; "Not Interested" button appears on every movie card across all pages; Profile page shows a collapsible list of dismissed movies with undo capability; cache is invalidated on dismiss/undismiss).
 
 ## API Endpoints
 
@@ -127,7 +127,7 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/users/{id}/surprise?limit=5` | Serendipity mode — random well-rated movies outside user's top genres |
 | GET | `/api/v1/users/{id}/completions?limit=10` | "Complete the Collection" — unrated films by directors/actors the user has rated 3+ films for |
 | GET | `/api/v1/users/{id}/feed?sections=5` | Personalized home feed — dynamic named sections tailored to user taste (cold-start users get generic sections) |
-| GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid` | Recommendations with smart explanations (strategy: `hybrid`, `content`, `collab`) |
+| GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid&diversity=medium` | Recommendations with smart explanations (strategy: `hybrid`/`content`/`collab`, diversity: `low`/`medium`/`high`) |
 | GET | `/api/v1/users/{id}/recommendations/from-seed/{movie_id}?limit=20` | "More Like This" — personalized recommendations branching from a seed movie |
 | POST | `/api/v1/recommendations/mood` | Mood-based discovery (body: `{"mood": "dark gritty thriller", "user_id": 1, "alpha": 0.3, "limit": 20}`) |
 | GET | `/api/v1/users/{id}/recommendations/explain/{movie_id}?score=0.9` | LLM explanation for a recommendation |
@@ -137,6 +137,10 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | DELETE | `/api/v1/users/{id}/watchlist/{movie_id}` | Remove from watchlist |
 | GET | `/api/v1/users/{id}/watchlist?offset=0&limit=20` | User's watchlist (paginated, with movie details) |
 | GET | `/api/v1/users/{id}/watchlist/check?movie_ids=1,2,3` | Bulk check which movies are in watchlist |
+| POST | `/api/v1/users/{id}/dismissals` | Dismiss a movie — "Not Interested" (body: `{"movie_id": 1}`) |
+| DELETE | `/api/v1/users/{id}/dismissals/{movie_id}` | Undo a dismissal |
+| GET | `/api/v1/users/{id}/dismissals?offset=0&limit=20` | User's dismissed movies (paginated, with movie details) |
+| GET | `/api/v1/users/{id}/dismissals/check?movie_ids=1,2,3` | Bulk check which movies are dismissed |
 
 ## LLM Integration (Mistral via Ollama)
 
@@ -162,7 +166,7 @@ If Ollama is not running, the app still works — recommendations use the algori
 4. **Franchise Penalty:** Sequels and franchise entries (e.g., "Cars 2", "Star Wars: Episode V") are detected and penalized to avoid clustering on one series.
 5. **Diverse Seed Selection:** User's top-rated movies are picked to span different genres, not just the N highest ratings.
 6. **LLM Re-ranking:** Top 50 candidates are sent to Mistral, which re-ranks for thematic variety, sequel avoidance, and deeper taste matching. Returns the best 20.
-7. **MMR Fallback:** If the LLM is unavailable, Maximal Marginal Relevance (MMR) with genre Jaccard similarity ensures diversity algorithmically.
+7. **MMR Fallback:** If the LLM is unavailable, Maximal Marginal Relevance (MMR) with genre Jaccard similarity ensures diversity algorithmically. Users can tune the diversity level via a `diversity` parameter (`low`=safe/relevance-heavy, `medium`=balanced, `high`=adventurous/diversity-heavy).
 8. **Smart Explanations:** Every recommendation includes lightweight, always-available explanation metadata — no LLM required. Three levels: (a) seed influence tracking ("Because you liked Inception"), (b) feature-based templates comparing genres, directors, and cast against the user's top-rated movies, and (c) score decomposition showing the content vs. collaborative contribution breakdown.
 9. **Fuzzy Search:** Movie search uses ILIKE for exact matches, with automatic pg_trgm fuzzy fallback for typos (e.g., "Casr" finds "Cars").
 10. **Semantic "Vibe" Search:** Users can search by mood or description (e.g., "funny movie about time travel"). The query text is embedded using the same sentence-transformer model and matched against movie embeddings via pgvector cosine similarity. No LLM needed — pure vector search.
@@ -171,6 +175,8 @@ If Ollama is not running, the app still works — recommendations use the algori
 13. **Complete the Collection:** Finds directors and actors where the user has rated 3+ films, queries for their unrated movies, and groups them by creator — sorted by the user's average rating per creator so the most-loved creators appear first.
 14. **"More Like This" from Seed:** Users pick any movie as a seed. The system finds the top 100 content-similar movies, scores them with ALS collab data (if the user has ratings), blends via `alpha * content + (1-alpha) * collab`, filters out already-rated movies and the seed itself, applies franchise/sequel penalty, and diversifies with MMR. Cold-start users get pure content-based results. Every result includes "Because you liked {seed}" influence tracking and feature explanations.
 15. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only). Cold-start users (not in ALS training data) get a 400 error on `collab` with guidance to use `hybrid` or `content` instead. The `hybrid` strategy handles cold-start automatically by falling back to content-only.
+16. **"Not Interested" Dismissals:** Users can dismiss movies from any page via the `visibility_off` button on movie cards. Dismissed movies are stored in a `dismissals` table and filtered from all recommendation paths — hybrid, content-only, from-seed, mood-based, and home feed sections. Cache is invalidated on dismiss/undismiss. The Profile page shows a collapsible "Not Interested" section with undo capability.
+17. **Diversity Controls:** Users can adjust the diversity-relevance tradeoff via a `diversity` query parameter: `low` (lambda=0.9, safe/similar picks), `medium` (lambda=0.7, balanced default), or `high` (lambda=0.4, adventurous/genre-spanning). Applies to `hybrid` and `content` strategies which use MMR re-ranking; `collab` strategy returns raw ALS scores without re-ranking.
 
 ## Data Pipeline
 
@@ -208,10 +214,10 @@ Redis caches API responses with automatic invalidation:
 | `top_charts:{genre}:{limit}` | 6 hours | Manual |
 | `movie:{id}` | 1 hour | Manual |
 | `similar:{id}:{top_k}` | 30 min | Never (content similarity is stable) |
-| `recs:{user_id}:{strategy}:{top_k}` | 15 min | On new rating from this user |
-| `from_seed:{user_id}:{movie_id}:{limit}` | 10 min | On new rating from this user |
-| `mood_rec:{user_id}:{mood_hash}:{alpha}:{limit}` | 10 min | On new rating from this user |
-| `feed:{user_id}:{sections}` | 10 min | On new rating from this user |
+| `recs:{user_id}:{strategy}:{top_k}` | 15 min | On new rating or dismissal from this user |
+| `from_seed:{user_id}:{movie_id}:{limit}` | 10 min | On new rating or dismissal from this user |
+| `mood_rec:{user_id}:{mood_hash}:{alpha}:{limit}` | 10 min | On new rating or dismissal from this user |
+| `feed:{user_id}:{sections}` | 10 min | On new rating or dismissal from this user |
 | `search:{query_hash}:{limit}` | 10 min | Never |
 
 Redis is optional — the app runs without it, just without caching.
@@ -232,6 +238,7 @@ src/cinematch/
 │       ├── recommendations.py    # GET /users/{id}/recommendations, /from-seed/{movie_id}, POST /recommendations/mood
 │       ├── users.py              # GET /users/{id}, /users/{id}/stats, /users/{id}/surprise, /users/{id}/completions, /users/{id}/feed
 │       ├── watchlist.py          # POST/DELETE/GET /users/{id}/watchlist
+│       ├── dismissals.py         # POST/DELETE/GET /users/{id}/dismissals ("Not Interested")
 │       └── router.py             # Aggregated v1 router
 ├── services/        # Business logic
 │   ├── embedding_service.py      # sentence-transformers wrapper
@@ -243,6 +250,7 @@ src/cinematch/
 │   ├── feed_service.py           # Personalized home feed orchestrator (5 named sections)
 │   ├── user_stats_service.py     # User profile analytics (genre, rating, director/actor stats)
 │   ├── watchlist_service.py      # Watchlist CRUD (add, remove, list, bulk check)
+│   ├── dismissal_service.py     # Dismissal CRUD ("Not Interested" feedback)
 │   └── llm_service.py            # Ollama LLM client for re-ranking + explanations
 ├── models/          # SQLAlchemy ORM models
 ├── schemas/         # Pydantic request/response schemas

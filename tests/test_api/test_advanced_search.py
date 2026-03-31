@@ -93,18 +93,14 @@ async def test_advanced_search_multiple_filters(client, mock_movie_service):
 
 
 async def test_advanced_search_sort_by(client, mock_movie_service):
-    resp = await client.get(
-        "/api/v1/movies/advanced-search", params={"sort_by": "vote_average"}
-    )
+    resp = await client.get("/api/v1/movies/advanced-search", params={"sort_by": "vote_average"})
     assert resp.status_code == 200
     call_kwargs = mock_movie_service.advanced_search.call_args.kwargs
     assert call_kwargs["sort_by"] == "vote_average"
 
 
 async def test_advanced_search_pagination(client, mock_movie_service):
-    resp = await client.get(
-        "/api/v1/movies/advanced-search", params={"offset": 20, "limit": 10}
-    )
+    resp = await client.get("/api/v1/movies/advanced-search", params={"offset": 20, "limit": 10})
     assert resp.status_code == 200
     call_kwargs = mock_movie_service.advanced_search.call_args.kwargs
     assert call_kwargs["offset"] == 20

@@ -8,6 +8,7 @@ import MoodPills from "../components/MoodPills";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { MOOD_PRESETS, type MoodPreset } from "../constants/moods";
+import { useDismissed } from "../hooks/useDismissed";
 import { useUserId } from "../hooks/useUserId";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -21,6 +22,7 @@ interface MoodResult {
 export default function Moods() {
   const { userId } = useUserId();
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
+  const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const [activeMoods, setActiveMoods] = useState<Map<string, MoodResult>>(new Map());
   const abortControllers = useRef<Map<string, AbortController>>(new Map());
   const moodFallback = useRef(false);
@@ -53,7 +55,9 @@ export default function Moods() {
         }
         return next;
       });
-      refreshForMovieIds(movies.map((m) => m.id));
+      const ids = movies.map((m) => m.id);
+      refreshForMovieIds(ids);
+      refreshDismissedForMovieIds(ids);
     };
 
     const fallbackToSemantic = () =>
@@ -187,6 +191,8 @@ export default function Moods() {
                     isPersonalized={result.isPersonalized}
                     isBookmarked={isInWatchlist}
                     onToggleBookmark={toggle}
+                    isDismissed={isDismissed}
+                    onDismiss={toggleDismiss}
                   />
                 </div>
               );

@@ -11,6 +11,7 @@ from cinematch.db.session import get_db
 if TYPE_CHECKING:
     from cinematch.core.cache import CacheService
     from cinematch.services.content_recommender import ContentRecommender
+    from cinematch.services.dismissal_service import DismissalService
     from cinematch.services.embedding_service import EmbeddingService
     from cinematch.services.feed_service import FeedService
     from cinematch.services.hybrid_recommender import HybridRecommender
@@ -58,6 +59,10 @@ def get_user_stats_service(request: Request) -> UserStatsService:
 
 def get_watchlist_service(request: Request) -> WatchlistService:
     return request.app.state.watchlist_service
+
+
+def get_dismissal_service(request: Request) -> DismissalService:
+    return request.app.state.dismissal_service
 
 
 def get_feed_service(request: Request) -> FeedService:

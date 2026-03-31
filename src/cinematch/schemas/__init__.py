@@ -1,5 +1,12 @@
 """Pydantic schemas for request/response validation."""
 
+from cinematch.schemas.dismissal import (
+    DismissalBulkStatusResponse,
+    DismissalCreate,
+    DismissalItemResponse,
+    DismissalListResponse,
+    DismissalResponse,
+)
 from cinematch.schemas.movie import (
     MovieResponse,
     MovieSearchResponse,
@@ -18,6 +25,11 @@ from cinematch.schemas.watchlist import (
 )
 
 __all__ = [
+    "DismissalBulkStatusResponse",
+    "DismissalCreate",
+    "DismissalItemResponse",
+    "DismissalListResponse",
+    "DismissalResponse",
     "MovieResponse",
     "MovieSearchResponse",
     "MovieSummary",

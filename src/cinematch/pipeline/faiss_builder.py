@@ -26,7 +26,9 @@ def build_faiss_index(
     # Load embeddings
     embeddings_path = processed_dir / "embeddings.npy"
     if not embeddings_path.exists():
-        raise FileNotFoundError(f"embeddings.npy not found at {embeddings_path}. Run embedder first.")
+        raise FileNotFoundError(
+            f"embeddings.npy not found at {embeddings_path}. Run embedder first."
+        )
 
     print(f"Loading embeddings from {embeddings_path}...")
     embeddings = np.load(embeddings_path).astype(np.float32)

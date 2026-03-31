@@ -8,11 +8,13 @@ import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
+import { useDismissed } from "../hooks/useDismissed";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Collections() {
   const { userId } = useUserId();
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
+  const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
 
   const [groups, setGroups] = useState<CollectionGroup[]>([]);
   const [totalMissing, setTotalMissing] = useState(0);
@@ -30,7 +32,7 @@ export default function Collections() {
         const allMovieIds = data.groups.flatMap((g) =>
           g.missing.map((m) => m.id)
         );
-        if (allMovieIds.length > 0) refreshForMovieIds(allMovieIds);
+        if (allMovieIds.length > 0) { refreshForMovieIds(allMovieIds); refreshDismissedForMovieIds(allMovieIds); }
       })
       .catch((e) => setError(e.detail || e.message || "Failed to load"))
       .finally(() => setLoading(false));
@@ -149,6 +151,8 @@ export default function Collections() {
                             movie={movie}
                             isBookmarked={isInWatchlist(movie.id)}
                             onToggleBookmark={toggle}
+                            isDismissed={isDismissed(movie.id)}
+                            onDismiss={toggleDismiss}
                           />
                         ))}
                       </div>

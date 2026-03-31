@@ -167,7 +167,9 @@ class LLMService:
         genres = ", ".join(movie.genres) if movie.genres else "Unknown"
         overview = movie.overview or "No overview available"
 
-        rated_lines = "\n".join(f"- {title} (rated {rating}/10)" for title, rating in user_top_rated)
+        rated_lines = "\n".join(
+            f"- {title} (rated {rating}/10)" for title, rating in user_top_rated
+        )
 
         return (
             "You are a movie recommendation assistant. Explain why this movie "

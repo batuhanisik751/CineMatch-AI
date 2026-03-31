@@ -11,12 +11,14 @@ interface Props {
   matchPercent?: number;
   isBookmarked?: boolean;
   onToggleBookmark?: (movieId: number) => void;
+  isDismissed?: boolean;
+  onDismiss?: (movieId: number) => void;
   becauseYouLiked?: string | null;
   featureExplanations?: string[];
   scoreBreakdown?: ScoreBreakdown | null;
 }
 
-export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleBookmark, becauseYouLiked, featureExplanations, scoreBreakdown }: Props) {
+export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleBookmark, isDismissed, onDismiss, becauseYouLiked, featureExplanations, scoreBreakdown }: Props) {
   const year = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
   const poster = posterUrl(movie.poster_path);
 
@@ -71,6 +73,24 @@ export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleB
               {matchPercent}% Match
             </div>
           </div>
+        )}
+        {onDismiss && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDismiss(movie.id);
+            }}
+            className="absolute bottom-4 right-4 bg-[#131314]/60 backdrop-blur-md p-1.5 rounded border border-white/10 hover:bg-error/60 transition-colors z-10"
+            title={isDismissed ? "Undo Not Interested" : "Not Interested"}
+          >
+            <span
+              className={`material-symbols-outlined text-[18px] ${isDismissed ? "text-error" : "text-outline"}`}
+              style={isDismissed ? { fontVariationSettings: "'FILL' 1" } : undefined}
+            >
+              visibility_off
+            </span>
+          </button>
         )}
       </div>
       <div className="p-6 flex flex-col gap-4">

@@ -8,6 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
+import { useDismissed } from "../hooks/useDismissed";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 const SORT_OPTIONS = [
@@ -52,6 +53,7 @@ export default function AdvancedSearch() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
+  const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
 
   // Helper: update URL params while preserving existing ones
   const updateParams = useCallback(
@@ -120,7 +122,7 @@ export default function AdvancedSearch() {
       .then((data) => {
         setResults(data.results);
         setTotal(data.total);
-        refreshForMovieIds(data.results.map((r) => r.movie.id));
+        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); }
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -389,7 +391,7 @@ export default function AdvancedSearch() {
               </p>
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {results.map((r) => (
-                  <MovieCard key={r.movie.id} movie={r.movie} isBookmarked={isInWatchlist(r.movie.id)} onToggleBookmark={toggle} />
+                  <MovieCard key={r.movie.id} movie={r.movie} isBookmarked={isInWatchlist(r.movie.id)} onToggleBookmark={toggle} isDismissed={isDismissed(r.movie.id)} onDismiss={toggleDismiss} />
                 ))}
               </section>
 

@@ -78,6 +78,7 @@ class HybridRecommender:
         self._diversity_lambda = diversity_lambda
         self._rerank_candidates = rerank_candidates
         self._llm_rerank_enabled = llm_rerank_enabled
+        self._dismissal_service = None
 
     async def recommend(
         self,
@@ -147,8 +148,8 @@ class HybridRecommender:
         # Step 3: content candidates from user's favorites (with seed tracking)
         content_scores, best_seed = await self._score_content_candidates(user_top, db)
 
-        # Step 4: merge pools, exclude already-rated
-        rated_ids = await self._get_user_rated_movie_ids(user_id, db)
+        # Step 4: merge pools, exclude already-rated and dismissed
+        rated_ids = await self._get_excluded_movie_ids(user_id, db)
         all_candidates = (set(collab_scores) | set(content_scores)) - rated_ids
 
         # Step 5: normalize
@@ -218,7 +219,7 @@ class HybridRecommender:
 
         content_scores, best_seed = await self._score_content_candidates(user_top, db)
 
-        rated_ids = await self._get_user_rated_movie_ids(user_id, db)
+        rated_ids = await self._get_excluded_movie_ids(user_id, db)
         scored: dict[int, float] = {
             mid: score for mid, score in content_scores.items() if mid not in rated_ids
         }
@@ -578,8 +579,8 @@ class HybridRecommender:
         else:
             alpha = 1.0
 
-        # 3 — filter already-rated movies and the seed itself
-        rated_ids = await self._get_user_rated_movie_ids(user_id, db)
+        # 3 — filter already-rated/dismissed movies and the seed itself
+        rated_ids = await self._get_excluded_movie_ids(user_id, db)
         excluded = rated_ids | {seed_movie_id}
         candidates = set(content_scores) - excluded
 
@@ -662,8 +663,10 @@ class HybridRecommender:
 
         user_top = await self._get_user_top_rated_diverse(user_id, db, limit=10)
         if not user_top:
-            rated_ids = await self._get_user_rated_movie_ids(user_id, db)
-            results = self._content.faiss_search_by_vector(mood_vec, top_k, exclude_ids=rated_ids)
+            excluded_ids = await self._get_excluded_movie_ids(user_id, db)
+            results = self._content.faiss_search_by_vector(
+                mood_vec, top_k, exclude_ids=excluded_ids
+            )
             return results, False
 
         # Build user taste vector from FAISS-stored embeddings
@@ -680,8 +683,10 @@ class HybridRecommender:
 
         if not weighted_vecs:
             # All rated movies missing from FAISS — fall back to pure mood
-            rated_ids = await self._get_user_rated_movie_ids(user_id, db)
-            results = self._content.faiss_search_by_vector(mood_vec, top_k, exclude_ids=rated_ids)
+            excluded_ids = await self._get_excluded_movie_ids(user_id, db)
+            results = self._content.faiss_search_by_vector(
+                mood_vec, top_k, exclude_ids=excluded_ids
+            )
             return results, False
 
         user_taste_vec = np.sum(weighted_vecs, axis=0) / total_weight
@@ -696,8 +701,8 @@ class HybridRecommender:
         if norm > 0:
             query_vec = query_vec / norm
 
-        rated_ids = await self._get_user_rated_movie_ids(user_id, db)
-        results = self._content.faiss_search_by_vector(query_vec, top_k, exclude_ids=rated_ids)
+        excluded_ids = await self._get_excluded_movie_ids(user_id, db)
+        results = self._content.faiss_search_by_vector(query_vec, top_k, exclude_ids=excluded_ids)
         return results, True
 
     # ------------------------------------------------------------------
@@ -777,6 +782,18 @@ class HybridRecommender:
             {"user_id": user_id},
         )
         return {r[0] for r in result.fetchall()}
+
+    async def _get_excluded_movie_ids(
+        self,
+        user_id: int,
+        db: AsyncSession,
+    ) -> set[int]:
+        """Get all movie IDs to exclude: rated + dismissed."""
+        rated = await self._get_user_rated_movie_ids(user_id, db)
+        if self._dismissal_service is not None:
+            dismissed = await self._dismissal_service.get_dismissed_movie_ids(user_id, db)
+            return rated | dismissed
+        return rated
 
     async def _get_movie_titles(
         self,
