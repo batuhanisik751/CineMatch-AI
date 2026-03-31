@@ -11,6 +11,7 @@ from cinematch.api.deps import (
     get_db,
     get_feed_service,
     get_movie_service,
+    get_rating_comparison_service,
     get_taste_profile_service,
     get_user_stats_service,
 )
@@ -19,6 +20,7 @@ from cinematch.models.rating import Rating
 from cinematch.models.user import User
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.rating import DiaryResponse
+from cinematch.schemas.rating_comparison import RatingComparisonResponse
 from cinematch.schemas.taste_profile import TasteProfileResponse
 from cinematch.schemas.user import (
     CollectionGroup,
@@ -30,6 +32,7 @@ from cinematch.schemas.user import (
 )
 from cinematch.services.feed_service import FeedService
 from cinematch.services.movie_service import MovieService
+from cinematch.services.rating_comparison_service import RatingComparisonService
 from cinematch.services.taste_profile_service import TasteProfileService
 from cinematch.services.user_stats_service import UserStatsService
 
@@ -186,6 +189,32 @@ async def get_taste_profile(
 
     result = await taste_service.get_taste_profile(user_id, db)
     response = TasteProfileResponse(**result)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            pass
+
+    return response
+
+
+@router.get("/{user_id}/rating-comparison", response_model=RatingComparisonResponse)
+async def get_rating_comparison(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    comparison_service: RatingComparisonService = Depends(get_rating_comparison_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Compare user's ratings against community averages."""
+    cache_key = f"rating_comparison:{user_id}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return RatingComparisonResponse.model_validate_json(cached)
+
+    result = await comparison_service.get_rating_comparison(user_id, db)
+    response = RatingComparisonResponse(**result)
 
     if cache is not None:
         try:

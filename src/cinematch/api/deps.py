@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from cinematch.services.hybrid_recommender import HybridRecommender
     from cinematch.services.llm_service import LLMService
     from cinematch.services.movie_service import MovieService
+    from cinematch.services.rating_comparison_service import RatingComparisonService
     from cinematch.services.rating_service import RatingService
     from cinematch.services.taste_profile_service import TasteProfileService
     from cinematch.services.user_stats_service import UserStatsService
@@ -72,3 +73,7 @@ def get_feed_service(request: Request) -> FeedService:
 
 def get_taste_profile_service(request: Request) -> TasteProfileService:
     return request.app.state.taste_profile_service
+
+
+def get_rating_comparison_service(request: Request) -> RatingComparisonService:
+    return request.app.state.rating_comparison_service

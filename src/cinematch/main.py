@@ -29,6 +29,7 @@ from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.feed_service import FeedService
 from cinematch.services.hybrid_recommender import HybridRecommender
 from cinematch.services.movie_service import MovieService
+from cinematch.services.rating_comparison_service import RatingComparisonService
 from cinematch.services.rating_service import RatingService
 from cinematch.services.taste_profile_service import TasteProfileService
 from cinematch.services.user_stats_service import UserStatsService
@@ -125,6 +126,7 @@ async def lifespan(app: FastAPI):
     app.state.user_stats_service = UserStatsService()
     app.state.watchlist_service = WatchlistService()
     app.state.dismissal_service = DismissalService()
+    app.state.rating_comparison_service = RatingComparisonService()
     app.state.taste_profile_service = TasteProfileService(
         user_stats_service=app.state.user_stats_service,
         llm_service=getattr(app.state, "llm_service", None),

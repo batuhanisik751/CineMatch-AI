@@ -465,6 +465,25 @@ export interface DiaryResponse {
   total_ratings: number;
 }
 
+export interface RatingComparisonMovie {
+  movie_id: number;
+  title: string;
+  poster_path: string | null;
+  user_rating: number;
+  community_avg: number;
+  difference: number;
+}
+
+export interface RatingComparisonResponse {
+  user_id: number;
+  user_avg: number;
+  community_avg: number;
+  agreement_pct: number;
+  total_rated: number;
+  most_overrated: RatingComparisonMovie[];
+  most_underrated: RatingComparisonMovie[];
+}
+
 export interface TasteInsight {
   key: string;
   icon: string;

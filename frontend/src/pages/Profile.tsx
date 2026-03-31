@@ -18,8 +18,8 @@ import {
 } from "recharts";
 import { getDismissals, undismissMovie } from "../api/dismissals";
 import { getUserRatings } from "../api/ratings";
-import type { DismissalItemResponse, RatingResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
-import { getTasteProfile, getUser, getUserStats } from "../api/users";
+import type { DismissalItemResponse, RatingComparisonResponse, RatingResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
+import { getRatingComparison, getTasteProfile, getUser, getUserStats } from "../api/users";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import TopNav from "../components/TopNav";
@@ -38,6 +38,7 @@ export default function Profile() {
   const [dismissedTotal, setDismissedTotal] = useState(0);
   const [showDismissed, setShowDismissed] = useState(false);
   const [tasteProfile, setTasteProfile] = useState<TasteProfileResponse | null>(null);
+  const [ratingComparison, setRatingComparison] = useState<RatingComparisonResponse | null>(null);
   const limit = 20;
 
   const fetchUser = async () => {
@@ -61,6 +62,10 @@ export default function Profile() {
       // Fetch taste profile (best-effort)
       getTasteProfile(userId)
         .then((tp) => setTasteProfile(tp))
+        .catch(() => {});
+      // Fetch rating comparison (best-effort)
+      getRatingComparison(userId)
+        .then((rc) => setRatingComparison(rc))
         .catch(() => {});
     } catch {
       // User hasn't rated anything yet — that's fine, not an error
@@ -183,6 +188,95 @@ export default function Profile() {
                 <p className="text-on-surface-variant font-body text-sm italic leading-relaxed">{tasteProfile.llm_summary}</p>
               </div>
             )}
+          </section>
+        )}
+
+        {/* Rating Comparison */}
+        {ratingComparison && ratingComparison.total_rated > 0 && (
+          <section className="flex flex-col gap-6">
+            <div>
+              <h2 className="font-headline text-3xl font-black italic tracking-tighter text-on-surface mb-2">You vs. Community</h2>
+              <p className="text-on-surface-variant font-body">How your ratings compare to everyone else's.</p>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Your Average</span>
+                <span className="font-headline text-2xl font-bold text-on-surface">{ratingComparison.user_avg.toFixed(1)}</span>
+              </div>
+              <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Community Average</span>
+                <span className="font-headline text-2xl font-bold text-on-surface">{ratingComparison.community_avg.toFixed(1)}</span>
+              </div>
+              <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Agreement</span>
+                <span className="font-headline text-2xl font-bold text-on-surface">{ratingComparison.agreement_pct.toFixed(0)}%</span>
+              </div>
+            </div>
+
+            {/* Overrated / Underrated */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Most Overrated */}
+              {ratingComparison.most_overrated.length > 0 && (
+                <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-tertiary">arrow_upward</span>
+                    You Rated Higher
+                  </h3>
+                  <div className="flex flex-col gap-4">
+                    {ratingComparison.most_overrated.map((m) => (
+                      <Link key={m.movie_id} to={`/movies/${m.movie_id}`} className="flex items-center gap-4 group">
+                        <div className="w-10 h-14 rounded overflow-hidden bg-surface-container flex-shrink-0">
+                          {m.poster_path ? (
+                            <img src={`https://image.tmdb.org/t/p/w92${m.poster_path}`} alt={m.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="material-symbols-outlined text-sm text-outline">movie</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-headline font-bold text-on-surface truncate group-hover:text-primary transition-colors">{m.title}</p>
+                          <p className="text-xs text-on-surface-variant">You: {m.user_rating}/10 &middot; Community: {m.community_avg.toFixed(1)}</p>
+                        </div>
+                        <span className="text-sm font-bold text-tertiary flex-shrink-0">+{m.difference.toFixed(1)}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Most Underrated */}
+              {ratingComparison.most_underrated.length > 0 && (
+                <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-error">arrow_downward</span>
+                    You Rated Lower
+                  </h3>
+                  <div className="flex flex-col gap-4">
+                    {ratingComparison.most_underrated.map((m) => (
+                      <Link key={m.movie_id} to={`/movies/${m.movie_id}`} className="flex items-center gap-4 group">
+                        <div className="w-10 h-14 rounded overflow-hidden bg-surface-container flex-shrink-0">
+                          {m.poster_path ? (
+                            <img src={`https://image.tmdb.org/t/p/w92${m.poster_path}`} alt={m.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="material-symbols-outlined text-sm text-outline">movie</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-headline font-bold text-on-surface truncate group-hover:text-primary transition-colors">{m.title}</p>
+                          <p className="text-xs text-on-surface-variant">You: {m.user_rating}/10 &middot; Community: {m.community_avg.toFixed(1)}</p>
+                        </div>
+                        <span className="text-sm font-bold text-error flex-shrink-0">{m.difference.toFixed(1)}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
         )}
 
