@@ -10,6 +10,7 @@ interface Props {
   onToggleBookmark?: (id: number) => void;
   isDismissed?: (id: number) => boolean;
   onDismiss?: (id: number) => void;
+  getRating?: (id: number) => number | null;
 }
 
 export default function MoodCarousel({
@@ -21,6 +22,7 @@ export default function MoodCarousel({
   onToggleBookmark,
   isDismissed,
   onDismiss,
+  getRating,
 }: Props) {
   if (!loading && movies.length === 0) return null;
 
@@ -55,6 +57,7 @@ export default function MoodCarousel({
                 onToggleBookmark={onToggleBookmark}
                 isDismissed={isDismissed?.(m.id)}
                 onDismiss={onDismiss}
+                userRating={getRating?.(m.id)}
               />
             </div>
           ))}

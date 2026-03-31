@@ -71,3 +71,28 @@ class RatingService:
         result = await db.execute(stmt)
         rows = [(rating, title) for rating, title in result.all()]
         return rows, total
+
+    async def bulk_check(
+        self,
+        user_id: int,
+        movie_ids: list[int],
+        db: AsyncSession,
+    ) -> dict[int, int]:
+        """Return {movie_id: rating} for movies the user has rated from the given list."""
+        if not movie_ids:
+            return {}
+        stmt = select(Rating.movie_id, Rating.rating).where(
+            Rating.user_id == user_id,
+            Rating.movie_id.in_(movie_ids),
+        )
+        result = await db.execute(stmt)
+        return {row[0]: int(row[1]) for row in result.all()}
+
+    async def get_rated_movie_ids(
+        self,
+        user_id: int,
+        db: AsyncSession,
+    ) -> set[int]:
+        """Get all movie IDs the user has rated."""
+        result = await db.execute(select(Rating.movie_id).where(Rating.user_id == user_id))
+        return {r[0] for r in result.fetchall()}

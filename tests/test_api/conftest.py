@@ -153,6 +153,8 @@ def mock_rating_service(sample_rating):
     svc = AsyncMock()
     svc.add_rating.return_value = sample_rating
     svc.get_user_ratings.return_value = ([(sample_rating, "The Matrix")], 1)
+    svc.bulk_check.return_value = {1: 9}
+    svc.get_rated_movie_ids.return_value = {1}
     return svc
 
 

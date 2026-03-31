@@ -13,6 +13,7 @@ from cinematch.api.deps import (
     get_db,
     get_embedding_service,
     get_movie_service,
+    get_rating_service,
 )
 from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import ServiceUnavailableError
@@ -62,6 +63,7 @@ from cinematch.schemas.movie import (
 from cinematch.services.content_recommender import ContentRecommender
 from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.movie_service import MovieService
+from cinematch.services.rating_service import RatingService
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +74,20 @@ router = APIRouter()
 async def search_movies(
     q: str = Query(min_length=1),
     limit: int = Query(default=20, ge=1, le=100),
+    user_id: int | None = Query(default=None, ge=1),
+    exclude_rated: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
+    rating_service: RatingService = Depends(get_rating_service),
 ):
     movies, total = await movie_service.search_by_title(q, db, limit=limit)
+    results = [MovieSummary.model_validate(m) for m in movies]
+    if user_id is not None and exclude_rated:
+        rated_ids = await rating_service.get_rated_movie_ids(user_id, db)
+        results = [r for r in results if r.id not in rated_ids]
     return MovieSearchResponse(
-        results=[MovieSummary.model_validate(m) for m in movies],
-        total=total,
+        results=results,
+        total=len(results) if (user_id is not None and exclude_rated) else total,
         query=q,
     )
 
@@ -100,8 +109,11 @@ async def discover_movies(
     sort_by: SortOption = Query(default=SortOption.popularity),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
+    user_id: int | None = Query(default=None, ge=1),
+    exclude_rated: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
+    rating_service: RatingService = Depends(get_rating_service),
 ):
     movies, total = await movie_service.list_movies(
         db,
@@ -113,8 +125,12 @@ async def discover_movies(
         offset=offset,
         limit=limit,
     )
+    results = [MovieSummary.model_validate(m) for m in movies]
+    if user_id is not None and exclude_rated:
+        rated_ids = await rating_service.get_rated_movie_ids(user_id, db)
+        results = [r for r in results if r.id not in rated_ids]
     return MovieListResponse(
-        results=[MovieSummary.model_validate(m) for m in movies],
+        results=results,
         total=total,
         offset=offset,
         limit=limit,
@@ -152,15 +168,22 @@ async def semantic_search(
 async def trending_movies(
     window: int = Query(default=7, ge=1, le=90),
     limit: int = Query(default=20, ge=1, le=100),
+    user_id: int | None = Query(default=None, ge=1),
+    exclude_rated: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
+    rating_service: RatingService = Depends(get_rating_service),
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
     cache_key = f"trending:{window}:{limit}"
     if cache_service is not None:
         cached = await cache_service.get(cache_key)
         if cached is not None:
-            return TrendingResponse.model_validate_json(cached)
+            response = TrendingResponse.model_validate_json(cached)
+            if user_id is not None and exclude_rated:
+                rated_ids = await rating_service.get_rated_movie_ids(user_id, db)
+                response.results = [r for r in response.results if r.movie.id not in rated_ids]
+            return response
 
     trending_pairs = await movie_service.trending(db, window=window, limit=limit)
 
@@ -182,6 +205,10 @@ async def trending_movies(
         except Exception:
             logger.warning("Failed to cache trending movies", exc_info=True)
 
+    if user_id is not None and exclude_rated:
+        rated_ids = await rating_service.get_rated_movie_ids(user_id, db)
+        response.results = [r for r in response.results if r.movie.id not in rated_ids]
+
     return response
 
 
@@ -191,15 +218,22 @@ async def hidden_gems(
     max_votes: int = Query(default=100, ge=1, le=100000),
     genre: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=20, ge=1, le=100),
+    user_id: int | None = Query(default=None, ge=1),
+    exclude_rated: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
+    rating_service: RatingService = Depends(get_rating_service),
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
     cache_key = f"hidden_gems:{round(min_rating, 1)}:{max_votes}:{genre}:{limit}"
     if cache_service is not None:
         cached = await cache_service.get(cache_key)
         if cached is not None:
-            return HiddenGemsResponse.model_validate_json(cached)
+            response = HiddenGemsResponse.model_validate_json(cached)
+            if user_id is not None and exclude_rated:
+                rated_ids = await rating_service.get_rated_movie_ids(user_id, db)
+                response.results = [r for r in response.results if r.movie.id not in rated_ids]
+            return response
 
     movies = await movie_service.hidden_gems(
         db, min_rating=min_rating, max_votes=max_votes, genre=genre, limit=limit
@@ -225,6 +259,10 @@ async def hidden_gems(
         except Exception:
             logger.warning("Failed to cache hidden gems", exc_info=True)
 
+    if user_id is not None and exclude_rated:
+        rated_ids = await rating_service.get_rated_movie_ids(user_id, db)
+        response.results = [r for r in response.results if r.movie.id not in rated_ids]
+
     return response
 
 
@@ -232,15 +270,22 @@ async def hidden_gems(
 async def top_charts_by_genre(
     genre: str = Query(min_length=1, max_length=100),
     limit: int = Query(default=20, ge=1, le=100),
+    user_id: int | None = Query(default=None, ge=1),
+    exclude_rated: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
+    rating_service: RatingService = Depends(get_rating_service),
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
     cache_key = f"top_charts:{genre}:{limit}"
     if cache_service is not None:
         cached = await cache_service.get(cache_key)
         if cached is not None:
-            return TopChartsResponse.model_validate_json(cached)
+            response = TopChartsResponse.model_validate_json(cached)
+            if user_id is not None and exclude_rated:
+                rated_ids = await rating_service.get_rated_movie_ids(user_id, db)
+                response.results = [r for r in response.results if r.movie.id not in rated_ids]
+            return response
 
     rows = await movie_service.top_by_genre(db, genre=genre, limit=limit)
 
@@ -262,6 +307,10 @@ async def top_charts_by_genre(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
         except Exception:
             logger.warning("Failed to cache top charts", exc_info=True)
+
+    if user_id is not None and exclude_rated:
+        rated_ids = await rating_service.get_rated_movie_ids(user_id, db)
+        response.results = [r for r in response.results if r.movie.id not in rated_ids]
 
     return response
 

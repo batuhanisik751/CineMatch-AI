@@ -13,12 +13,13 @@ interface Props {
   onToggleBookmark?: (movieId: number) => void;
   isDismissed?: boolean;
   onDismiss?: (movieId: number) => void;
+  userRating?: number | null;
   becauseYouLiked?: string | null;
   featureExplanations?: string[];
   scoreBreakdown?: ScoreBreakdown | null;
 }
 
-export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleBookmark, isDismissed, onDismiss, becauseYouLiked, featureExplanations, scoreBreakdown }: Props) {
+export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleBookmark, isDismissed, onDismiss, userRating, becauseYouLiked, featureExplanations, scoreBreakdown }: Props) {
   const year = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
   const poster = posterUrl(movie.poster_path);
 
@@ -67,11 +68,24 @@ export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleB
             {movie.vote_average.toFixed(1)}
           </span>
         </div>
-        {matchPercent != null && (
-          <div className="absolute bottom-4 left-4">
-            <div className="bg-primary-container text-on-primary-container text-[10px] font-black px-2 py-1 rounded-sm tracking-tighter uppercase">
-              {matchPercent}% Match
-            </div>
+        {(matchPercent != null || userRating != null) && (
+          <div className="absolute bottom-4 left-4 flex flex-col gap-1">
+            {matchPercent != null && (
+              <div className="bg-primary-container text-on-primary-container text-[10px] font-black px-2 py-1 rounded-sm tracking-tighter uppercase">
+                {matchPercent}% Match
+              </div>
+            )}
+            {userRating != null && (
+              <div className="bg-tertiary-container text-on-tertiary-container text-[10px] font-black px-2 py-1 rounded-sm tracking-tighter uppercase flex items-center gap-1">
+                <span
+                  className="material-symbols-outlined text-[12px]"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  star
+                </span>
+                Rated {userRating}/10
+              </div>
+            )}
           </div>
         )}
         {onDismiss && (

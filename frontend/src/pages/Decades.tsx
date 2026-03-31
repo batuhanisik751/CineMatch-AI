@@ -8,6 +8,7 @@ import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
+import { useRated } from "../hooks/useRated";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Decades() {
@@ -21,6 +22,7 @@ export default function Decades() {
   const [error, setError] = useState("");
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
+  const { getRating, refreshRatingsForMovieIds } = useRated();
 
   // Load decades on mount
   useEffect(() => {
@@ -46,7 +48,7 @@ export default function Decades() {
       .then((data) => {
         setResults(data.results);
         setTotal(data.total);
-        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); }
+        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); }
       })
       .catch((e) => setError(e.detail || e.message || "Failed to load movies"))
       .finally(() => setLoading(false));
@@ -194,6 +196,7 @@ export default function Decades() {
                           movie={item.movie}
                           isBookmarked={isInWatchlist(item.movie.id)}
                           onToggleBookmark={toggle} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
+                          userRating={getRating(item.movie.id)}
                         />
                         <div className="mt-2 flex items-center gap-3 text-xs text-on-surface-variant font-medium">
                           <span>

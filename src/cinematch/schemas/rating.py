@@ -34,3 +34,9 @@ class UserRatingsResponse(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+class RatingBulkCheckResponse(BaseModel):
+    """Map of movie_id -> rating for bulk check."""
+
+    ratings: dict[int, int]

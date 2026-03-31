@@ -11,6 +11,7 @@ import MovieCard from "../components/MovieCard";
 import TopNav from "../components/TopNav";
 import type { MoodPreset } from "../constants/moods";
 import { useDismissed } from "../hooks/useDismissed";
+import { useRated } from "../hooks/useRated";
 import { useUserId } from "../hooks/useUserId";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -24,6 +25,7 @@ export default function Home() {
   const [gems, setGems] = useState<MovieSummary[]>([]);
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
+  const { getRating, refreshRatingsForMovieIds } = useRated();
 
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [moodMovies, setMoodMovies] = useState<MovieSummary[]>([]);
@@ -47,6 +49,7 @@ export default function Home() {
         const ids = data.results.map((m) => m.id);
         refreshForMovieIds(ids);
         refreshDismissedForMovieIds(ids);
+        refreshRatingsForMovieIds(ids);
       })
       .catch(() => {});
     discoverMovies({ sort_by: "vote_average", limit: 8 })
@@ -55,6 +58,7 @@ export default function Home() {
         const ids = data.results.map((m) => m.id);
         refreshForMovieIds(ids);
         refreshDismissedForMovieIds(ids);
+        refreshRatingsForMovieIds(ids);
       })
       .catch(() => {});
     getHiddenGems({ limit: 8 })
@@ -64,6 +68,7 @@ export default function Home() {
         const ids = movies.map((m) => m.id);
         refreshForMovieIds(ids);
         refreshDismissedForMovieIds(ids);
+        refreshRatingsForMovieIds(ids);
       })
       .catch(() => {});
   }, []);
@@ -169,6 +174,7 @@ export default function Home() {
         const ids = data.results.map((m) => m.id);
         refreshForMovieIds(ids);
         refreshDismissedForMovieIds(ids);
+        refreshRatingsForMovieIds(ids);
       })
       .catch(() => setSurpriseMovies([]))
       .finally(() => setSurpriseLoading(false));
@@ -254,6 +260,7 @@ export default function Home() {
             onToggleBookmark={toggle}
             isDismissed={isDismissed}
             onDismiss={toggleDismiss}
+            getRating={getRating}
           />
         )}
 
@@ -288,6 +295,7 @@ export default function Home() {
                     onToggleBookmark={toggle}
                     isDismissed={isDismissed(m.id)}
                     onDismiss={toggleDismiss}
+                    userRating={getRating(m.id)}
                   />
                 </div>
               ))}
@@ -377,6 +385,7 @@ export default function Home() {
                               onToggleBookmark={toggle}
                               isDismissed={isDismissed(m.id)}
                               onDismiss={toggleDismiss}
+                              userRating={getRating(m.id)}
                             />
                           </div>
                         ))}
@@ -413,7 +422,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {popular.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
                           </div>
                         ))}
                       </div>
@@ -430,7 +439,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {topRated.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
                           </div>
                         ))}
                       </div>
@@ -447,7 +456,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {gems.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
                           </div>
                         ))}
                       </div>

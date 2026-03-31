@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import get_cache_service, get_db, get_movie_service, get_rating_service
 from cinematch.core.cache import CacheService
-from cinematch.schemas.rating import RatingCreate, RatingResponse, UserRatingsResponse
+from cinematch.schemas.rating import (
+    RatingBulkCheckResponse,
+    RatingCreate,
+    RatingResponse,
+    UserRatingsResponse,
+)
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_service import RatingService
 
@@ -43,6 +48,18 @@ async def add_rating(
     resp = RatingResponse.model_validate(rating)
     resp.movie_title = movie.title
     return resp
+
+
+@router.get("/users/{user_id}/ratings/check", response_model=RatingBulkCheckResponse)
+async def bulk_check_ratings(
+    user_id: int,
+    movie_ids: str = Query(..., description="Comma-separated movie IDs"),
+    db: AsyncSession = Depends(get_db),
+    rating_service: RatingService = Depends(get_rating_service),
+):
+    id_list = [int(x.strip()) for x in movie_ids.split(",") if x.strip()]
+    ratings = await rating_service.bulk_check(user_id, id_list, db)
+    return RatingBulkCheckResponse(ratings=ratings)
 
 
 @router.get("/users/{user_id}/ratings", response_model=UserRatingsResponse)

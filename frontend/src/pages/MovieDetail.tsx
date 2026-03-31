@@ -8,6 +8,7 @@ import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
 import StarRating from "../components/StarRating";
 import TopNav from "../components/TopNav";
+import { useRated } from "../hooks/useRated";
 import { useUserId } from "../hooks/useUserId";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -25,6 +26,7 @@ export default function MovieDetail() {
   const [userRating, setUserRating] = useState(0);
   const [ratingMsg, setRatingMsg] = useState("");
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
+  const { setLocalRating } = useRated();
 
   useEffect(() => {
     if (!id) return;
@@ -44,6 +46,7 @@ export default function MovieDetail() {
     if (userRating === 0 || !movie) return;
     try {
       await addRating(userId, movie.id, userRating);
+      setLocalRating(movie.id, userRating);
       setRatingMsg("Rating submitted!");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to submit";

@@ -9,6 +9,7 @@ import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
+import { useRated } from "../hooks/useRated";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 const SORT_OPTIONS = [
@@ -58,6 +59,7 @@ export default function Discover() {
   const yearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
+  const { getRating, refreshRatingsForMovieIds } = useRated();
 
   // Debounce year inputs — only apply after 600ms of no typing
   useEffect(() => {
@@ -102,6 +104,7 @@ export default function Discover() {
           const ids = data.results.map((m) => m.id);
           refreshForMovieIds(ids);
           refreshDismissedForMovieIds(ids);
+          refreshRatingsForMovieIds(ids);
         })
         .catch((e) => setError(e.detail || e.message))
         .finally(() => setLoading(false));
@@ -124,6 +127,7 @@ export default function Discover() {
           const ids = data.results.map((m) => m.id);
           refreshForMovieIds(ids);
           refreshDismissedForMovieIds(ids);
+          refreshRatingsForMovieIds(ids);
         })
         .catch((e) => setError(e.detail || e.message))
         .finally(() => setLoading(false));
@@ -309,7 +313,7 @@ export default function Discover() {
               </p>
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {movies.map((movie) => (
-                  <MovieCard key={movie.id} movie={movie} isBookmarked={isInWatchlist(movie.id)} onToggleBookmark={toggle} isDismissed={isDismissed(movie.id)} onDismiss={toggleDismiss} />
+                  <MovieCard key={movie.id} movie={movie} isBookmarked={isInWatchlist(movie.id)} onToggleBookmark={toggle} isDismissed={isDismissed(movie.id)} onDismiss={toggleDismiss} userRating={getRating(movie.id)} />
                 ))}
               </section>
 

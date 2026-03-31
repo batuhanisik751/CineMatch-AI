@@ -16,11 +16,13 @@ import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
+import { useRated } from "../hooks/useRated";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Keywords() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
+  const { getRating, refreshRatingsForMovieIds } = useRated();
 
   // Level 1 state (browse/search)
   const [keywords, setKeywords] = useState<KeywordSummary[]>([]);
@@ -87,7 +89,7 @@ export default function Keywords() {
         setMovies(data.results);
         setStats(data.stats);
         setTotal(data.total);
-        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); }
+        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); }
       })
       .catch((e) => setError(e.detail || e.message || "Failed to load movies"))
       .finally(() => setLoading(false));
@@ -101,7 +103,7 @@ export default function Keywords() {
     getKeywordMovies(selectedKeyword, { offset: nextOffset, limit: 20 })
       .then((data) => {
         setMovies((prev) => [...prev, ...data.results]);
-        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); }
+        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); }
       })
       .catch((e) => setError(e.detail || e.message || "Failed to load more"))
       .finally(() => setLoading(false));
@@ -320,6 +322,7 @@ export default function Keywords() {
                         movie={item.movie}
                         isBookmarked={isInWatchlist(item.movie.id)}
                         onToggleBookmark={toggle} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
+                        userRating={getRating(item.movie.id)}
                       />
                     ))}
                   </section>

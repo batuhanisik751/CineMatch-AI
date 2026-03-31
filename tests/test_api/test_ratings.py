@@ -68,3 +68,32 @@ async def test_get_user_ratings_empty(client, mock_rating_service):
     data = resp.json()
     assert data["total"] == 0
     assert data["ratings"] == []
+
+
+# --- Bulk check endpoint tests ---
+
+
+async def test_bulk_check_ratings_success(client, mock_rating_service):
+    mock_rating_service.bulk_check.return_value = {1: 9, 3: 7}
+    resp = await client.get(
+        "/api/v1/users/1/ratings/check",
+        params={"movie_ids": "1,2,3"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ratings"] == {"1": 9, "3": 7}
+
+
+async def test_bulk_check_ratings_empty_result(client, mock_rating_service):
+    mock_rating_service.bulk_check.return_value = {}
+    resp = await client.get(
+        "/api/v1/users/1/ratings/check",
+        params={"movie_ids": "10,20"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ratings"] == {}
+
+
+async def test_bulk_check_ratings_missing_param(client):
+    resp = await client.get("/api/v1/users/1/ratings/check")
+    assert resp.status_code == 422

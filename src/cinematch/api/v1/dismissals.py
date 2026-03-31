@@ -108,9 +108,7 @@ async def get_dismissals(
     dismissal_service: DismissalService = Depends(get_dismissal_service),
 ):
     """Get the user's dismissed movies with details."""
-    rows, total = await dismissal_service.get_dismissals(
-        user_id, db, offset=offset, limit=limit
-    )
+    rows, total = await dismissal_service.get_dismissals(user_id, db, offset=offset, limit=limit)
     items = []
     for item, title, poster_path, genres, vote_average, release_date in rows:
         resp = DismissalItemResponse.model_validate(item)

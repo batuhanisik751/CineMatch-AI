@@ -273,6 +273,33 @@ async def test_trending_no_cache_service(app, client, mock_movie_service):
     mock_movie_service.trending.assert_called_once()
 
 
+async def test_trending_exclude_rated_filters_results(
+    client, mock_movie_service, mock_rating_service, sample_movie
+):
+    from tests.test_api.conftest import _make_movie
+
+    movie2 = _make_movie(id=2, title="Inception")
+    mock_movie_service.trending.return_value = [(sample_movie, 42), (movie2, 30)]
+    mock_rating_service.get_rated_movie_ids.return_value = {1}  # sample_movie.id == 1
+
+    resp = await client.get(
+        "/api/v1/movies/trending",
+        params={"user_id": 1, "exclude_rated": True},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    # Movie 1 (The Matrix) should be filtered out, only Inception remains
+    assert len(data["results"]) == 1
+    assert data["results"][0]["movie"]["title"] == "Inception"
+
+
+async def test_trending_without_exclude_rated_returns_all(client, mock_movie_service, sample_movie):
+    resp = await client.get("/api/v1/movies/trending")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["results"]) == 1
+
+
 # --- Hidden Gems endpoint tests ---
 
 

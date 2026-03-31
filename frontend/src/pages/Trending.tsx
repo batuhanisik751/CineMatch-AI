@@ -8,6 +8,7 @@ import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
+import { useRated } from "../hooks/useRated";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 const WINDOW_OPTIONS = [
@@ -24,6 +25,7 @@ export default function Trending() {
   const [error, setError] = useState("");
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
+  const { getRating, refreshRatingsForMovieIds } = useRated();
 
   const fetchTrending = (w: number) => {
     setLoading(true);
@@ -31,7 +33,7 @@ export default function Trending() {
     getTrendingMovies(w, 40)
       .then((data) => {
         setResults(data.results);
-        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); }
+        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); }
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -91,6 +93,7 @@ export default function Trending() {
                       movie={item.movie}
                       isBookmarked={isInWatchlist(item.movie.id)}
                       onToggleBookmark={toggle} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
+                      userRating={getRating(item.movie.id)}
                     />
                     <p className="mt-2 text-xs text-on-surface-variant font-medium">
                       <span className="material-symbols-outlined text-sm align-middle mr-1">bar_chart</span>

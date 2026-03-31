@@ -13,3 +13,13 @@ export function getUserRatings(userId: number, offset = 0, limit = 20) {
     `/api/v1/users/${userId}/ratings?offset=${offset}&limit=${limit}`
   );
 }
+
+export interface RatingBulkCheckResponse {
+  ratings: Record<number, number>;
+}
+
+export function bulkCheckRatings(userId: number, movieIds: number[]) {
+  return apiFetch<RatingBulkCheckResponse>(
+    `/api/v1/users/${userId}/ratings/check?movie_ids=${movieIds.join(",")}`
+  );
+}

@@ -9,6 +9,7 @@ import MovieCard from "../components/MovieCard";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
+import { useRated } from "../hooks/useRated";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Search() {
@@ -20,6 +21,7 @@ export default function Search() {
   const [error, setError] = useState("");
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
+  const { getRating, refreshRatingsForMovieIds } = useRated();
 
   useEffect(() => {
     if (!q) return;
@@ -29,7 +31,7 @@ export default function Search() {
       .then((data) => {
         setResults(data.results);
         setTotal(data.total);
-        { const _ids = data.results.map((m) => m.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); }
+        { const _ids = data.results.map((m) => m.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); }
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -63,7 +65,7 @@ export default function Search() {
           {!loading && !error && (
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {results.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} isBookmarked={isInWatchlist(movie.id)} onToggleBookmark={toggle} isDismissed={isDismissed(movie.id)} onDismiss={toggleDismiss} />
+                <MovieCard key={movie.id} movie={movie} isBookmarked={isInWatchlist(movie.id)} onToggleBookmark={toggle} isDismissed={isDismissed(movie.id)} onDismiss={toggleDismiss} userRating={getRating(movie.id)} />
               ))}
             </section>
           )}
