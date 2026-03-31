@@ -6,6 +6,11 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -206,6 +211,25 @@ export default function Profile() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+
+            {/* Genre Affinity Radar */}
+            {stats.genre_distribution.length > 0 && (
+              <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6">Genre Affinity</h3>
+                <ResponsiveContainer width="100%" height={350}>
+                  <RadarChart data={stats.genre_distribution.slice(0, 8)} cx="50%" cy="50%" outerRadius="75%">
+                    <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                    <PolarAngleAxis dataKey="genre" tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 12 }} />
+                    <PolarRadiusAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} domain={[0, "auto"]} />
+                    <Tooltip
+                      contentStyle={{ background: "#1C1B1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#E6E1E5" }}
+                      formatter={(value) => [`${value}%`, "Affinity"]}
+                    />
+                    <Radar name="Genre Affinity" dataKey="percentage" stroke="#D0BCFF" fill="#D0BCFF" fillOpacity={0.3} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
 
             {/* Row 2: Top Directors + Top Actors */}
             {(stats.top_directors.length > 0 || stats.top_actors.length > 0) && (
