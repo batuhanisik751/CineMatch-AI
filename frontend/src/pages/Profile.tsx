@@ -13,8 +13,8 @@ import {
 } from "recharts";
 import { getDismissals, undismissMovie } from "../api/dismissals";
 import { getUserRatings } from "../api/ratings";
-import type { DismissalItemResponse, RatingResponse, UserResponse, UserStatsResponse } from "../api/types";
-import { getUser, getUserStats } from "../api/users";
+import type { DismissalItemResponse, RatingResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
+import { getTasteProfile, getUser, getUserStats } from "../api/users";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import TopNav from "../components/TopNav";
@@ -32,6 +32,7 @@ export default function Profile() {
   const [dismissedItems, setDismissedItems] = useState<DismissalItemResponse[]>([]);
   const [dismissedTotal, setDismissedTotal] = useState(0);
   const [showDismissed, setShowDismissed] = useState(false);
+  const [tasteProfile, setTasteProfile] = useState<TasteProfileResponse | null>(null);
   const limit = 20;
 
   const fetchUser = async () => {
@@ -51,6 +52,10 @@ export default function Profile() {
       // Fetch dismissed movies count (best-effort)
       getDismissals(userId, 0, 20)
         .then((d) => { setDismissedItems(d.items); setDismissedTotal(d.total); })
+        .catch(() => {});
+      // Fetch taste profile (best-effort)
+      getTasteProfile(userId)
+        .then((tp) => setTasteProfile(tp))
         .catch(() => {});
     } catch {
       // User hasn't rated anything yet — that's fine, not an error
@@ -152,6 +157,29 @@ export default function Profile() {
 
         {loading && <div className="flex justify-center py-12"><div className="w-12 h-12 border-4 border-primary-container/20 border-t-primary-container rounded-full animate-spin" /></div>}
         {error && <ErrorPanel message={error} />}
+
+        {/* Taste Profile */}
+        {tasteProfile && tasteProfile.insights.length > 0 && (
+          <section className="p-8 rounded-xl bg-gradient-to-r from-surface-container to-surface-container-highest border border-outline-variant/10 shadow-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="material-symbols-outlined text-3xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+              <h2 className="font-headline text-2xl font-extrabold tracking-tight text-on-surface">Your Taste Profile</h2>
+            </div>
+            <div className="flex flex-col gap-4">
+              {tasteProfile.insights.map((insight) => (
+                <div key={insight.key} className="flex items-start gap-4">
+                  <span className="material-symbols-outlined text-xl text-primary-fixed-dim mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>{insight.icon}</span>
+                  <p className="text-on-surface font-body text-base leading-relaxed">{insight.text}</p>
+                </div>
+              ))}
+            </div>
+            {tasteProfile.llm_summary && (
+              <div className="mt-6 pt-6 border-t border-outline-variant/10">
+                <p className="text-on-surface-variant font-body text-sm italic leading-relaxed">{tasteProfile.llm_summary}</p>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Analytics Dashboard */}
         {stats && stats.total_ratings > 0 && (

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from cinematch.services.llm_service import LLMService
     from cinematch.services.movie_service import MovieService
     from cinematch.services.rating_service import RatingService
+    from cinematch.services.taste_profile_service import TasteProfileService
     from cinematch.services.user_stats_service import UserStatsService
     from cinematch.services.watchlist_service import WatchlistService
 
@@ -67,3 +68,7 @@ def get_dismissal_service(request: Request) -> DismissalService:
 
 def get_feed_service(request: Request) -> FeedService:
     return request.app.state.feed_service
+
+
+def get_taste_profile_service(request: Request) -> TasteProfileService:
+    return request.app.state.taste_profile_service

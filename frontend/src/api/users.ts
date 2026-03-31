@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { CompletionsResponse, FeedResponse, UserResponse, UserStatsResponse } from "./types";
+import type { CompletionsResponse, FeedResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "./types";
 
 export function getUser(id: number) {
   return apiFetch<UserResponse>(`/api/v1/users/${id}`);
@@ -18,5 +18,11 @@ export function getCompletions(userId: number, limit = 10) {
 export function getUserFeed(userId: number, sections = 5) {
   return apiFetch<FeedResponse>(
     `/api/v1/users/${userId}/feed?sections=${sections}`
+  );
+}
+
+export function getTasteProfile(userId: number) {
+  return apiFetch<TasteProfileResponse>(
+    `/api/v1/users/${userId}/taste-profile`
   );
 }

@@ -129,6 +129,7 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/users/{id}/surprise?limit=5` | Serendipity mode — random well-rated movies outside user's top genres |
 | GET | `/api/v1/users/{id}/completions?limit=10` | "Complete the Collection" — unrated films by directors/actors the user has rated 3+ films for |
 | GET | `/api/v1/users/{id}/feed?sections=5` | Personalized home feed — dynamic named sections tailored to user taste (cold-start users get generic sections) |
+| GET | `/api/v1/users/{id}/taste-profile` | Natural-language taste profile — template-based insights (top genre, critic style, director affinity, decade preference) with optional LLM-enhanced summary |
 | GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid&diversity=medium` | Recommendations with smart explanations (strategy: `hybrid`/`content`/`collab`, diversity: `low`/`medium`/`high`) |
 | GET | `/api/v1/users/{id}/recommendations/from-seed/{movie_id}?limit=20` | "More Like This" — personalized recommendations branching from a seed movie |
 | POST | `/api/v1/recommendations/mood` | Mood-based discovery (body: `{"mood": "dark gritty thriller", "user_id": 1, "alpha": 0.3, "limit": 20}`) |
@@ -180,7 +181,8 @@ If Ollama is not running, the app still works — recommendations use the algori
 15. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only). Cold-start users (not in ALS training data) get a 400 error on `collab` with guidance to use `hybrid` or `content` instead. The `hybrid` strategy handles cold-start automatically by falling back to content-only.
 16. **"Not Interested" Dismissals:** Users can dismiss movies from any page via the `visibility_off` button on movie cards. Dismissed movies are stored in a `dismissals` table and filtered from all recommendation paths — hybrid, content-only, from-seed, mood-based, and home feed sections. Cache is invalidated on dismiss/undismiss. The Profile page shows a collapsible "Not Interested" section with undo capability.
 17. **Diversity Controls:** Users can adjust the diversity-relevance tradeoff via a `diversity` query parameter: `low` (lambda=0.9, safe/similar picks), `medium` (lambda=0.7, balanced default), or `high` (lambda=0.4, adventurous/genre-spanning). Applies to `hybrid` and `content` strategies which use MMR re-ranking; `collab` strategy returns raw ALS scores without re-ranking.
-18. **Watch History Awareness:** Every MovieCard across all pages shows a "Rated X/10" badge (in tertiary-container colors, distinct from the match-percent badge) when the user has already rated that movie — powered by a shared `useRated` hook that batch-fetches ratings via `GET /users/{id}/ratings/check`. All five discovery endpoints (trending, hidden gems, top charts, search, discover) accept optional `user_id` + `exclude_rated=true` params; filtering is applied post-cache in Python so the global Redis cache is preserved and only per-user results are trimmed.
+18. **Taste Profile Summary:** Generates a natural-language personality snapshot of the user's taste from their rating history — "You're a Thriller enthusiast (35% of your ratings)", "You're a generous critic (avg 7.2 vs site avg 6.5)", "You have a special appreciation for Nolan's work", "Your sweet spot is 2000s cinema". Backed by four template-driven insights (top genre, critic style, director affinity, decade preference) computed from the same stats used by the analytics dashboard. If Ollama is running, the service optionally asks Mistral to synthesize a 2-3 sentence cohesive personality summary. Cached per-user (10 min) and invalidated on new ratings. Displayed as a card on the Profile page above the analytics charts.
+19. **Watch History Awareness:** Every MovieCard across all pages shows a "Rated X/10" badge (in tertiary-container colors, distinct from the match-percent badge) when the user has already rated that movie — powered by a shared `useRated` hook that batch-fetches ratings via `GET /users/{id}/ratings/check`. All five discovery endpoints (trending, hidden gems, top charts, search, discover) accept optional `user_id` + `exclude_rated=true` params; filtering is applied post-cache in Python so the global Redis cache is preserved and only per-user results are trimmed.
 
 ## Data Pipeline
 
@@ -222,6 +224,7 @@ Redis caches API responses with automatic invalidation:
 | `from_seed:{user_id}:{movie_id}:{limit}` | 10 min | On new rating or dismissal from this user |
 | `mood_rec:{user_id}:{mood_hash}:{alpha}:{limit}` | 10 min | On new rating or dismissal from this user |
 | `feed:{user_id}:{sections}` | 10 min | On new rating or dismissal from this user |
+| `taste_profile:{user_id}` | 10 min | On new rating or dismissal from this user |
 | `search:{query_hash}:{limit}` | 10 min | Never |
 
 Redis is optional — the app runs without it, just without caching.
@@ -240,7 +243,7 @@ src/cinematch/
 │       ├── movies.py             # GET /{id}, /search, /semantic-search, /discover, /genres, /decades, /directors, /actors, /keywords, /advanced-search, /{id}/similar
 │       ├── ratings.py            # POST/GET /users/{id}/ratings
 │       ├── recommendations.py    # GET /users/{id}/recommendations, /from-seed/{movie_id}, POST /recommendations/mood
-│       ├── users.py              # GET /users/{id}, /users/{id}/stats, /users/{id}/surprise, /users/{id}/completions, /users/{id}/feed
+│       ├── users.py              # GET /users/{id}, /users/{id}/stats, /users/{id}/surprise, /users/{id}/completions, /users/{id}/feed, /users/{id}/taste-profile
 │       ├── watchlist.py          # POST/DELETE/GET /users/{id}/watchlist
 │       ├── dismissals.py         # POST/DELETE/GET /users/{id}/dismissals ("Not Interested")
 │       └── router.py             # Aggregated v1 router
@@ -253,6 +256,7 @@ src/cinematch/
 │   ├── rating_service.py         # Rating DB queries (upsert, list with movie titles, bulk check, rated-ID set)
 │   ├── feed_service.py           # Personalized home feed orchestrator (5 named sections)
 │   ├── user_stats_service.py     # User profile analytics (genre, rating, director/actor stats)
+│   ├── taste_profile_service.py  # Natural-language taste profile generation (template-based + optional LLM)
 │   ├── watchlist_service.py      # Watchlist CRUD (add, remove, list, bulk check)
 │   ├── dismissal_service.py     # Dismissal CRUD ("Not Interested" feedback)
 │   └── llm_service.py            # Ollama LLM client for re-ranking + explanations

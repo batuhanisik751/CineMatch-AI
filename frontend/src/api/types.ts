@@ -445,3 +445,16 @@ export interface FeedResponse {
   is_personalized: boolean;
   sections: FeedSection[];
 }
+
+export interface TasteInsight {
+  key: string;
+  icon: string;
+  text: string;
+}
+
+export interface TasteProfileResponse {
+  user_id: number;
+  total_ratings: number;
+  insights: TasteInsight[];
+  llm_summary: string | null;
+}

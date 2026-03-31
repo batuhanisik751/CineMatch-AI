@@ -11,12 +11,14 @@ from cinematch.api.deps import (
     get_db,
     get_feed_service,
     get_movie_service,
+    get_taste_profile_service,
     get_user_stats_service,
 )
 from cinematch.core.cache import CacheService
 from cinematch.models.rating import Rating
 from cinematch.models.user import User
 from cinematch.schemas.movie import MovieSummary
+from cinematch.schemas.taste_profile import TasteProfileResponse
 from cinematch.schemas.user import (
     CollectionGroup,
     CompletionsResponse,
@@ -27,6 +29,7 @@ from cinematch.schemas.user import (
 )
 from cinematch.services.feed_service import FeedService
 from cinematch.services.movie_service import MovieService
+from cinematch.services.taste_profile_service import TasteProfileService
 from cinematch.services.user_stats_service import UserStatsService
 
 router = APIRouter()
@@ -129,6 +132,32 @@ async def get_user_feed(
             return FeedResponse.model_validate_json(cached)
 
     response = await feed_service.generate_feed(user_id, db, sections=sections)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            pass
+
+    return response
+
+
+@router.get("/{user_id}/taste-profile", response_model=TasteProfileResponse)
+async def get_taste_profile(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    taste_service: TasteProfileService = Depends(get_taste_profile_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Natural-language summary of the user's movie taste."""
+    cache_key = f"taste_profile:{user_id}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return TasteProfileResponse.model_validate_json(cached)
+
+    result = await taste_service.get_taste_profile(user_id, db)
+    response = TasteProfileResponse(**result)
 
     if cache is not None:
         try:

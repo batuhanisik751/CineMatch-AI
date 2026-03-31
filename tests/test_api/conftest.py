@@ -20,6 +20,7 @@ from cinematch.api.deps import (
     get_llm_service,
     get_movie_service,
     get_rating_service,
+    get_taste_profile_service,
     get_user_stats_service,
     get_watchlist_service,
 )
@@ -331,6 +332,39 @@ def mock_dismissal_service(sample_dismissal):
 
 
 @pytest.fixture()
+def mock_taste_profile_service():
+    svc = AsyncMock()
+    svc.get_taste_profile.return_value = {
+        "user_id": 1,
+        "total_ratings": 20,
+        "insights": [
+            {
+                "key": "top_genre",
+                "icon": "movie_filter",
+                "text": "You're a Thriller enthusiast (35.0% of your ratings)",
+            },
+            {
+                "key": "critic_style",
+                "icon": "thumbs_up_down",
+                "text": "You're a generous critic (avg 7.2 vs site avg 6.5)",
+            },
+            {
+                "key": "director_affinity",
+                "icon": "person",
+                "text": "You have a special appreciation for Nolan's work (5 films rated)",
+            },
+            {
+                "key": "decade_preference",
+                "icon": "calendar_month",
+                "text": "Your sweet spot is 2000s cinema",
+            },
+        ],
+        "llm_summary": None,
+    }
+    return svc
+
+
+@pytest.fixture()
 def mock_feed_service(sample_movie):
     from cinematch.schemas.movie import MovieSummary
     from cinematch.schemas.user import FeedResponse, FeedSection
@@ -389,6 +423,7 @@ def app(
     mock_dismissal_service,
     mock_cache_service,
     mock_feed_service,
+    mock_taste_profile_service,
     mock_db,
 ):
     test_app = create_app()
@@ -405,6 +440,7 @@ def app(
     test_app.dependency_overrides[get_dismissal_service] = lambda: mock_dismissal_service
     test_app.dependency_overrides[get_cache_service] = lambda: mock_cache_service
     test_app.dependency_overrides[get_feed_service] = lambda: mock_feed_service
+    test_app.dependency_overrides[get_taste_profile_service] = lambda: mock_taste_profile_service
 
     return test_app
 
