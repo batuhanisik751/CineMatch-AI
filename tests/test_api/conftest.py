@@ -20,6 +20,7 @@ from cinematch.api.deps import (
     get_llm_service,
     get_movie_service,
     get_rating_service,
+    get_streak_service,
     get_taste_profile_service,
     get_user_stats_service,
     get_watchlist_service,
@@ -121,9 +122,7 @@ def mock_movie_service(sample_movie):
     )
     svc.surprise_movies.return_value = [sample_movie]
     svc.advanced_search.return_value = ([sample_movie], 1)
-    svc.controversial.return_value = [
-        (sample_movie, 7.3, 2.15, 150, {r: 15 for r in range(1, 11)})
-    ]
+    svc.controversial.return_value = [(sample_movie, 7.3, 2.15, 150, {r: 15 for r in range(1, 11)})]
     svc.collection_completions.return_value = [
         {
             "creator_type": "director",
@@ -373,6 +372,27 @@ def mock_taste_profile_service():
 
 
 @pytest.fixture()
+def mock_streak_service():
+    svc = AsyncMock()
+    svc.get_streaks.return_value = {
+        "user_id": 1,
+        "current_streak": 5,
+        "longest_streak": 12,
+        "total_ratings": 87,
+        "milestones": [
+            {"threshold": 10, "reached": True, "label": "10 Ratings"},
+            {"threshold": 25, "reached": True, "label": "25 Ratings"},
+            {"threshold": 50, "reached": True, "label": "50 Ratings"},
+            {"threshold": 100, "reached": False, "label": "100 Ratings"},
+            {"threshold": 250, "reached": False, "label": "250 Ratings"},
+            {"threshold": 500, "reached": False, "label": "500 Ratings"},
+            {"threshold": 1000, "reached": False, "label": "1000 Ratings"},
+        ],
+    }
+    return svc
+
+
+@pytest.fixture()
 def mock_feed_service(sample_movie):
     from cinematch.schemas.movie import MovieSummary
     from cinematch.schemas.user import FeedResponse, FeedSection
@@ -432,6 +452,7 @@ def app(
     mock_cache_service,
     mock_feed_service,
     mock_taste_profile_service,
+    mock_streak_service,
     mock_db,
 ):
     test_app = create_app()
@@ -449,6 +470,7 @@ def app(
     test_app.dependency_overrides[get_cache_service] = lambda: mock_cache_service
     test_app.dependency_overrides[get_feed_service] = lambda: mock_feed_service
     test_app.dependency_overrides[get_taste_profile_service] = lambda: mock_taste_profile_service
+    test_app.dependency_overrides[get_streak_service] = lambda: mock_streak_service
 
     return test_app
 

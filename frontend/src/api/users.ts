@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { AffinitiesResponse, CompletionsResponse, DiaryResponse, FeedResponse, RatingComparisonResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "./types";
+import type { AffinitiesResponse, CompletionsResponse, DiaryResponse, FeedResponse, RatingComparisonResponse, StreakResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "./types";
 
 export function getUser(id: number) {
   return apiFetch<UserResponse>(`/api/v1/users/${id}`);
@@ -41,4 +41,8 @@ export function getTasteProfile(userId: number) {
   return apiFetch<TasteProfileResponse>(
     `/api/v1/users/${userId}/taste-profile`
   );
+}
+
+export function getUserStreaks(userId: number) {
+  return apiFetch<StreakResponse>(`/api/v1/users/${userId}/streaks`);
 }

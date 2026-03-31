@@ -537,3 +537,17 @@ export interface ControversialResponse {
   min_ratings: number;
   limit: number;
 }
+
+export interface Milestone {
+  threshold: number;
+  reached: boolean;
+  label: string;
+}
+
+export interface StreakResponse {
+  user_id: number;
+  current_streak: number;
+  longest_streak: number;
+  total_ratings: number;
+  milestones: Milestone[];
+}

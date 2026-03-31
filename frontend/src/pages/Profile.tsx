@@ -18,8 +18,8 @@ import {
 } from "recharts";
 import { getDismissals, undismissMovie } from "../api/dismissals";
 import { getUserRatings } from "../api/ratings";
-import type { AffinitiesResponse, AffinityEntry, DismissalItemResponse, RatingComparisonResponse, RatingResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
-import { getRatingComparison, getTasteProfile, getUser, getUserAffinities, getUserStats } from "../api/users";
+import type { AffinitiesResponse, AffinityEntry, DismissalItemResponse, RatingComparisonResponse, RatingResponse, StreakResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
+import { getRatingComparison, getTasteProfile, getUser, getUserAffinities, getUserStats, getUserStreaks } from "../api/users";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import TopNav from "../components/TopNav";
@@ -40,6 +40,7 @@ export default function Profile() {
   const [tasteProfile, setTasteProfile] = useState<TasteProfileResponse | null>(null);
   const [ratingComparison, setRatingComparison] = useState<RatingComparisonResponse | null>(null);
   const [affinities, setAffinities] = useState<AffinitiesResponse | null>(null);
+  const [streaks, setStreaks] = useState<StreakResponse | null>(null);
   const [expandedAffinity, setExpandedAffinity] = useState<string | null>(null);
   const limit = 20;
 
@@ -72,6 +73,10 @@ export default function Profile() {
       // Fetch affinities (best-effort)
       getUserAffinities(userId)
         .then((a) => setAffinities(a))
+        .catch(() => {});
+      // Fetch streaks (best-effort)
+      getUserStreaks(userId)
+        .then((s) => setStreaks(s))
         .catch(() => {});
     } catch {
       // User hasn't rated anything yet — that's fine, not an error
@@ -173,6 +178,49 @@ export default function Profile() {
 
         {loading && <div className="flex justify-center py-12"><div className="w-12 h-12 border-4 border-primary-container/20 border-t-primary-container rounded-full animate-spin" /></div>}
         {error && <ErrorPanel message={error} />}
+
+        {/* Rating Streaks & Milestones */}
+        {streaks && (
+          <section className="flex flex-col gap-6">
+            <h2 className="font-headline text-3xl font-black italic tracking-tighter text-on-surface">Rating Streaks</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Current Streak</span>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-2xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+                  <span className="font-headline text-2xl font-bold text-on-surface">{streaks.current_streak} {streaks.current_streak === 1 ? "day" : "days"}</span>
+                </div>
+              </div>
+              <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">Longest Streak</span>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-2xl text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>emoji_events</span>
+                  <span className="font-headline text-2xl font-bold text-on-surface">{streaks.longest_streak} {streaks.longest_streak === 1 ? "day" : "days"}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {streaks.milestones.map((m) => (
+                <div
+                  key={m.threshold}
+                  className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold transition-all ${
+                    m.reached
+                      ? "bg-primary/20 text-primary"
+                      : "bg-surface-container text-on-surface-variant/40"
+                  }`}
+                >
+                  <span
+                    className="material-symbols-outlined text-base"
+                    style={{ fontVariationSettings: m.reached ? "'FILL' 1" : "'FILL' 0" }}
+                  >
+                    {m.reached ? "check_circle" : "circle"}
+                  </span>
+                  {m.label}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Taste Profile */}
         {tasteProfile && tasteProfile.insights.length > 0 && (

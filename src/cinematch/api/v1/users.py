@@ -12,6 +12,7 @@ from cinematch.api.deps import (
     get_feed_service,
     get_movie_service,
     get_rating_comparison_service,
+    get_streak_service,
     get_taste_profile_service,
     get_user_stats_service,
 )
@@ -21,6 +22,7 @@ from cinematch.models.user import User
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.rating import DiaryResponse
 from cinematch.schemas.rating_comparison import RatingComparisonResponse
+from cinematch.schemas.streak import StreakResponse
 from cinematch.schemas.taste_profile import TasteProfileResponse
 from cinematch.schemas.user import (
     AffinitiesResponse,
@@ -34,6 +36,7 @@ from cinematch.schemas.user import (
 from cinematch.services.feed_service import FeedService
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_comparison_service import RatingComparisonService
+from cinematch.services.streak_service import StreakService
 from cinematch.services.taste_profile_service import TasteProfileService
 from cinematch.services.user_stats_service import UserStatsService
 
@@ -247,6 +250,32 @@ async def get_rating_comparison(
     if cache is not None:
         try:
             await cache.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            pass
+
+    return response
+
+
+@router.get("/{user_id}/streaks", response_model=StreakResponse)
+async def get_streaks(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    streak_service: StreakService = Depends(get_streak_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Rating streak and milestone data for a user."""
+    cache_key = f"streaks:{user_id}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return StreakResponse.model_validate_json(cached)
+
+    result = await streak_service.get_streaks(user_id, db)
+    response = StreakResponse(**result)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=300)
         except Exception:
             pass
 
