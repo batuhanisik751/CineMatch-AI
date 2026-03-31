@@ -6,17 +6,26 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cinematch.api.deps import get_db, get_movie_service, get_user_stats_service
+from cinematch.api.deps import (
+    get_cache_service,
+    get_db,
+    get_feed_service,
+    get_movie_service,
+    get_user_stats_service,
+)
+from cinematch.core.cache import CacheService
 from cinematch.models.rating import Rating
 from cinematch.models.user import User
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.user import (
     CollectionGroup,
     CompletionsResponse,
+    FeedResponse,
     SurpriseResponse,
     UserResponse,
     UserStatsResponse,
 )
+from cinematch.services.feed_service import FeedService
 from cinematch.services.movie_service import MovieService
 from cinematch.services.user_stats_service import UserStatsService
 
@@ -102,3 +111,29 @@ async def get_completions(
         ],
         total_missing=total_missing,
     )
+
+
+@router.get("/{user_id}/feed", response_model=FeedResponse)
+async def get_user_feed(
+    user_id: int,
+    sections: int = Query(default=5, ge=1, le=10),
+    db: AsyncSession = Depends(get_db),
+    feed_service: FeedService = Depends(get_feed_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Personalized home feed with named sections tailored to the user's taste."""
+    cache_key = f"feed:{user_id}:{sections}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return FeedResponse.model_validate_json(cached)
+
+    response = await feed_service.generate_feed(user_id, db, sections=sections)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            pass
+
+    return response

@@ -398,3 +398,15 @@ export interface CompletionsResponse {
   groups: CollectionGroup[];
   total_missing: number;
 }
+
+export interface FeedSection {
+  key: string;
+  title: string;
+  movies: MovieSummary[];
+}
+
+export interface FeedResponse {
+  user_id: number;
+  is_personalized: boolean;
+  sections: FeedSection[];
+}

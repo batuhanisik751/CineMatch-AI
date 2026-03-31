@@ -40,6 +40,7 @@ class CacheService:
         """Invalidate all cached recommendations for a user."""
         await self.delete_pattern(f"recs:{user_id}:*")
         await self.delete_pattern(f"mood_rec:{user_id}:*")
+        await self.delete_pattern(f"feed:{user_id}:*")
         logger.debug("Invalidated recommendation cache for user %s", user_id)
 
     async def close(self) -> None:

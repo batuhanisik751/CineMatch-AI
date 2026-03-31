@@ -14,6 +14,7 @@ from cinematch.api.deps import (
     get_content_recommender,
     get_db,
     get_embedding_service,
+    get_feed_service,
     get_hybrid_recommender,
     get_llm_service,
     get_movie_service,
@@ -276,6 +277,47 @@ def mock_user_stats_service():
 
 
 @pytest.fixture()
+def mock_feed_service(sample_movie):
+    from cinematch.schemas.movie import MovieSummary
+    from cinematch.schemas.user import FeedResponse, FeedSection
+
+    svc = AsyncMock()
+    movie_summary = MovieSummary.model_validate(sample_movie)
+    svc.generate_feed.return_value = FeedResponse(
+        user_id=1,
+        is_personalized=True,
+        sections=[
+            FeedSection(
+                key="because_you_rated",
+                title="Because you rated The Matrix highly",
+                movies=[movie_summary],
+            ),
+            FeedSection(
+                key="trending_for_you",
+                title="Trending with users like you",
+                movies=[movie_summary],
+            ),
+            FeedSection(
+                key="hidden_gems",
+                title="Hidden gems in Action",
+                movies=[movie_summary],
+            ),
+            FeedSection(
+                key="something_different",
+                title="Something different",
+                movies=[movie_summary],
+            ),
+            FeedSection(
+                key="new_in_decade",
+                title="New to you in the 1990s",
+                movies=[movie_summary],
+            ),
+        ],
+    )
+    return svc
+
+
+@pytest.fixture()
 def mock_db():
     return AsyncMock()
 
@@ -291,6 +333,7 @@ def app(
     mock_user_stats_service,
     mock_watchlist_service,
     mock_cache_service,
+    mock_feed_service,
     mock_db,
 ):
     test_app = create_app()
@@ -305,6 +348,7 @@ def app(
     test_app.dependency_overrides[get_user_stats_service] = lambda: mock_user_stats_service
     test_app.dependency_overrides[get_watchlist_service] = lambda: mock_watchlist_service
     test_app.dependency_overrides[get_cache_service] = lambda: mock_cache_service
+    test_app.dependency_overrides[get_feed_service] = lambda: mock_feed_service
 
     return test_app
 

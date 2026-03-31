@@ -25,6 +25,7 @@ from cinematch.core.logging import setup_logging
 from cinematch.services.collab_recommender import CollabRecommender
 from cinematch.services.content_recommender import ContentRecommender
 from cinematch.services.embedding_service import EmbeddingService
+from cinematch.services.feed_service import FeedService
 from cinematch.services.hybrid_recommender import HybridRecommender
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_service import RatingService
@@ -121,6 +122,15 @@ async def lifespan(app: FastAPI):
     app.state.rating_service = RatingService()
     app.state.user_stats_service = UserStatsService()
     app.state.watchlist_service = WatchlistService()
+
+    # Feed service (works with or without recommendation artifacts)
+    app.state.feed_service = FeedService(
+        movie_service=app.state.movie_service,
+        user_stats_service=app.state.user_stats_service,
+        content_recommender=getattr(app.state, "content_recommender", None),
+        collab_recommender=getattr(app.state, "collab_recommender", None),
+        hybrid_recommender=getattr(app.state, "hybrid_recommender", None),
+    )
 
     # Redis cache (optional — app works without it)
     try:

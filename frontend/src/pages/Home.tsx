@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { discoverMovies, getHiddenGems, semanticSearchMovies } from "../api/movies";
 import { getMoodRecommendations, getSurpriseMovies } from "../api/recommendations";
-import type { MovieSummary } from "../api/types";
+import type { FeedResponse, MovieSummary } from "../api/types";
+import { getUserFeed } from "../api/users";
 import BottomNav from "../components/BottomNav";
 import MoodCarousel from "../components/MoodCarousel";
 import MoodPills from "../components/MoodPills";
@@ -34,6 +35,9 @@ export default function Home() {
   const [surpriseLoading, setSurpriseLoading] = useState(false);
   const [surpriseGenres, setSurpriseGenres] = useState<string[]>([]);
 
+  const [feed, setFeed] = useState<FeedResponse | null>(null);
+  const [feedLoading, setFeedLoading] = useState(false);
+
   useEffect(() => {
     discoverMovies({ sort_by: "popularity", limit: 8 })
       .then((data) => {
@@ -55,6 +59,29 @@ export default function Home() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    setFeedLoading(true);
+    getUserFeed(userId)
+      .then((data) => {
+        setFeed(data);
+        const allIds = data.sections.flatMap((s) => s.movies.map((m) => m.id));
+        refreshForMovieIds(allIds);
+      })
+      .catch(() => setFeed(null))
+      .finally(() => setFeedLoading(false));
+  }, [userId]);
+
+  const feedSectionIcon: Record<string, string> = {
+    because_you_rated: "thumb_up",
+    trending_for_you: "trending_up",
+    hidden_gems: "diamond",
+    something_different: "explore",
+    new_in_decade: "history",
+    trending: "trending_up",
+    top_rated: "star",
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,58 +331,110 @@ export default function Home() {
                 </button>
               </form>
             </div>
-            {/* Movie Carousels */}
+            {/* Movie Carousels — personalized feed or static fallback */}
             <div className="lg:col-span-7 space-y-10">
-              {popular.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-headline font-bold text-xl text-on-surface">Popular Now</h3>
-                    <Link to="/discover?sort_by=popularity" className="text-primary text-sm font-medium hover:underline">
-                      See all &rarr;
-                    </Link>
-                  </div>
-                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                    {popular.map((m) => (
-                      <div key={m.id} className="flex-shrink-0 w-44">
-                        <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
+              {feed && feed.sections.length > 0 ? (
+                <>
+                  {feed.is_personalized && (
+                    <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                      <span className="material-symbols-outlined text-base">auto_awesome</span>
+                      Personalized for you
+                    </div>
+                  )}
+                  {feed.sections.map((section) => (
+                    <div key={section.key}>
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="material-symbols-outlined text-primary text-xl">
+                          {feedSectionIcon[section.key] || "movie"}
+                        </span>
+                        <h3 className="font-headline font-bold text-xl text-on-surface">
+                          {section.title}
+                        </h3>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {topRated.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-headline font-bold text-xl text-on-surface">Top Rated</h3>
-                    <Link to="/discover?sort_by=vote_average" className="text-primary text-sm font-medium hover:underline">
-                      See all &rarr;
-                    </Link>
-                  </div>
-                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                    {topRated.map((m) => (
-                      <div key={m.id} className="flex-shrink-0 w-44">
-                        <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
+                      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                        {section.movies.map((m) => (
+                          <div key={m.id} className="flex-shrink-0 w-44">
+                            <MovieCard
+                              movie={m}
+                              isBookmarked={isInWatchlist(m.id)}
+                              onToggleBookmark={toggle}
+                            />
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {gems.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-headline font-bold text-xl text-on-surface">Hidden Gems</h3>
-                    <Link to="/hidden-gems" className="text-primary text-sm font-medium hover:underline">
-                      See all &rarr;
-                    </Link>
-                  </div>
-                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                    {gems.map((m) => (
-                      <div key={m.id} className="flex-shrink-0 w-44">
-                        <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
+                    </div>
+                  ))}
+                </>
+              ) : feedLoading ? (
+                <div className="space-y-10">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i}>
+                      <div className="h-6 w-48 bg-surface-container-low rounded mb-4 animate-pulse" />
+                      <div className="flex gap-4 overflow-x-auto pb-4">
+                        {[1, 2, 3, 4, 5, 6].map((j) => (
+                          <div
+                            key={j}
+                            className="flex-shrink-0 w-44 aspect-[2/3] bg-surface-container-low rounded-xl animate-pulse"
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <>
+                  {popular.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-headline font-bold text-xl text-on-surface">Popular Now</h3>
+                        <Link to="/discover?sort_by=popularity" className="text-primary text-sm font-medium hover:underline">
+                          See all &rarr;
+                        </Link>
+                      </div>
+                      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                        {popular.map((m) => (
+                          <div key={m.id} className="flex-shrink-0 w-44">
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {topRated.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-headline font-bold text-xl text-on-surface">Top Rated</h3>
+                        <Link to="/discover?sort_by=vote_average" className="text-primary text-sm font-medium hover:underline">
+                          See all &rarr;
+                        </Link>
+                      </div>
+                      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                        {topRated.map((m) => (
+                          <div key={m.id} className="flex-shrink-0 w-44">
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {gems.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-headline font-bold text-xl text-on-surface">Hidden Gems</h3>
+                        <Link to="/hidden-gems" className="text-primary text-sm font-medium hover:underline">
+                          See all &rarr;
+                        </Link>
+                      </div>
+                      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                        {gems.map((m) => (
+                          <div key={m.id} className="flex-shrink-0 w-44">
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

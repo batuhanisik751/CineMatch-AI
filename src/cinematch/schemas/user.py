@@ -87,3 +87,19 @@ class CompletionsResponse(BaseModel):
     user_id: int
     groups: list[CollectionGroup]
     total_missing: int
+
+
+class FeedSection(BaseModel):
+    """One carousel section in the personalized feed."""
+
+    key: str
+    title: str
+    movies: list[MovieSummary]
+
+
+class FeedResponse(BaseModel):
+    """Full personalized home feed."""
+
+    user_id: int
+    is_personalized: bool
+    sections: list[FeedSection]
