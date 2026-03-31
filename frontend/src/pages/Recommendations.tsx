@@ -16,6 +16,9 @@ export default function Recommendations() {
   const { userId } = useUserId();
   const [strategy, setStrategy] = useState(params.get("strategy") || "hybrid");
   const [topK, setTopK] = useState(Number(params.get("topK")) || 20);
+  const [diversity, setDiversity] = useState<"low" | "medium" | "high">(
+    (params.get("diversity") as "low" | "medium" | "high") || "medium"
+  );
   const [recs, setRecs] = useState<RecommendationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,8 +33,8 @@ export default function Recommendations() {
   const fetchRecs = () => {
     setLoading(true);
     setError("");
-    setParams({ user: String(userId), strategy, topK: String(topK) });
-    getRecommendations(userId, topK, strategy)
+    setParams({ user: String(userId), strategy, topK: String(topK), diversity });
+    getRecommendations(userId, topK, strategy, diversity)
       .then((data) => {
         setRecs(data.recommendations);
         setFetched(true);
@@ -72,6 +75,11 @@ export default function Recommendations() {
         <header className="mb-12">
           <h1 className="text-5xl font-extrabold font-headline text-on-surface tracking-tight mb-2">
             Showing <span className="text-primary-container capitalize">{strategy}</span> recommendations
+            {diversity !== "medium" && (
+              <span className="text-lg font-bold text-on-surface-variant ml-3">
+                ({diversity === "high" ? "adventurous" : "safe"} diversity)
+              </span>
+            )}
           </h1>
           {userId && (
             <p className="text-on-surface-variant text-lg">
@@ -86,7 +94,7 @@ export default function Recommendations() {
         {/* Configuration Panel */}
         <section className="mb-16">
           <div className="glass-panel p-8 rounded-xl border border-outline-variant/10 shadow-2xl">
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-end">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 items-end">
               <div className="space-y-3">
                 <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant">Your ID</label>
                 <div className="relative">
@@ -121,6 +129,30 @@ export default function Recommendations() {
                   onChange={(e) => setTopK(Number(e.target.value))}
                   className="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary-container"
                 />
+              </div>
+              <div className="space-y-3">
+                <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant">Diversity</label>
+                <div className="flex gap-1">
+                  {([
+                    { value: "low" as const, label: "Safe", icon: "target" },
+                    { value: "medium" as const, label: "Balanced", icon: "balance" },
+                    { value: "high" as const, label: "Adventurous", icon: "explore" },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setDiversity(opt.value)}
+                      className={`flex-1 h-12 rounded-lg text-xs font-bold tracking-wide transition-all flex flex-col items-center justify-center gap-0.5 ${
+                        diversity === opt.value
+                          ? "bg-primary-container text-on-primary-container shadow-[0_0_12px_rgba(255,193,7,0.25)]"
+                          : "bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-sm">{opt.icon}</span>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <button

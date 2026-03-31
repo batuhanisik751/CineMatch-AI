@@ -85,12 +85,23 @@ class HybridRecommender:
         db: AsyncSession,
         top_k: int = 20,
         strategy: str = "hybrid",
+        diversity_lambda: float | None = None,
     ) -> list[RecommendationResult]:
         """Main entry point. Strategy: 'hybrid', 'content', or 'collab'."""
         if strategy == "hybrid":
-            return await self._hybrid_recommend(user_id, db, top_k)
+            return await self._hybrid_recommend(
+                user_id,
+                db,
+                top_k,
+                diversity_lambda=diversity_lambda,
+            )
         if strategy == "content":
-            return await self._content_only_recommend(user_id, db, top_k)
+            return await self._content_only_recommend(
+                user_id,
+                db,
+                top_k,
+                diversity_lambda=diversity_lambda,
+            )
         if strategy == "collab":
             return self._collab_only_recommend(user_id, top_k)
         raise ValueError(f"Unknown strategy: {strategy!r}. Use 'hybrid', 'content', or 'collab'.")
@@ -100,12 +111,18 @@ class HybridRecommender:
         user_id: int,
         db: AsyncSession,
         top_k: int,
+        diversity_lambda: float | None = None,
     ) -> list[RecommendationResult]:
         """Full hybrid: alpha * content + (1 - alpha) * collab, with diversity."""
         alpha = self._alpha if self._collab.is_known_user(user_id) else 1.0
 
         if alpha == 1.0:
-            return await self._content_only_recommend(user_id, db, top_k)
+            return await self._content_only_recommend(
+                user_id,
+                db,
+                top_k,
+                diversity_lambda=diversity_lambda,
+            )
 
         # Step 1: collaborative candidates
         collab_results = self._collab.recommend_for_user(user_id, top_k=200)
@@ -164,7 +181,15 @@ class HybridRecommender:
         ranked = sorted(scored.items(), key=lambda r: r[1], reverse=True)[:fetch_n]
 
         # Step 9: LLM re-ranking (with MMR fallback)
-        final = await self._rerank(ranked, candidate_titles, seed_titles, user_top, db, top_k)
+        final = await self._rerank(
+            ranked,
+            candidate_titles,
+            seed_titles,
+            user_top,
+            db,
+            top_k,
+            diversity_lambda=diversity_lambda,
+        )
 
         # Step 10: generate feature explanations for final results
         final_ids = [mid for mid, _ in final]
@@ -184,6 +209,7 @@ class HybridRecommender:
         user_id: int,
         db: AsyncSession,
         top_k: int,
+        diversity_lambda: float | None = None,
     ) -> list[RecommendationResult]:
         """Content-only: recommend based on user's top-rated movies."""
         user_top = await self._get_user_top_rated_diverse(user_id, db, limit=10)
@@ -219,7 +245,15 @@ class HybridRecommender:
         fetch_n = max(top_k, self._rerank_candidates)
         ranked = sorted(scored.items(), key=lambda r: r[1], reverse=True)[:fetch_n]
 
-        final = await self._rerank(ranked, candidate_titles, seed_titles, user_top, db, top_k)
+        final = await self._rerank(
+            ranked,
+            candidate_titles,
+            seed_titles,
+            user_top,
+            db,
+            top_k,
+            diversity_lambda=diversity_lambda,
+        )
 
         # Generate feature explanations for final results
         final_ids = [mid for mid, _ in final]
@@ -411,6 +445,7 @@ class HybridRecommender:
         user_top: list[tuple[int, float]],
         db: AsyncSession,
         top_k: int,
+        diversity_lambda: float | None = None,
     ) -> list[tuple[int, float]]:
         """Try LLM re-ranking; fall back to MMR on failure."""
         if self._llm_rerank_enabled and self._llm is not None:
@@ -426,7 +461,7 @@ class HybridRecommender:
 
         # MMR fallback
         candidate_genres = await self._get_movie_genres([mid for mid, _ in ranked], db)
-        return self._mmr_rerank(ranked, candidate_genres, top_k)
+        return self._mmr_rerank(ranked, candidate_genres, top_k, diversity_lambda=diversity_lambda)
 
     async def _llm_rerank(
         self,
@@ -474,6 +509,7 @@ class HybridRecommender:
         ranked: list[tuple[int, float]],
         genres_map: dict[int, list[str]],
         top_k: int,
+        diversity_lambda: float | None = None,
     ) -> list[tuple[int, float]]:
         """Maximal Marginal Relevance using genre Jaccard similarity."""
         if not ranked:
@@ -483,7 +519,7 @@ class HybridRecommender:
         scores = self._min_max_normalize(dict(ranked))
         selected: list[tuple[int, float]] = []
         remaining = list(ranked)
-        lam = self._diversity_lambda
+        lam = diversity_lambda if diversity_lambda is not None else self._diversity_lambda
 
         for _ in range(min(top_k, len(ranked))):
             best_mid, best_score, best_idx = -1, -float("inf"), -1

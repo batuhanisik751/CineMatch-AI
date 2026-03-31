@@ -7,9 +7,14 @@ import type {
   SurpriseResponse,
 } from "./types";
 
-export function getRecommendations(userId: number, topK = 20, strategy = "hybrid") {
+export function getRecommendations(
+  userId: number,
+  topK = 20,
+  strategy = "hybrid",
+  diversity: "low" | "medium" | "high" = "medium"
+) {
   return apiFetch<RecommendationsResponse>(
-    `/api/v1/users/${userId}/recommendations?top_k=${topK}&strategy=${strategy}`
+    `/api/v1/users/${userId}/recommendations?top_k=${topK}&strategy=${strategy}&diversity=${diversity}`
   );
 }
 

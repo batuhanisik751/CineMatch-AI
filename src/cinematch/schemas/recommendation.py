@@ -2,9 +2,26 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
 
 from cinematch.schemas.movie import MovieSummary
+
+
+class DiversityLevel(StrEnum):
+    """User-facing diversity control for recommendations."""
+
+    low = "low"
+    medium = "medium"
+    high = "high"
+
+
+DIVERSITY_LAMBDA_MAP: dict[DiversityLevel, float] = {
+    DiversityLevel.low: 0.9,
+    DiversityLevel.medium: 0.7,
+    DiversityLevel.high: 0.4,
+}
 
 
 class SeedInfluenceSchema(BaseModel):
@@ -40,6 +57,7 @@ class RecommendationsResponse(BaseModel):
 
     user_id: int
     strategy: str
+    diversity: str = "medium"
     recommendations: list[RecommendationItem]
 
 

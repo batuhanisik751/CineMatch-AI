@@ -71,6 +71,45 @@ async def test_get_recommendations_service_unavailable(app, client):
     assert "Recommendation service" in resp.json()["detail"]
 
 
+async def test_get_recommendations_default_diversity(client, sample_movie, mock_movie_service):
+    resp = await client.get("/api/v1/users/1/recommendations")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["diversity"] == "medium"
+
+
+async def test_get_recommendations_with_diversity_low(client, mock_hybrid_recommender):
+    resp = await client.get(
+        "/api/v1/users/1/recommendations",
+        params={"diversity": "low"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["diversity"] == "low"
+    call_kwargs = mock_hybrid_recommender.recommend.call_args
+    assert call_kwargs.kwargs.get("diversity_lambda") == 0.9
+
+
+async def test_get_recommendations_with_diversity_high(client, mock_hybrid_recommender):
+    resp = await client.get(
+        "/api/v1/users/1/recommendations",
+        params={"diversity": "high"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["diversity"] == "high"
+    call_kwargs = mock_hybrid_recommender.recommend.call_args
+    assert call_kwargs.kwargs.get("diversity_lambda") == 0.4
+
+
+async def test_get_recommendations_invalid_diversity(client):
+    resp = await client.get(
+        "/api/v1/users/1/recommendations",
+        params={"diversity": "extreme"},
+    )
+    assert resp.status_code == 422
+
+
 async def test_get_recommendations_collab_cold_start(client, mock_hybrid_recommender):
     mock_hybrid_recommender.recommend.side_effect = ValueError(
         "User 999 has no collaborative filtering data yet."

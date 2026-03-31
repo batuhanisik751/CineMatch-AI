@@ -20,6 +20,8 @@ from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import NotFoundError, ServiceUnavailableError
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.recommendation import (
+    DIVERSITY_LAMBDA_MAP,
+    DiversityLevel,
     FromSeedRecommendationsResponse,
     MoodRecommendationItem,
     MoodRecommendationRequest,
@@ -48,14 +50,18 @@ async def get_recommendations(
     user_id: int,
     top_k: int = Query(default=20, ge=1, le=100),
     strategy: str = Query(default="hybrid", pattern="^(hybrid|content|collab)$"),
+    diversity: DiversityLevel = Query(default=DiversityLevel.medium),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     hybrid_rec: HybridRecommender | None = Depends(get_hybrid_recommender),
 ):
     if hybrid_rec is None:
         raise ServiceUnavailableError("Recommendation service")
+    diversity_lambda = DIVERSITY_LAMBDA_MAP[diversity]
     try:
-        rec_results = await hybrid_rec.recommend(user_id, db, top_k=top_k, strategy=strategy)
+        rec_results = await hybrid_rec.recommend(
+            user_id, db, top_k=top_k, strategy=strategy, diversity_lambda=diversity_lambda
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -98,6 +104,7 @@ async def get_recommendations(
     return RecommendationsResponse(
         user_id=user_id,
         strategy=strategy,
+        diversity=diversity.value,
         recommendations=recommendations,
     )
 

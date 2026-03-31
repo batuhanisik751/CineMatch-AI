@@ -170,6 +170,7 @@ export interface RecommendationItem {
 export interface RecommendationsResponse {
   user_id: number;
   strategy: string;
+  diversity: "low" | "medium" | "high";
   recommendations: RecommendationItem[];
 }
 
