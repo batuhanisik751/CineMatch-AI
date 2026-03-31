@@ -103,3 +103,31 @@ class FeedResponse(BaseModel):
     user_id: int
     is_personalized: bool
     sections: list[FeedSection]
+
+
+class RatedFilm(BaseModel):
+    """A film the user has rated, used in affinity detail."""
+
+    movie_id: int
+    title: str
+    rating: int
+    poster_path: str | None
+
+
+class AffinityEntry(BaseModel):
+    """A director or actor ranked by affinity score."""
+
+    name: str
+    role: str
+    avg_rating: float
+    count: int
+    weighted_score: float
+    films_rated: list[RatedFilm]
+
+
+class AffinitiesResponse(BaseModel):
+    """Director and actor affinity rankings for a user."""
+
+    user_id: int
+    directors: list[AffinityEntry]
+    actors: list[AffinityEntry]

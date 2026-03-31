@@ -23,6 +23,7 @@ from cinematch.schemas.rating import DiaryResponse
 from cinematch.schemas.rating_comparison import RatingComparisonResponse
 from cinematch.schemas.taste_profile import TasteProfileResponse
 from cinematch.schemas.user import (
+    AffinitiesResponse,
     CollectionGroup,
     CompletionsResponse,
     FeedResponse,
@@ -189,6 +190,33 @@ async def get_taste_profile(
 
     result = await taste_service.get_taste_profile(user_id, db)
     response = TasteProfileResponse(**result)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            pass
+
+    return response
+
+
+@router.get("/{user_id}/affinities", response_model=AffinitiesResponse)
+async def get_affinities(
+    user_id: int,
+    limit: int = Query(default=15, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+    stats_service: UserStatsService = Depends(get_user_stats_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Director and actor affinity rankings weighted by rating enthusiasm."""
+    cache_key = f"affinities:{user_id}:{limit}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return AffinitiesResponse.model_validate_json(cached)
+
+    data = await stats_service.get_affinities(user_id, db, limit=limit)
+    response = AffinitiesResponse(**data)
 
     if cache is not None:
         try:

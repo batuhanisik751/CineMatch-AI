@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
@@ -126,6 +127,95 @@ class UserStatsService:
             "top_actors": top_actors,
             "rating_timeline": rating_timeline,
         }
+
+    async def get_affinities(
+        self, user_id: int, db: AsyncSession, *, limit: int = 15
+    ) -> dict[str, Any]:
+        """Return director/actor affinity rankings weighted by avg_rating * log(count+1)."""
+
+        # Check if user has any ratings
+        total_result = await db.execute(
+            select(func.count(Rating.id)).where(Rating.user_id == user_id)
+        )
+        if total_result.scalar() == 0:
+            return {"user_id": user_id, "directors": [], "actors": []}
+
+        # --- Directors ---
+        dir_agg_stmt = text(
+            "SELECT m.director, AVG(r.rating)::float AS avg_r, COUNT(*)::int AS cnt "
+            "FROM ratings r "
+            "JOIN movies m ON r.movie_id = m.id "
+            "WHERE r.user_id = :uid AND m.director IS NOT NULL "
+            "GROUP BY m.director "
+            "HAVING COUNT(*) >= 2 "
+            "ORDER BY AVG(r.rating) * LN(COUNT(*) + 1) DESC "
+            "LIMIT :lim"
+        )
+        dir_rows = (await db.execute(dir_agg_stmt, {"uid": user_id, "lim": limit})).all()
+
+        directors = []
+        for name, avg_r, cnt in dir_rows:
+            films_stmt = text(
+                "SELECT m.id, m.title, r.rating, m.poster_path "
+                "FROM ratings r JOIN movies m ON r.movie_id = m.id "
+                "WHERE r.user_id = :uid AND m.director = :dir "
+                "ORDER BY r.rating DESC"
+            )
+            films = (await db.execute(films_stmt, {"uid": user_id, "dir": name})).all()
+            directors.append(
+                {
+                    "name": name,
+                    "role": "director",
+                    "avg_rating": round(avg_r, 2),
+                    "count": cnt,
+                    "weighted_score": round(avg_r * math.log(cnt + 1), 2),
+                    "films_rated": [
+                        {"movie_id": f[0], "title": f[1], "rating": f[2], "poster_path": f[3]}
+                        for f in films
+                    ],
+                }
+            )
+
+        # --- Actors ---
+        act_agg_stmt = text(
+            "SELECT actor, AVG(r.rating)::float AS avg_r, COUNT(*)::int AS cnt "
+            "FROM ratings r "
+            "JOIN movies m ON r.movie_id = m.id, "
+            "jsonb_array_elements_text(m.cast_names) AS actor "
+            "WHERE r.user_id = :uid "
+            "GROUP BY actor "
+            "HAVING COUNT(*) >= 2 "
+            "ORDER BY AVG(r.rating) * LN(COUNT(*) + 1) DESC "
+            "LIMIT :lim"
+        )
+        act_rows = (await db.execute(act_agg_stmt, {"uid": user_id, "lim": limit})).all()
+
+        actors = []
+        for name, avg_r, cnt in act_rows:
+            films_stmt = text(
+                "SELECT m.id, m.title, r.rating, m.poster_path "
+                "FROM ratings r "
+                "JOIN movies m ON r.movie_id = m.id, "
+                "jsonb_array_elements_text(m.cast_names) AS a "
+                "WHERE r.user_id = :uid AND a = :actor "
+                "ORDER BY r.rating DESC"
+            )
+            films = (await db.execute(films_stmt, {"uid": user_id, "actor": name})).all()
+            actors.append(
+                {
+                    "name": name,
+                    "role": "actor",
+                    "avg_rating": round(avg_r, 2),
+                    "count": cnt,
+                    "weighted_score": round(avg_r * math.log(cnt + 1), 2),
+                    "films_rated": [
+                        {"movie_id": f[0], "title": f[1], "rating": f[2], "poster_path": f[3]}
+                        for f in films
+                    ],
+                }
+            )
+
+        return {"user_id": user_id, "directors": directors, "actors": actors}
 
     async def get_diary(self, user_id: int, year: int, db: AsyncSession) -> dict[str, Any]:
         """Return daily rating activity for a given year."""

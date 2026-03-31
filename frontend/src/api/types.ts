@@ -484,6 +484,28 @@ export interface RatingComparisonResponse {
   most_underrated: RatingComparisonMovie[];
 }
 
+export interface RatedFilm {
+  movie_id: number;
+  title: string;
+  rating: number;
+  poster_path: string | null;
+}
+
+export interface AffinityEntry {
+  name: string;
+  role: string;
+  avg_rating: number;
+  count: number;
+  weighted_score: number;
+  films_rated: RatedFilm[];
+}
+
+export interface AffinitiesResponse {
+  user_id: number;
+  directors: AffinityEntry[];
+  actors: AffinityEntry[];
+}
+
 export interface TasteInsight {
   key: string;
   icon: string;

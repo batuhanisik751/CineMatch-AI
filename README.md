@@ -126,10 +126,12 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/users/{id}` | User details |
 | GET | `/api/v1/users/{id}/stats` | User profile analytics (rating histogram, top directors/actors, timeline) |
+| GET | `/api/v1/users/{id}/affinities?limit=15` | Director & actor affinity rankings weighted by enthusiasm (avg_rating × log(count+1)), with rated films list |
 | GET | `/api/v1/users/{id}/surprise?limit=5` | Serendipity mode — random well-rated movies outside user's top genres |
 | GET | `/api/v1/users/{id}/completions?limit=10` | "Complete the Collection" — unrated films by directors/actors the user has rated 3+ films for |
 | GET | `/api/v1/users/{id}/feed?sections=5` | Personalized home feed — dynamic named sections tailored to user taste (cold-start users get generic sections) |
 | GET | `/api/v1/users/{id}/taste-profile` | Natural-language taste profile — template-based insights (top genre, critic style, director affinity, decade preference) with optional LLM-enhanced summary |
+| GET | `/api/v1/users/{id}/affinities?limit=15` | Director & actor affinity rankings — weighted score (avg_rating × log(count+1)), with rated films per person |
 | GET | `/api/v1/users/{id}/rating-comparison` | You vs. community — user avg, community avg, agreement %, most overrated and most underrated movies |
 | GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid&diversity=medium` | Recommendations with smart explanations (strategy: `hybrid`/`content`/`collab`, diversity: `low`/`medium`/`high`) |
 | GET | `/api/v1/users/{id}/recommendations/from-seed/{movie_id}?limit=20` | "More Like This" — personalized recommendations branching from a seed movie |

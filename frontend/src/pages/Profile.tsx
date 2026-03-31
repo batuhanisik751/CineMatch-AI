@@ -18,8 +18,8 @@ import {
 } from "recharts";
 import { getDismissals, undismissMovie } from "../api/dismissals";
 import { getUserRatings } from "../api/ratings";
-import type { DismissalItemResponse, RatingComparisonResponse, RatingResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
-import { getRatingComparison, getTasteProfile, getUser, getUserStats } from "../api/users";
+import type { AffinitiesResponse, AffinityEntry, DismissalItemResponse, RatingComparisonResponse, RatingResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
+import { getRatingComparison, getTasteProfile, getUser, getUserAffinities, getUserStats } from "../api/users";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import TopNav from "../components/TopNav";
@@ -39,6 +39,8 @@ export default function Profile() {
   const [showDismissed, setShowDismissed] = useState(false);
   const [tasteProfile, setTasteProfile] = useState<TasteProfileResponse | null>(null);
   const [ratingComparison, setRatingComparison] = useState<RatingComparisonResponse | null>(null);
+  const [affinities, setAffinities] = useState<AffinitiesResponse | null>(null);
+  const [expandedAffinity, setExpandedAffinity] = useState<string | null>(null);
   const limit = 20;
 
   const fetchUser = async () => {
@@ -66,6 +68,10 @@ export default function Profile() {
       // Fetch rating comparison (best-effort)
       getRatingComparison(userId)
         .then((rc) => setRatingComparison(rc))
+        .catch(() => {});
+      // Fetch affinities (best-effort)
+      getUserAffinities(userId)
+        .then((a) => setAffinities(a))
         .catch(() => {});
     } catch {
       // User hasn't rated anything yet — that's fine, not an error
@@ -398,6 +404,117 @@ export default function Profile() {
                 </ResponsiveContainer>
               </div>
             )}
+          </section>
+        )}
+
+        {/* Director & Actor Affinities */}
+        {affinities && (affinities.directors.length > 0 || affinities.actors.length > 0) && (
+          <section className="flex flex-col gap-6">
+            <div>
+              <h2 className="font-headline text-3xl font-black italic tracking-tighter text-on-surface mb-2">Director & Actor Affinities</h2>
+              <p className="text-on-surface-variant font-body">Your favorite filmmakers ranked by rating enthusiasm.</p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Directors */}
+              {affinities.directors.length > 0 && (
+                <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-primary-fixed-dim" style={{ fontVariationSettings: "'FILL' 1" }}>movie</span>
+                    Directors
+                  </h3>
+                  <div className="flex flex-col gap-3">
+                    {affinities.directors.map((entry: AffinityEntry) => {
+                      const key = `director-${entry.name}`;
+                      const isExpanded = expandedAffinity === key;
+                      const maxScore = affinities.directors[0]?.weighted_score ?? 1;
+                      return (
+                        <div key={key}>
+                          <button onClick={() => setExpandedAffinity(isExpanded ? null : key)} className="w-full text-left group">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-headline font-bold text-on-surface truncate w-28 flex-shrink-0 group-hover:text-primary transition-colors">{entry.name}</span>
+                              <div className="flex-1 h-5 bg-surface-container rounded-full overflow-hidden">
+                                <div className="h-full bg-[#CCC2DC] rounded-full transition-all duration-500" style={{ width: `${(entry.weighted_score / maxScore) * 100}%` }} />
+                              </div>
+                              <span className="text-xs font-bold text-on-surface-variant flex-shrink-0 w-10 text-right">{entry.weighted_score}</span>
+                              <span className="text-xs text-on-surface-variant/60 flex-shrink-0 w-16 text-right">{entry.avg_rating.toFixed(1)} avg</span>
+                              <span className="text-xs text-on-surface-variant/60 flex-shrink-0">{entry.count} films</span>
+                              <span className={`material-symbols-outlined text-sm text-on-surface-variant transition-transform ${isExpanded ? "rotate-180" : ""}`}>expand_more</span>
+                            </div>
+                          </button>
+                          {isExpanded && (
+                            <div className="mt-2 ml-2 flex flex-col gap-2 pl-4 border-l-2 border-outline-variant/10">
+                              {entry.films_rated.map((f) => (
+                                <Link key={f.movie_id} to={`/movies/${f.movie_id}`} className="flex items-center gap-3 group/film">
+                                  <div className="w-8 h-12 rounded overflow-hidden bg-surface-container flex-shrink-0">
+                                    {f.poster_path ? (
+                                      <img src={`https://image.tmdb.org/t/p/w92${f.poster_path}`} alt={f.title} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-xs text-outline">movie</span></div>
+                                    )}
+                                  </div>
+                                  <span className="text-sm text-on-surface truncate group-hover/film:text-primary transition-colors">{f.title}</span>
+                                  <span className="ml-auto text-xs font-bold text-primary-fixed-dim flex-shrink-0">{f.rating}/10</span>
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Actors */}
+              {affinities.actors.length > 0 && (
+                <div className="p-8 rounded-xl bg-surface-container-low border border-outline-variant/5">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-6 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
+                    Actors
+                  </h3>
+                  <div className="flex flex-col gap-3">
+                    {affinities.actors.map((entry: AffinityEntry) => {
+                      const key = `actor-${entry.name}`;
+                      const isExpanded = expandedAffinity === key;
+                      const maxScore = affinities.actors[0]?.weighted_score ?? 1;
+                      return (
+                        <div key={key}>
+                          <button onClick={() => setExpandedAffinity(isExpanded ? null : key)} className="w-full text-left group">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-headline font-bold text-on-surface truncate w-28 flex-shrink-0 group-hover:text-primary transition-colors">{entry.name}</span>
+                              <div className="flex-1 h-5 bg-surface-container rounded-full overflow-hidden">
+                                <div className="h-full bg-[#EFB8C8] rounded-full transition-all duration-500" style={{ width: `${(entry.weighted_score / maxScore) * 100}%` }} />
+                              </div>
+                              <span className="text-xs font-bold text-on-surface-variant flex-shrink-0 w-10 text-right">{entry.weighted_score}</span>
+                              <span className="text-xs text-on-surface-variant/60 flex-shrink-0 w-16 text-right">{entry.avg_rating.toFixed(1)} avg</span>
+                              <span className="text-xs text-on-surface-variant/60 flex-shrink-0">{entry.count} films</span>
+                              <span className={`material-symbols-outlined text-sm text-on-surface-variant transition-transform ${isExpanded ? "rotate-180" : ""}`}>expand_more</span>
+                            </div>
+                          </button>
+                          {isExpanded && (
+                            <div className="mt-2 ml-2 flex flex-col gap-2 pl-4 border-l-2 border-outline-variant/10">
+                              {entry.films_rated.map((f) => (
+                                <Link key={f.movie_id} to={`/movies/${f.movie_id}`} className="flex items-center gap-3 group/film">
+                                  <div className="w-8 h-12 rounded overflow-hidden bg-surface-container flex-shrink-0">
+                                    {f.poster_path ? (
+                                      <img src={`https://image.tmdb.org/t/p/w92${f.poster_path}`} alt={f.title} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-xs text-outline">movie</span></div>
+                                    )}
+                                  </div>
+                                  <span className="text-sm text-on-surface truncate group-hover/film:text-primary transition-colors">{f.title}</span>
+                                  <span className="ml-auto text-xs font-bold text-primary-fixed-dim flex-shrink-0">{f.rating}/10</span>
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
         )}
 

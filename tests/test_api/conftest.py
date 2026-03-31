@@ -286,6 +286,11 @@ def mock_user_stats_service():
         "top_actors": [{"name": "DiCaprio", "count": 2}],
         "rating_timeline": [{"month": "2024-01", "count": 5}],
     }
+    svc.get_affinities.return_value = {
+        "user_id": 1,
+        "directors": [],
+        "actors": [],
+    }
     return svc
 
 
