@@ -18,6 +18,7 @@ import Profile from "./pages/Profile";
 import Recommendations from "./pages/Recommendations";
 import Search from "./pages/Search";
 import TopCharts from "./pages/TopCharts";
+import TasteEvolution from "./pages/TasteEvolution";
 import Trending from "./pages/Trending";
 import Watchlist from "./pages/Watchlist";
 
@@ -54,6 +55,7 @@ export default function App() {
       <Route path="/recommendations/from-seed/:movieId" element={<FromSeedRecommendations />} />
       <Route path="/watchlist" element={<Watchlist />} />
       <Route path="/diary" element={<Diary />} />
+      <Route path="/taste-evolution" element={<TasteEvolution />} />
       <Route path="/profile" element={<Profile />} />
     </Routes>
   );

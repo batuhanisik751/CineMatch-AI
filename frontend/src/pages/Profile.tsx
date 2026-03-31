@@ -222,6 +222,19 @@ export default function Profile() {
           </section>
         )}
 
+        {/* Taste Evolution Link */}
+        <Link
+          to="/taste-evolution"
+          className="flex items-center gap-4 p-6 rounded-xl bg-surface-container-low hover:bg-surface-container transition-all group"
+        >
+          <span className="material-symbols-outlined text-3xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>timeline</span>
+          <div className="flex-1">
+            <h3 className="font-headline text-lg font-bold text-on-surface">Taste Evolution</h3>
+            <p className="text-sm text-on-surface-variant">See how your genre preferences have shifted over time</p>
+          </div>
+          <span className="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">arrow_forward</span>
+        </Link>
+
         {/* Taste Profile */}
         {tasteProfile && tasteProfile.insights.length > 0 && (
           <section className="p-8 rounded-xl bg-gradient-to-r from-surface-container to-surface-container-highest border border-outline-variant/10 shadow-lg">

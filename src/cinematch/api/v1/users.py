@@ -13,6 +13,7 @@ from cinematch.api.deps import (
     get_movie_service,
     get_rating_comparison_service,
     get_streak_service,
+    get_taste_evolution_service,
     get_taste_profile_service,
     get_user_stats_service,
 )
@@ -23,6 +24,7 @@ from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.rating import DiaryResponse
 from cinematch.schemas.rating_comparison import RatingComparisonResponse
 from cinematch.schemas.streak import StreakResponse
+from cinematch.schemas.taste_evolution import TasteEvolutionResponse
 from cinematch.schemas.taste_profile import TasteProfileResponse
 from cinematch.schemas.user import (
     AffinitiesResponse,
@@ -37,6 +39,7 @@ from cinematch.services.feed_service import FeedService
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_comparison_service import RatingComparisonService
 from cinematch.services.streak_service import StreakService
+from cinematch.services.taste_evolution_service import TasteEvolutionService
 from cinematch.services.taste_profile_service import TasteProfileService
 from cinematch.services.user_stats_service import UserStatsService
 
@@ -276,6 +279,33 @@ async def get_streaks(
     if cache is not None:
         try:
             await cache.set(cache_key, response.model_dump_json(), ttl=300)
+        except Exception:
+            pass
+
+    return response
+
+
+@router.get("/{user_id}/taste-evolution", response_model=TasteEvolutionResponse)
+async def get_taste_evolution(
+    user_id: int,
+    granularity: str = Query(default="quarter", pattern=r"^(month|quarter|year)$"),
+    db: AsyncSession = Depends(get_db),
+    service: TasteEvolutionService = Depends(get_taste_evolution_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Genre distribution over time for a user."""
+    cache_key = f"taste_evolution:{user_id}:{granularity}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return TasteEvolutionResponse.model_validate_json(cached)
+
+    result = await service.get_taste_evolution(user_id, db, granularity=granularity)
+    response = TasteEvolutionResponse(**result)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=3600)
         except Exception:
             pass
 

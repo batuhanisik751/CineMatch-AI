@@ -551,3 +551,14 @@ export interface StreakResponse {
   total_ratings: number;
   milestones: Milestone[];
 }
+
+export interface TasteEvolutionPeriod {
+  period: string;
+  genres: Record<string, number>;
+}
+
+export interface TasteEvolutionResponse {
+  user_id: number;
+  granularity: string;
+  periods: TasteEvolutionPeriod[];
+}
