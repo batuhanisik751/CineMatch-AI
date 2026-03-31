@@ -370,3 +370,16 @@ export interface SurpriseResponse {
   results: MovieSummary[];
   limit: number;
 }
+
+export interface AdvancedSearchResult {
+  movie: MovieSummary;
+  vote_average: number;
+  director: string | null;
+}
+
+export interface AdvancedSearchResponse {
+  results: AdvancedSearchResult[];
+  total: number;
+  offset: number;
+  limit: number;
+}

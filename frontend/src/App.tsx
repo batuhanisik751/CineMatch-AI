@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Actors from "./pages/Actors";
+import AdvancedSearch from "./pages/AdvancedSearch";
 import Decades from "./pages/Decades";
 import Directors from "./pages/Directors";
 import Discover from "./pages/Discover";
@@ -38,6 +39,7 @@ export default function App() {
       <Route path="/directors" element={<Directors key={navCountRef.current} />} />
       <Route path="/actors" element={<Actors key={navCountRef.current} />} />
       <Route path="/keywords" element={<Keywords key={navCountRef.current} />} />
+      <Route path="/advanced-search" element={<AdvancedSearch />} />
       <Route path="/search" element={<Search />} />
       <Route path="/movies/:id" element={<MovieDetail />} />
       <Route path="/recommendations" element={<Recommendations />} />

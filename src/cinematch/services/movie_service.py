@@ -600,7 +600,7 @@ class MovieService:
         genre_stmt = text(
             "SELECT genre, COUNT(*)::int AS cnt "
             "FROM movies, jsonb_array_elements_text(genres) AS genre "
-            "WHERE movies.keywords @> :kw_array::jsonb "
+            "WHERE movies.keywords @> CAST(:kw_array AS jsonb) "
             "GROUP BY genre ORDER BY cnt DESC LIMIT 5"
         )
         genre_result = await db.execute(genre_stmt, {"kw_array": f'["{keyword}"]'})
@@ -637,3 +637,63 @@ class MovieService:
 
         result = await db.execute(stmt)
         return list(result.scalars().all())
+
+    async def advanced_search(
+        self,
+        db: AsyncSession,
+        *,
+        genre: str | None = None,
+        decade: str | None = None,
+        min_rating: float | None = None,
+        max_rating: float | None = None,
+        director: str | None = None,
+        keyword: str | None = None,
+        cast_name: str | None = None,
+        sort_by: str = "popularity",
+        sort_order: str = "desc",
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[list[Movie], int]:
+        """Advanced multi-criteria movie search with dynamic filter chaining."""
+        filters = []
+        if genre is not None:
+            filters.append(Movie.genres.op("@>")(cast([genre], JSONB_TYPE)))
+        if decade is not None:
+            decade_start = int(decade[:-1])
+            filters.append(extract("year", Movie.release_date) >= decade_start)
+            filters.append(extract("year", Movie.release_date) <= decade_start + 9)
+        if min_rating is not None:
+            filters.append(Movie.vote_average >= min_rating)
+        if max_rating is not None:
+            filters.append(Movie.vote_average <= max_rating)
+        if director is not None:
+            filters.append(Movie.director.ilike(f"%{director}%"))
+        if keyword is not None:
+            filters.append(Movie.keywords.op("@>")(cast([keyword], JSONB_TYPE)))
+        if cast_name is not None:
+            filters.append(
+                Movie.cast_names.op("@>")(func.jsonb_build_array(cast_name).cast(JSONB_TYPE))
+            )
+
+        count_stmt = select(func.count()).select_from(Movie)
+        for f in filters:
+            count_stmt = count_stmt.where(f)
+        count_result = await db.execute(count_stmt)
+        total = count_result.scalar_one()
+
+        sort_column_map = {
+            "popularity": Movie.popularity,
+            "vote_average": Movie.vote_average,
+            "release_date": Movie.release_date,
+            "title": Movie.title,
+        }
+        col = sort_column_map.get(sort_by, Movie.popularity)
+        order = col.asc() if sort_order == "asc" else col.desc()
+
+        stmt = select(Movie)
+        for f in filters:
+            stmt = stmt.where(f)
+        stmt = stmt.order_by(order).offset(offset).limit(limit)
+
+        result = await db.execute(stmt)
+        return list(result.scalars().all()), total

@@ -257,3 +257,16 @@ class KeywordMoviesResponse(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+class AdvancedSearchResult(BaseModel):
+    movie: MovieSummary
+    vote_average: float
+    director: str | None
+
+
+class AdvancedSearchResponse(BaseModel):
+    results: list[AdvancedSearchResult]
+    total: int
+    offset: int
+    limit: int

@@ -22,6 +22,8 @@ from cinematch.schemas.movie import (
     ActorSearchResponse,
     ActorStats,
     ActorSummary,
+    AdvancedSearchResponse,
+    AdvancedSearchResult,
     DecadeMovieResult,
     DecadeMoviesResponse,
     DecadesResponse,
@@ -609,6 +611,68 @@ async def keyword_movies(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
         except Exception:
             logger.warning("Failed to cache keyword movies", exc_info=True)
+
+    return response
+
+
+@router.get("/advanced-search", response_model=AdvancedSearchResponse)
+async def advanced_search(
+    genre: str | None = Query(default=None, max_length=100),
+    decade: str | None = Query(default=None, pattern=r"^\d{4}s$"),
+    min_rating: float | None = Query(default=None, ge=0, le=10),
+    max_rating: float | None = Query(default=None, ge=0, le=10),
+    director: str | None = Query(default=None, max_length=255),
+    keyword: str | None = Query(default=None, max_length=255),
+    cast: str | None = Query(default=None, max_length=255),
+    sort_by: SortOption = Query(default=SortOption.popularity),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = (
+        f"adv_search:{genre}:{decade}:{min_rating}:{max_rating}"
+        f":{director}:{keyword}:{cast}:{sort_by.value}:{offset}:{limit}"
+    )
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return AdvancedSearchResponse.model_validate_json(cached)
+
+    movies, total = await movie_service.advanced_search(
+        db,
+        genre=genre,
+        decade=decade,
+        min_rating=min_rating,
+        max_rating=max_rating,
+        director=director,
+        keyword=keyword,
+        cast_name=cast,
+        sort_by=sort_by.value,
+        offset=offset,
+        limit=limit,
+    )
+
+    response = AdvancedSearchResponse(
+        results=[
+            AdvancedSearchResult(
+                movie=MovieSummary.model_validate(m),
+                vote_average=m.vote_average,
+                director=m.director,
+            )
+            for m in movies
+        ],
+        total=total,
+        offset=offset,
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=3600)
+        except Exception:
+            logger.warning("Failed to cache advanced search results", exc_info=True)
 
     return response
 

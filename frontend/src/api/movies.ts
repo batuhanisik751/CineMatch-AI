@@ -2,6 +2,7 @@ import { apiFetch } from "./client";
 import type {
   ActorFilmographyResponse,
   ActorSearchResponse,
+  AdvancedSearchResponse,
   DecadeMoviesResponse,
   DecadesResponse,
   DirectorFilmographyResponse,
@@ -171,4 +172,30 @@ export function getKeywordMovies(
   return apiFetch<KeywordMoviesResponse>(
     `/api/v1/movies/keywords/movies?${qs.toString()}`
   );
+}
+
+export function advancedSearchMovies(params: {
+  genre?: string;
+  decade?: string;
+  min_rating?: number;
+  max_rating?: number;
+  director?: string;
+  keyword?: string;
+  cast?: string;
+  sort_by?: string;
+  offset?: number;
+  limit?: number;
+}) {
+  const qs = new URLSearchParams();
+  if (params.genre) qs.set("genre", params.genre);
+  if (params.decade) qs.set("decade", params.decade);
+  if (params.min_rating != null) qs.set("min_rating", String(params.min_rating));
+  if (params.max_rating != null) qs.set("max_rating", String(params.max_rating));
+  if (params.director) qs.set("director", params.director);
+  if (params.keyword) qs.set("keyword", params.keyword);
+  if (params.cast) qs.set("cast", params.cast);
+  if (params.sort_by) qs.set("sort_by", params.sort_by);
+  if (params.offset != null) qs.set("offset", String(params.offset));
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  return apiFetch<AdvancedSearchResponse>(`/api/v1/movies/advanced-search?${qs.toString()}`);
 }

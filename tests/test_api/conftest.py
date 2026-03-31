@@ -117,6 +117,7 @@ def mock_movie_service(sample_movie):
         {"total_movies": 1, "avg_vote": 8.2, "top_genres": ["Action", "Sci-Fi"]},
     )
     svc.surprise_movies.return_value = [sample_movie]
+    svc.advanced_search.return_value = ([sample_movie], 1)
     svc.search_actors.return_value = [("Keanu Reeves", 8, 7.15)]
     svc.popular_actors.return_value = [
         ("Keanu Reeves", 8, 7.15),
