@@ -3,6 +3,7 @@ import type {
   ActorFilmographyResponse,
   ActorSearchResponse,
   AdvancedSearchResponse,
+  ControversialResponse,
   DecadeMoviesResponse,
   DecadesResponse,
   DirectorFilmographyResponse,
@@ -198,4 +199,16 @@ export function advancedSearchMovies(params: {
   if (params.offset != null) qs.set("offset", String(params.offset));
   if (params.limit != null) qs.set("limit", String(params.limit));
   return apiFetch<AdvancedSearchResponse>(`/api/v1/movies/advanced-search?${qs.toString()}`);
+}
+
+export function getControversialMovies(
+  params: { min_ratings?: number; limit?: number } = {},
+) {
+  const qs = new URLSearchParams();
+  if (params.min_ratings != null)
+    qs.set("min_ratings", String(params.min_ratings));
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  return apiFetch<ControversialResponse>(
+    `/api/v1/movies/controversial?${qs.toString()}`,
+  );
 }

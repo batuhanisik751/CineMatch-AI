@@ -827,3 +827,51 @@ class MovieService:
             trimmed.append(g)
 
         return trimmed
+
+    async def controversial(
+        self,
+        db: AsyncSession,
+        *,
+        min_ratings: int = 100,
+        limit: int = 20,
+    ) -> list[tuple[Movie, float, float, int, dict[int, int]]]:
+        """Return movies with the highest rating standard deviation."""
+        avg_col = func.avg(Rating.rating).label("avg_rating")
+        stddev_col = func.stddev_samp(Rating.rating).label("stddev_rating")
+        count_col = func.count(Rating.id).label("rating_count")
+
+        stmt = (
+            select(Rating.movie_id, avg_col, stddev_col, count_col)
+            .group_by(Rating.movie_id)
+            .having(func.count(Rating.id) >= min_ratings)
+            .order_by(desc(stddev_col))
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        rows = result.all()
+
+        if not rows:
+            return []
+
+        ordered_ids = [row[0] for row in rows]
+        stats = {row[0]: (float(row[1]), float(row[2]), int(row[3])) for row in rows}
+
+        # Batch-fetch rating histograms
+        hist_stmt = (
+            select(Rating.movie_id, Rating.rating, func.count().label("cnt"))
+            .where(Rating.movie_id.in_(ordered_ids))
+            .group_by(Rating.movie_id, Rating.rating)
+        )
+        hist_result = await db.execute(hist_stmt)
+        histograms: dict[int, dict[int, int]] = {
+            mid: {r: 0 for r in range(1, 11)} for mid in ordered_ids
+        }
+        for mid, rating, cnt in hist_result.all():
+            histograms[mid][rating] = int(cnt)
+
+        movies_map = await self.get_movies_by_ids(ordered_ids, db)
+        return [
+            (movies_map[mid], *stats[mid], histograms[mid])
+            for mid in ordered_ids
+            if mid in movies_map
+        ]

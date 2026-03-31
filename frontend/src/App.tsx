@@ -3,6 +3,7 @@ import { Route, Routes, useLocation } from "react-router-dom";
 import Actors from "./pages/Actors";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import Collections from "./pages/Collections";
+import Controversial from "./pages/Controversial";
 import Decades from "./pages/Decades";
 import Diary from "./pages/Diary";
 import Directors from "./pages/Directors";
@@ -39,6 +40,7 @@ export default function App() {
       <Route path="/trending" element={<Trending />} />
       <Route path="/top-charts" element={<TopCharts />} />
       <Route path="/hidden-gems" element={<HiddenGems />} />
+      <Route path="/controversial" element={<Controversial />} />
       <Route path="/moods" element={<Moods />} />
       <Route path="/decades" element={<Decades key={navCountRef.current} />} />
       <Route path="/directors" element={<Directors key={navCountRef.current} />} />

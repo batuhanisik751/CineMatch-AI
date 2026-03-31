@@ -25,6 +25,8 @@ from cinematch.schemas.movie import (
     ActorSummary,
     AdvancedSearchResponse,
     AdvancedSearchResult,
+    ControversialMovieResult,
+    ControversialResponse,
     DecadeMovieResult,
     DecadeMoviesResponse,
     DecadesResponse,
@@ -50,6 +52,7 @@ from cinematch.schemas.movie import (
     PopularActorsResponse,
     PopularDirectorsResponse,
     PopularKeywordsResponse,
+    RatingHistogramBucket,
     SemanticSearchResponse,
     SemanticSearchResult,
     SimilarMovie,
@@ -722,6 +725,48 @@ async def advanced_search(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=3600)
         except Exception:
             logger.warning("Failed to cache advanced search results", exc_info=True)
+
+    return response
+
+
+@router.get("/controversial", response_model=ControversialResponse)
+async def controversial_movies(
+    min_ratings: int = Query(default=100, ge=10, le=10000),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = f"controversial:{min_ratings}:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return ControversialResponse.model_validate_json(cached)
+
+    rows = await movie_service.controversial(db, min_ratings=min_ratings, limit=limit)
+
+    response = ControversialResponse(
+        results=[
+            ControversialMovieResult(
+                movie=MovieSummary.model_validate(movie),
+                avg_rating=round(avg, 4),
+                stddev_rating=round(stddev, 4),
+                rating_count=count,
+                histogram=[
+                    RatingHistogramBucket(rating=r, count=hist.get(r, 0)) for r in range(1, 11)
+                ],
+            )
+            for movie, avg, stddev, count, hist in rows
+        ],
+        min_ratings=min_ratings,
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache controversial movies", exc_info=True)
 
     return response
 

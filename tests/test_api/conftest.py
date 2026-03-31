@@ -121,6 +121,9 @@ def mock_movie_service(sample_movie):
     )
     svc.surprise_movies.return_value = [sample_movie]
     svc.advanced_search.return_value = ([sample_movie], 1)
+    svc.controversial.return_value = [
+        (sample_movie, 7.3, 2.15, 150, {r: 15 for r in range(1, 11)})
+    ]
     svc.collection_completions.return_value = [
         {
             "creator_type": "director",

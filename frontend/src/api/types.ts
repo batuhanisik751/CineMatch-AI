@@ -518,3 +518,22 @@ export interface TasteProfileResponse {
   insights: TasteInsight[];
   llm_summary: string | null;
 }
+
+export interface RatingHistogramBucket {
+  rating: number;
+  count: number;
+}
+
+export interface ControversialMovieResult {
+  movie: MovieSummary;
+  avg_rating: number;
+  stddev_rating: number;
+  rating_count: number;
+  histogram: RatingHistogramBucket[];
+}
+
+export interface ControversialResponse {
+  results: ControversialMovieResult[];
+  min_ratings: number;
+  limit: number;
+}

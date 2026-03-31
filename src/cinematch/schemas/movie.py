@@ -270,3 +270,22 @@ class AdvancedSearchResponse(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+class RatingHistogramBucket(BaseModel):
+    rating: int
+    count: int
+
+
+class ControversialMovieResult(BaseModel):
+    movie: MovieSummary
+    avg_rating: float
+    stddev_rating: float
+    rating_count: int
+    histogram: list[RatingHistogramBucket]
+
+
+class ControversialResponse(BaseModel):
+    results: list[ControversialMovieResult]
+    min_ratings: int
+    limit: int
