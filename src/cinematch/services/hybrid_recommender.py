@@ -512,6 +512,100 @@ class HybridRecommender:
         return selected
 
     # ------------------------------------------------------------------
+    # Seed-based recommendation ("More Like This")
+    # ------------------------------------------------------------------
+
+    async def from_seed_recommend(
+        self,
+        seed_movie_id: int,
+        user_id: int,
+        db: AsyncSession,
+        top_k: int = 20,
+    ) -> list[RecommendationResult]:
+        """Recommend movies similar to a seed, optionally personalized.
+
+        Uses the seed movie as the sole content anchor.  If the user has
+        collaborative-filtering data the content scores are blended with
+        ALS item scores; otherwise pure content similarity is returned.
+        """
+        # 1 — content candidates from the seed
+        similar = await self._content.get_similar_movies(seed_movie_id, db, top_k=100)
+        if not similar:
+            return []
+        content_scores: dict[int, float] = dict(similar)
+
+        # 2 — collaborative scoring (if available)
+        alpha = self._alpha
+        collab_scores: dict[int, float] = {}
+        if self._collab.is_known_user(user_id):
+            collab_scores = self._collab.score_items(user_id, list(content_scores.keys()))
+        else:
+            alpha = 1.0
+
+        # 3 — filter already-rated movies and the seed itself
+        rated_ids = await self._get_user_rated_movie_ids(user_id, db)
+        excluded = rated_ids | {seed_movie_id}
+        candidates = set(content_scores) - excluded
+
+        if not candidates:
+            return []
+
+        # 4 — normalize
+        content_norm = self._min_max_normalize(
+            {mid: content_scores[mid] for mid in candidates},
+        )
+        collab_norm = self._min_max_normalize(
+            {mid: collab_scores[mid] for mid in candidates if mid in collab_scores},
+        )
+
+        # 5 — hybrid score + breakdowns
+        scored: dict[int, float] = {}
+        breakdowns: dict[int, ScoreBreakdown] = {}
+        for mid in candidates:
+            c = content_norm.get(mid, 0.0)
+            f = collab_norm.get(mid, 0.0)
+            scored[mid] = alpha * c + (1 - alpha) * f
+            breakdowns[mid] = ScoreBreakdown(
+                content_score=round(c, 4),
+                collab_score=round(f, 4),
+                alpha=alpha,
+            )
+
+        # 6 — best-seed map (single seed for all candidates)
+        best_seed: dict[int, tuple[int, float, float]] = {
+            mid: (seed_movie_id, content_scores[mid], 10.0) for mid in candidates
+        }
+
+        # 7 — franchise / sequel penalty
+        seed_titles = await self._get_movie_titles([seed_movie_id], db)
+        seed_bases = {self._base_title(t) for t in seed_titles.values()}
+        candidate_titles = await self._get_movie_titles(list(scored.keys()), db)
+        for mid, title in candidate_titles.items():
+            if mid in scored and self._base_title(title) in seed_bases:
+                scored[mid] *= self._sequel_penalty
+
+        # 8 — sort & over-fetch for MMR
+        fetch_n = max(top_k, self._rerank_candidates)
+        ranked = sorted(scored.items(), key=lambda r: r[1], reverse=True)[:fetch_n]
+
+        # 9 — MMR diversity re-rank (skip LLM — single-seed context)
+        genres_map = await self._get_movie_genres([mid for mid, _ in ranked], db)
+        final = self._mmr_rerank(ranked, genres_map, top_k)
+
+        # 10 — feature explanations
+        user_top: list[tuple[int, float]] = [(seed_movie_id, 10.0)]
+        final_ids = [mid for mid, _ in final]
+        feature_explanations = await self._generate_feature_explanations(
+            final_ids,
+            user_top,
+            best_seed,
+            seed_titles,
+            db,
+        )
+
+        return self._build_results(final, best_seed, seed_titles, breakdowns, feature_explanations)
+
+    # ------------------------------------------------------------------
     # Mood-based recommendation
     # ------------------------------------------------------------------
 

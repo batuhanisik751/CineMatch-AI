@@ -6,6 +6,7 @@ import Collections from "./pages/Collections";
 import Decades from "./pages/Decades";
 import Directors from "./pages/Directors";
 import Discover from "./pages/Discover";
+import FromSeedRecommendations from "./pages/FromSeedRecommendations";
 import HiddenGems from "./pages/HiddenGems";
 import Home from "./pages/Home";
 import Moods from "./pages/Moods";
@@ -47,6 +48,7 @@ export default function App() {
       <Route path="/search" element={<Search />} />
       <Route path="/movies/:id" element={<MovieDetail />} />
       <Route path="/recommendations" element={<Recommendations />} />
+      <Route path="/recommendations/from-seed/:movieId" element={<FromSeedRecommendations />} />
       <Route path="/watchlist" element={<Watchlist />} />
       <Route path="/profile" element={<Profile />} />
     </Routes>

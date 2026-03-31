@@ -208,8 +208,15 @@ export default function MovieDetail() {
         {/* Similar Movies */}
         {similar.length > 0 && (
           <section className="bg-surface-container-lowest py-20 overflow-hidden">
-            <div className="max-w-7xl mx-auto px-8 mb-8">
+            <div className="max-w-7xl mx-auto px-8 mb-8 flex items-center justify-between">
               <h3 className="text-3xl font-headline font-extrabold text-on-surface tracking-tight">Similar Movies</h3>
+              <Link
+                to={`/recommendations/from-seed/${movie.id}`}
+                className="flex items-center gap-2 bg-primary-container/20 border border-primary-container/40 text-primary px-4 py-2 rounded-lg font-bold text-sm hover:bg-primary-container hover:text-on-primary-container transition-all"
+              >
+                <span className="material-symbols-outlined text-lg">auto_awesome</span>
+                More Like This
+              </Link>
             </div>
             <div className="flex gap-6 overflow-x-auto px-8 pb-10 hide-scrollbar scroll-smooth">
               {similar.map((s) => {

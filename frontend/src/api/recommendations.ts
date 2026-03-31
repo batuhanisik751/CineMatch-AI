@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type {
+  FromSeedRecommendationsResponse,
   MoodRecommendationResponse,
   RecommendationExplanation,
   RecommendationsResponse,
@@ -28,6 +29,12 @@ export function getMoodRecommendations(params: {
     method: "POST",
     body: JSON.stringify(params),
   });
+}
+
+export function getFromSeedRecommendations(userId: number, movieId: number, limit = 20) {
+  return apiFetch<FromSeedRecommendationsResponse>(
+    `/api/v1/users/${userId}/recommendations/from-seed/${movieId}?limit=${limit}`
+  );
 }
 
 export function getSurpriseMovies(userId: number, limit = 5) {

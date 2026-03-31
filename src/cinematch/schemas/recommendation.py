@@ -52,6 +52,12 @@ class RecommendationExplanation(BaseModel):
     score: float
 
 
+class FromSeedRecommendationsResponse(RecommendationsResponse):
+    """Recommendations seeded from a specific movie."""
+
+    seed_movie: MovieSummary
+
+
 class MoodRecommendationRequest(BaseModel):
     """Request body for mood-based recommendations."""
 

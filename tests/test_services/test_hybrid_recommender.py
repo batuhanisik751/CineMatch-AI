@@ -612,3 +612,193 @@ async def test_feature_explanation_director_match(hybrid_recommender, mock_db_se
         ]
         assert len(director_explanations) > 0
         assert "Director A" in director_explanations[0]
+
+
+# ------------------------------------------------------------------
+# From-seed recommendation tests
+# ------------------------------------------------------------------
+
+
+def _from_seed_db_factory(
+    rated_ids: list[tuple] | None = None,
+    titles: list[tuple] | None = None,
+    genres: list[tuple] | None = None,
+    metadata: list[tuple] | None = None,
+):
+    """Build query-matching side_effect for from_seed_recommend db calls."""
+    if rated_ids is None:
+        rated_ids = [(101,)]
+    if titles is None:
+        titles = [(101, "Seed Movie"), (102, "Movie B"), (103, "Movie C"), (104, "Movie D")]
+    if genres is None:
+        genres = [(102, ["Action"]), (103, ["Comedy"]), (104, ["Drama"])]
+    if metadata is None:
+        metadata = [
+            (101, ["Action", "Sci-Fi"], "Director A", ["Actor X"]),
+            (102, ["Action"], "Director A", ["Actor X"]),
+            (103, ["Comedy"], "Director B", ["Actor Y"]),
+            (104, ["Drama"], "Director C", ["Actor Z"]),
+        ]
+
+    def _make_result(data):
+        r = MagicMock()
+        r.fetchall.return_value = data
+        return r
+
+    async def _side_effect(query, params=None):
+        q = str(query)
+        if "SELECT movie_id FROM ratings" in q:
+            return _make_result(rated_ids)
+        if "SELECT id, title FROM movies" in q:
+            return _make_result(titles)
+        if "SELECT id, genres, director, cast_names" in q:
+            return _make_result(metadata)
+        if "SELECT id, genres FROM movies" in q:
+            return _make_result(genres)
+        return _make_result([])
+
+    return _side_effect
+
+
+@pytest.mark.asyncio
+async def test_from_seed_returns_results(hybrid_recommender, mock_db_session):
+    """from_seed_recommend should return personalized results for known user."""
+    mock_db_session.execute = AsyncMock(side_effect=_from_seed_db_factory())
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        mock_content.return_value = [(102, 0.9), (103, 0.8), (104, 0.7)]
+
+        results = await hybrid_recommender.from_seed_recommend(
+            seed_movie_id=101,
+            user_id=1,
+            db=mock_db_session,
+            top_k=5,
+        )
+
+    assert len(results) > 0
+    assert all(isinstance(r, RecommendationResult) for r in results)
+    # Seed movie (101) should not appear in results (it's excluded)
+    result_ids = [r.movie_id for r in results]
+    assert 101 not in result_ids
+
+
+@pytest.mark.asyncio
+async def test_from_seed_cold_start_user(hybrid_recommender, mock_db_session):
+    """Cold-start user should get content-only results (alpha=1.0)."""
+    mock_db_session.execute = AsyncMock(
+        side_effect=_from_seed_db_factory(rated_ids=[]),
+    )
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        mock_content.return_value = [(102, 0.9), (103, 0.8)]
+
+        results = await hybrid_recommender.from_seed_recommend(
+            seed_movie_id=101,
+            user_id=999,
+            db=mock_db_session,
+            top_k=5,
+        )
+
+    assert len(results) > 0
+    for r in results:
+        assert r.score_breakdown is not None
+        assert r.score_breakdown.alpha == 1.0
+        assert r.score_breakdown.collab_score == 0.0
+
+
+@pytest.mark.asyncio
+async def test_from_seed_excludes_rated_movies(hybrid_recommender, mock_db_session):
+    """Already-rated movies should be excluded from from-seed results."""
+    mock_db_session.execute = AsyncMock(
+        side_effect=_from_seed_db_factory(rated_ids=[(102,), (103,)]),
+    )
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        mock_content.return_value = [(102, 0.95), (103, 0.85), (104, 0.7)]
+
+        results = await hybrid_recommender.from_seed_recommend(
+            seed_movie_id=101,
+            user_id=1,
+            db=mock_db_session,
+            top_k=5,
+        )
+
+    result_ids = [r.movie_id for r in results]
+    assert 102 not in result_ids
+    assert 103 not in result_ids
+
+
+@pytest.mark.asyncio
+async def test_from_seed_excludes_seed_movie(hybrid_recommender, mock_db_session):
+    """The seed movie itself should never appear in results."""
+    mock_db_session.execute = AsyncMock(
+        side_effect=_from_seed_db_factory(rated_ids=[]),
+    )
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        # ContentRecommender normally excludes it, but ensure our method also does
+        mock_content.return_value = [(101, 0.99), (102, 0.9), (103, 0.8)]
+
+        results = await hybrid_recommender.from_seed_recommend(
+            seed_movie_id=101,
+            user_id=999,
+            db=mock_db_session,
+            top_k=5,
+        )
+
+    result_ids = [r.movie_id for r in results]
+    assert 101 not in result_ids
+
+
+@pytest.mark.asyncio
+async def test_from_seed_empty_similar(hybrid_recommender, mock_db_session):
+    """When seed movie has no similar movies, return empty list."""
+    mock_db_session.execute = AsyncMock(
+        side_effect=_from_seed_db_factory(),
+    )
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        mock_content.return_value = []
+
+        results = await hybrid_recommender.from_seed_recommend(
+            seed_movie_id=101,
+            user_id=1,
+            db=mock_db_session,
+            top_k=5,
+        )
+
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_from_seed_because_you_liked_points_to_seed(hybrid_recommender, mock_db_session):
+    """All results should have because_you_liked pointing to the seed movie."""
+    mock_db_session.execute = AsyncMock(side_effect=_from_seed_db_factory())
+
+    with patch.object(
+        hybrid_recommender._content, "get_similar_movies", new_callable=AsyncMock
+    ) as mock_content:
+        mock_content.return_value = [(102, 0.9), (103, 0.8)]
+
+        results = await hybrid_recommender.from_seed_recommend(
+            seed_movie_id=101,
+            user_id=1,
+            db=mock_db_session,
+            top_k=5,
+        )
+
+    for r in results:
+        assert r.because_you_liked is not None
+        assert r.because_you_liked.movie_id == 101
+        assert r.because_you_liked.title == "Seed Movie"
+        assert r.because_you_liked.your_rating == 10.0

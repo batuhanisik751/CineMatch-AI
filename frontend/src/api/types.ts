@@ -173,6 +173,10 @@ export interface RecommendationsResponse {
   recommendations: RecommendationItem[];
 }
 
+export interface FromSeedRecommendationsResponse extends RecommendationsResponse {
+  seed_movie: MovieSummary;
+}
+
 export interface UserResponse {
   id: number;
   movielens_id: number;

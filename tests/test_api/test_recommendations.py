@@ -274,3 +274,58 @@ async def test_get_recommendations_null_explanation_for_no_seed(
         rec2 = data["recommendations"][1]
         assert rec2["because_you_liked"] is None
         assert rec2["feature_explanations"] == []
+
+
+# --- From-seed recommendations endpoint tests ---
+
+
+async def test_from_seed_recommendations_success(
+    client, mock_hybrid_recommender, mock_movie_service
+):
+    resp = await client.get("/api/v1/users/1/recommendations/from-seed/5")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user_id"] == 1
+    assert data["strategy"] == "from-seed"
+    assert "seed_movie" in data
+    assert data["seed_movie"]["id"] == 1  # from mock_movie_service.get_by_id
+    assert len(data["recommendations"]) > 0
+    rec = data["recommendations"][0]
+    assert "score" in rec
+    assert "movie" in rec
+    assert rec["because_you_liked"]["title"] == "The Matrix"
+    mock_hybrid_recommender.from_seed_recommend.assert_called_once()
+
+
+async def test_from_seed_recommendations_movie_not_found(client, mock_movie_service):
+    mock_movie_service.get_by_id.return_value = None
+    resp = await client.get("/api/v1/users/1/recommendations/from-seed/999")
+    assert resp.status_code == 404
+    assert "Movie" in resp.json()["detail"]
+
+
+async def test_from_seed_recommendations_service_unavailable(app, client):
+    from cinematch.api.deps import get_hybrid_recommender
+
+    app.dependency_overrides[get_hybrid_recommender] = lambda: None
+    resp = await client.get("/api/v1/users/1/recommendations/from-seed/5")
+    assert resp.status_code == 503
+    assert "Recommendation service" in resp.json()["detail"]
+
+
+async def test_from_seed_recommendations_empty_results(
+    client, mock_hybrid_recommender, mock_movie_service
+):
+    mock_hybrid_recommender.from_seed_recommend.return_value = []
+    resp = await client.get("/api/v1/users/1/recommendations/from-seed/5")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["recommendations"] == []
+    assert data["seed_movie"]["id"] == 1
+
+
+async def test_from_seed_recommendations_with_limit(client, mock_hybrid_recommender):
+    resp = await client.get("/api/v1/users/1/recommendations/from-seed/5?limit=10")
+    assert resp.status_code == 200
+    call_kwargs = mock_hybrid_recommender.from_seed_recommend.call_args
+    assert call_kwargs.kwargs.get("top_k") == 10

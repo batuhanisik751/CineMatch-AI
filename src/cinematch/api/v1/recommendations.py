@@ -20,6 +20,7 @@ from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import NotFoundError, ServiceUnavailableError
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.recommendation import (
+    FromSeedRecommendationsResponse,
     MoodRecommendationItem,
     MoodRecommendationRequest,
     MoodRecommendationResponse,
@@ -151,6 +152,93 @@ async def explain_recommendation(
         explanation=explanation,
         score=effective_score,
     )
+
+
+@router.get(
+    "/users/{user_id}/recommendations/from-seed/{movie_id}",
+    response_model=FromSeedRecommendationsResponse,
+)
+async def get_from_seed_recommendations(
+    user_id: int,
+    movie_id: int,
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    hybrid_rec: HybridRecommender | None = Depends(get_hybrid_recommender),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """Recommend movies similar to a seed movie, personalized for the user."""
+    if hybrid_rec is None:
+        raise ServiceUnavailableError("Recommendation service")
+
+    seed_movie = await movie_service.get_by_id(movie_id, db)
+    if seed_movie is None:
+        raise NotFoundError("Movie", movie_id)
+
+    # Check cache
+    cache_key = f"from_seed:{user_id}:{movie_id}:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return FromSeedRecommendationsResponse.model_validate_json(cached)
+
+    rec_results = await hybrid_rec.from_seed_recommend(
+        movie_id,
+        user_id,
+        db,
+        top_k=limit,
+    )
+
+    # Enrich with movie details
+    rec_movie_ids = [r.movie_id for r in rec_results]
+    movies_map = await movie_service.get_movies_by_ids(rec_movie_ids, db)
+
+    recommendations = []
+    for r in rec_results:
+        movie = movies_map.get(r.movie_id)
+        if movie is not None:
+            recommendations.append(
+                RecommendationItem(
+                    movie=MovieSummary.model_validate(movie),
+                    score=r.score,
+                    content_score=(r.score_breakdown.content_score if r.score_breakdown else None),
+                    collab_score=(r.score_breakdown.collab_score if r.score_breakdown else None),
+                    because_you_liked=(
+                        SeedInfluenceSchema(
+                            movie_id=r.because_you_liked.movie_id,
+                            title=r.because_you_liked.title,
+                            your_rating=r.because_you_liked.your_rating,
+                        )
+                        if r.because_you_liked
+                        else None
+                    ),
+                    feature_explanations=r.feature_explanations,
+                    score_breakdown=(
+                        ScoreBreakdownSchema(
+                            content_score=r.score_breakdown.content_score,
+                            collab_score=r.score_breakdown.collab_score,
+                            alpha=r.score_breakdown.alpha,
+                        )
+                        if r.score_breakdown
+                        else None
+                    ),
+                )
+            )
+
+    response = FromSeedRecommendationsResponse(
+        user_id=user_id,
+        strategy="from-seed",
+        seed_movie=MovieSummary.model_validate(seed_movie),
+        recommendations=recommendations,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            logger.warning("Failed to cache from-seed recommendations", exc_info=True)
+
+    return response
 
 
 @router.post(

@@ -186,6 +186,15 @@ def mock_hybrid_recommender():
         ),
     ]
     rec.mood_recommend.return_value = ([(1, 0.92), (2, 0.85)], True)
+    rec.from_seed_recommend.return_value = [
+        RecommendationResult(
+            movie_id=1,
+            score=0.90,
+            because_you_liked=SeedInfluence(movie_id=5, title="The Matrix", your_rating=10.0),
+            feature_explanations=["Same director as The Matrix — Lana Wachowski"],
+            score_breakdown=ScoreBreakdown(content_score=0.85, collab_score=0.6, alpha=0.5),
+        ),
+    ]
     return rec
 
 
