@@ -59,3 +59,56 @@ async def test_get_user_stats_empty(client, mock_user_stats_service):
     assert data["total_ratings"] == 0
     assert data["average_rating"] == 0.0
     assert data["genre_distribution"] == []
+
+
+async def test_surprise_me_success(client, mock_user_stats_service, mock_movie_service, mock_db):
+    """Surprise endpoint returns movies outside user's top genres."""
+    rated_result_mock = MagicMock()
+    rated_result_mock.all.return_value = [(10,), (20,)]
+    mock_db.execute = AsyncMock(return_value=rated_result_mock)
+
+    resp = await client.get("/api/v1/users/1/surprise?limit=5")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user_id"] == 1
+    assert data["excluded_genres"] == ["Action", "Comedy"]
+    assert data["limit"] == 5
+    assert len(data["results"]) == 1
+    assert data["results"][0]["title"] == "The Matrix"
+    mock_movie_service.surprise_movies.assert_called_once()
+
+
+async def test_surprise_me_no_ratings(client, mock_user_stats_service, mock_movie_service, mock_db):
+    """User with no ratings gets surprise movies with no genre exclusions."""
+    mock_user_stats_service.get_user_stats.return_value = {
+        "user_id": 999,
+        "total_ratings": 0,
+        "average_rating": 0.0,
+        "genre_distribution": [],
+        "rating_distribution": [],
+        "top_directors": [],
+        "top_actors": [],
+        "rating_timeline": [],
+    }
+    rated_result_mock = MagicMock()
+    rated_result_mock.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=rated_result_mock)
+
+    resp = await client.get("/api/v1/users/999/surprise?limit=3")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["excluded_genres"] == []
+    assert data["limit"] == 3
+
+
+async def test_surprise_me_default_limit(
+    client, mock_user_stats_service, mock_movie_service, mock_db
+):
+    """Default limit is 5 when not specified."""
+    rated_result_mock = MagicMock()
+    rated_result_mock.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=rated_result_mock)
+
+    resp = await client.get("/api/v1/users/1/surprise")
+    assert resp.status_code == 200
+    assert resp.json()["limit"] == 5

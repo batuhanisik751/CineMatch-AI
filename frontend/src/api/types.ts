@@ -328,3 +328,10 @@ export interface ActorFilmographyResponse {
   stats: ActorStats;
   filmography: ActorFilmResult[];
 }
+
+export interface SurpriseResponse {
+  user_id: number;
+  excluded_genres: string[];
+  results: MovieSummary[];
+  limit: number;
+}

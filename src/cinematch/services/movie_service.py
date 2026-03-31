@@ -526,3 +526,27 @@ class MovieService:
         }
 
         return films, stats
+
+    async def surprise_movies(
+        self,
+        db: AsyncSession,
+        *,
+        excluded_genres: list[str],
+        excluded_movie_ids: list[int] | None = None,
+        min_rating: float = 7.0,
+        limit: int = 5,
+    ) -> list[Movie]:
+        """Return random well-rated movies outside the given genres."""
+        filters = [Movie.vote_average > min_rating, Movie.vote_count > 0]
+        for genre in excluded_genres:
+            filters.append(~Movie.genres.op("@>")(cast([genre], JSONB_TYPE)))
+        if excluded_movie_ids:
+            filters.append(~Movie.id.in_(excluded_movie_ids))
+
+        stmt = select(Movie)
+        for f in filters:
+            stmt = stmt.where(f)
+        stmt = stmt.order_by(func.random()).limit(limit)
+
+        result = await db.execute(stmt)
+        return list(result.scalars().all())

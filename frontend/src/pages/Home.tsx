@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { discoverMovies, getHiddenGems, semanticSearchMovies } from "../api/movies";
-import { getMoodRecommendations } from "../api/recommendations";
+import { getMoodRecommendations, getSurpriseMovies } from "../api/recommendations";
 import type { MovieSummary } from "../api/types";
 import BottomNav from "../components/BottomNav";
 import MoodCarousel from "../components/MoodCarousel";
@@ -29,6 +29,10 @@ export default function Home() {
   const [customVibe, setCustomVibe] = useState("");
   const moodAbort = useRef<AbortController | null>(null);
   const moodFallback = useRef(false);
+
+  const [surpriseMovies, setSurpriseMovies] = useState<MovieSummary[]>([]);
+  const [surpriseLoading, setSurpriseLoading] = useState(false);
+  const [surpriseGenres, setSurpriseGenres] = useState<string[]>([]);
 
   useEffect(() => {
     discoverMovies({ sort_by: "popularity", limit: 8 })
@@ -117,6 +121,19 @@ export default function Home() {
     fetchMoodMovies(vibe, vibe);
   };
 
+  const handleSurprise = () => {
+    if (!userId) return;
+    setSurpriseLoading(true);
+    getSurpriseMovies(userId, 8)
+      .then((data) => {
+        setSurpriseMovies(data.results);
+        setSurpriseGenres(data.excluded_genres);
+        refreshForMovieIds(data.results.map((m) => m.id));
+      })
+      .catch(() => setSurpriseMovies([]))
+      .finally(() => setSurpriseLoading(false));
+  };
+
   return (
     <>
       <TopNav />
@@ -175,6 +192,14 @@ export default function Home() {
                 Discover
               </button>
             </form>
+            <button
+              onClick={handleSurprise}
+              disabled={surpriseLoading}
+              className="mt-6 h-14 px-8 bg-gradient-to-r from-tertiary to-tertiary-container text-on-tertiary-container rounded-full font-headline font-bold text-base tracking-wide hover:shadow-[0_0_25px_rgba(165,238,255,0.3)] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-3 mx-auto"
+            >
+              <span className="material-symbols-outlined">casino</span>
+              {surpriseLoading ? "Shuffling..." : "Surprise Me"}
+            </button>
           </div>
         </section>
 
@@ -188,6 +213,42 @@ export default function Home() {
             isBookmarked={isInWatchlist}
             onToggleBookmark={toggle}
           />
+        )}
+
+        {/* Surprise Picks */}
+        {surpriseMovies.length > 0 && (
+          <section className="max-w-7xl mx-auto px-6 py-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-headline font-bold text-xl text-on-surface">
+                  Surprise Picks
+                </h3>
+                {surpriseGenres.length > 0 && (
+                  <p className="text-sm text-on-surface-variant mt-1">
+                    Outside your usual {surpriseGenres.join(" & ")} favorites
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleSurprise}
+                className="text-primary text-sm font-medium hover:underline flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-sm">refresh</span>
+                Shuffle again
+              </button>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+              {surpriseMovies.map((m) => (
+                <div key={m.id} className="flex-shrink-0 w-44">
+                  <MovieCard
+                    movie={m}
+                    isBookmarked={isInWatchlist(m.id)}
+                    onToggleBookmark={toggle}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Recommendations Section */}

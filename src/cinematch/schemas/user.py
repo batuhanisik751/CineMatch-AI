@@ -6,6 +6,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from cinematch.schemas.movie import MovieSummary
+
 
 class UserResponse(BaseModel):
     """User details."""
@@ -57,3 +59,12 @@ class UserStatsResponse(BaseModel):
     top_directors: list[PersonCount]
     top_actors: list[PersonCount]
     rating_timeline: list[MonthlyActivity]
+
+
+class SurpriseResponse(BaseModel):
+    """Response for surprise/serendipity recommendations."""
+
+    user_id: int
+    excluded_genres: list[str]
+    results: list[MovieSummary]
+    limit: int

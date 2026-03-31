@@ -3,6 +3,7 @@ import type {
   MoodRecommendationResponse,
   RecommendationExplanation,
   RecommendationsResponse,
+  SurpriseResponse,
 } from "./types";
 
 export function getRecommendations(userId: number, topK = 20, strategy = "hybrid") {
@@ -27,4 +28,10 @@ export function getMoodRecommendations(params: {
     method: "POST",
     body: JSON.stringify(params),
   });
+}
+
+export function getSurpriseMovies(userId: number, limit = 5) {
+  return apiFetch<SurpriseResponse>(
+    `/api/v1/users/${userId}/surprise?limit=${limit}`
+  );
 }
