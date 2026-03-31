@@ -446,6 +446,25 @@ export interface FeedResponse {
   sections: FeedSection[];
 }
 
+export interface DiaryDayMovie {
+  id: number;
+  title: string | null;
+  rating: number;
+}
+
+export interface DiaryDay {
+  date: string;
+  count: number;
+  movies: DiaryDayMovie[];
+}
+
+export interface DiaryResponse {
+  user_id: number;
+  year: number;
+  days: DiaryDay[];
+  total_ratings: number;
+}
+
 export interface TasteInsight {
   key: string;
   icon: string;

@@ -193,3 +193,51 @@ async def test_genre_percentages_calculated_correctly(service, mock_db):
     assert stats["genre_distribution"][0]["percentage"] == 50.0
     assert stats["genre_distribution"][1]["percentage"] == 30.0
     assert stats["genre_distribution"][2]["percentage"] == 20.0
+
+
+# --- Diary (get_diary) tests ---
+
+
+async def test_get_diary_returns_grouped_days(service, mock_db):
+    """Diary groups rows by date and computes total_ratings."""
+    from datetime import date
+
+    diary_result = MagicMock()
+    diary_result.all.return_value = [
+        (date(2025, 3, 1), 10, "Inception", 9),
+        (date(2025, 3, 1), 20, "Interstellar", 8),
+        (date(2025, 3, 5), 30, "Tenet", 7),
+    ]
+    mock_db.execute = AsyncMock(return_value=diary_result)
+
+    result = await service.get_diary(1, 2025, mock_db)
+
+    assert result["user_id"] == 1
+    assert result["year"] == 2025
+    assert result["total_ratings"] == 3
+    assert len(result["days"]) == 2
+
+    day1 = result["days"][0]
+    assert day1["date"] == "2025-03-01"
+    assert day1["count"] == 2
+    assert day1["movies"][0]["id"] == 10
+    assert day1["movies"][1]["title"] == "Interstellar"
+
+    day2 = result["days"][1]
+    assert day2["date"] == "2025-03-05"
+    assert day2["count"] == 1
+    assert day2["movies"][0]["rating"] == 7
+
+
+async def test_get_diary_empty_year(service, mock_db):
+    """Diary for a year with no ratings returns empty days list."""
+    diary_result = MagicMock()
+    diary_result.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=diary_result)
+
+    result = await service.get_diary(1, 2020, mock_db)
+
+    assert result["user_id"] == 1
+    assert result["year"] == 2020
+    assert result["days"] == []
+    assert result["total_ratings"] == 0

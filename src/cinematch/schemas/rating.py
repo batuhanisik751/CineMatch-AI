@@ -40,3 +40,28 @@ class RatingBulkCheckResponse(BaseModel):
     """Map of movie_id -> rating for bulk check."""
 
     ratings: dict[int, int]
+
+
+class DiaryDayMovie(BaseModel):
+    """A single movie entry within a diary day."""
+
+    id: int
+    title: str | None = None
+    rating: int
+
+
+class DiaryDay(BaseModel):
+    """Aggregated rating activity for a single day."""
+
+    date: str
+    count: int
+    movies: list[DiaryDayMovie]
+
+
+class DiaryResponse(BaseModel):
+    """Film diary / rating calendar for a given year."""
+
+    user_id: int
+    year: int
+    days: list[DiaryDay]
+    total_ratings: int

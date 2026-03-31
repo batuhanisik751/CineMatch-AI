@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, select, text
@@ -124,4 +125,34 @@ class UserStatsService:
             "top_directors": top_directors,
             "top_actors": top_actors,
             "rating_timeline": rating_timeline,
+        }
+
+    async def get_diary(self, user_id: int, year: int, db: AsyncSession) -> dict[str, Any]:
+        """Return daily rating activity for a given year."""
+        stmt = text(
+            "SELECT DATE(r.timestamp) AS day, r.movie_id, m.title, r.rating "
+            "FROM ratings r "
+            "LEFT JOIN movies m ON r.movie_id = m.id "
+            "WHERE r.user_id = :uid "
+            "  AND EXTRACT(YEAR FROM r.timestamp) = :year "
+            "ORDER BY day, r.timestamp"
+        )
+        result = await db.execute(stmt, {"uid": user_id, "year": year})
+        rows = result.all()
+
+        grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for row in rows:
+            date_str = row[0].isoformat()
+            grouped[date_str].append({"id": row[1], "title": row[2], "rating": row[3]})
+
+        days = [
+            {"date": d, "count": len(movies), "movies": movies}
+            for d, movies in sorted(grouped.items())
+        ]
+
+        return {
+            "user_id": user_id,
+            "year": year,
+            "days": days,
+            "total_ratings": sum(d["count"] for d in days),
         }

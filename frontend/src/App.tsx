@@ -4,6 +4,7 @@ import Actors from "./pages/Actors";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import Collections from "./pages/Collections";
 import Decades from "./pages/Decades";
+import Diary from "./pages/Diary";
 import Directors from "./pages/Directors";
 import Discover from "./pages/Discover";
 import FromSeedRecommendations from "./pages/FromSeedRecommendations";
@@ -50,6 +51,7 @@ export default function App() {
       <Route path="/recommendations" element={<Recommendations />} />
       <Route path="/recommendations/from-seed/:movieId" element={<FromSeedRecommendations />} />
       <Route path="/watchlist" element={<Watchlist />} />
+      <Route path="/diary" element={<Diary />} />
       <Route path="/profile" element={<Profile />} />
     </Routes>
   );

@@ -190,7 +190,13 @@ export default function Profile() {
         {stats && stats.total_ratings > 0 && (
           <section className="flex flex-col gap-6">
             <div>
-              <h2 className="font-headline text-3xl font-black italic tracking-tighter text-on-surface mb-2">Analytics</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-headline text-3xl font-black italic tracking-tighter text-on-surface mb-2">Analytics</h2>
+                <Link to="/diary" className="flex items-center gap-1.5 text-sm font-bold text-primary hover:text-primary/80 transition-colors">
+                  <span className="material-symbols-outlined text-base">calendar_month</span>
+                  Film Diary
+                </Link>
+              </div>
               <p className="text-on-surface-variant font-body">Insights from your viewing history and ratings.</p>
             </div>
 

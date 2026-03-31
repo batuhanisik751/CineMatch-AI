@@ -18,6 +18,7 @@ from cinematch.core.cache import CacheService
 from cinematch.models.rating import Rating
 from cinematch.models.user import User
 from cinematch.schemas.movie import MovieSummary
+from cinematch.schemas.rating import DiaryResponse
 from cinematch.schemas.taste_profile import TasteProfileResponse
 from cinematch.schemas.user import (
     CollectionGroup,
@@ -55,6 +56,33 @@ async def get_user_stats(
 ):
     stats = await stats_service.get_user_stats(user_id, db)
     return UserStatsResponse(**stats)
+
+
+@router.get("/{user_id}/diary", response_model=DiaryResponse)
+async def get_user_diary(
+    user_id: int,
+    year: int = Query(default=2025, ge=2000, le=2100),
+    db: AsyncSession = Depends(get_db),
+    stats_service: UserStatsService = Depends(get_user_stats_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Film diary — daily rating activity calendar for a given year."""
+    cache_key = f"diary:{user_id}:{year}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return DiaryResponse.model_validate_json(cached)
+
+    data = await stats_service.get_diary(user_id, year, db)
+    response = DiaryResponse(**data)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=300)
+        except Exception:
+            pass
+
+    return response
 
 
 @router.get("/{user_id}/surprise", response_model=SurpriseResponse)
