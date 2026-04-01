@@ -14,6 +14,8 @@ async def test_rating_stats_success(client):
     assert data["avg_rating"] == 7.5
     assert data["median_rating"] == 8.0
     assert data["total_ratings"] == 100
+    assert data["stddev"] == 1.58
+    assert data["polarization_score"] == 0.35
     assert len(data["distribution"]) == 10
     assert data["user_rating"] is None
 
@@ -64,6 +66,8 @@ async def test_rating_stats_cache_hit(client, mock_rating_service, mock_cache_se
             "avg_rating": 6.0,
             "median_rating": 6.0,
             "total_ratings": 50,
+            "stddev": 2.0,
+            "polarization_score": 0.44,
             "distribution": [{"rating": i, "count": 5} for i in range(1, 11)],
             "user_rating": None,
         }

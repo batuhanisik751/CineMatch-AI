@@ -543,6 +543,8 @@ export interface MovieRatingStatsResponse {
   avg_rating: number;
   median_rating: number;
   total_ratings: number;
+  stddev: number;
+  polarization_score: number;
   distribution: RatingHistogramBucket[];
   user_rating: number | null;
 }

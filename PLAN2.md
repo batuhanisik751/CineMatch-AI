@@ -575,7 +575,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Return: {connections: [{type: "actor", value: "DiCaprio", details: "appears in both"}, ...]}
   - Extension: find shortest path between two movies through shared people (BFS on actor/director graph)
 
-### 7.4 Movie "DNA" Breakdown
+### 7.4 Movie "DNA" Breakdown ✅
 **Scope:** Single user
 **One-line:** Visual breakdown of what makes a movie unique — its genre mix, keyword themes, era, and tone.
 - **Data backing:** `movies.genres`, `movies.keywords`, `movies.release_date`, `movies.vote_average`, embedding vector
@@ -587,7 +587,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Mood inference: find 5 nearest neighbors by embedding, extract common keywords not in this movie → these are the "vibe" tags
   - Frontend: visual "DNA strip" or tag cloud showing movie's character
 
-### 7.5 Community Sentiment for a Movie
+### 7.5 Community Sentiment for a Movie ✅
 **Scope:** Single user
 **One-line:** Show rating distribution, average, and how polarizing a movie is across all users.
 - **Data backing:** `ratings` for the specific movie — all ratings from all users
@@ -838,7 +838,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 8 | 1.2 Hidden Gems | Low | Discovery |
 | 9 | 1.3 Top Charts by Genre | Low | Discovery |
 | 10 | 3.7 Rating Streaks & Milestones | Low | Analytics |
-| 11 | 7.5 Community Sentiment | Low | Movie Detail |
+| 11 | 7.5 Community Sentiment ✅ | Low | Movie Detail |
 | 12 | 8.1 Autocomplete Search | Low | Search |
 | 13 | 3.8 Global Platform Stats | Low | Analytics |
 | 14 | 2.8 Genre Affinity Radar | Low | Personalization |

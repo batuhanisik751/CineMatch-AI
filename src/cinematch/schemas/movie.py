@@ -296,6 +296,8 @@ class MovieRatingStatsResponse(BaseModel):
     avg_rating: float
     median_rating: float
     total_ratings: int
+    stddev: float = 0.0
+    polarization_score: float = 0.0
     distribution: list[RatingHistogramBucket]
     user_rating: int | None
 

@@ -19,9 +19,9 @@ def mock_db():
     return AsyncMock()
 
 
-def _agg_row(avg, median, count):
+def _agg_row(avg, median, count, stddev=None):
     row = MagicMock()
-    row.__getitem__ = lambda self, i: [avg, median, count][i]
+    row.__getitem__ = lambda self, i: [avg, median, count, stddev][i]
     return row
 
 
@@ -43,7 +43,7 @@ def _user_row(rating):
 @pytest.mark.asyncio
 async def test_basic_stats(service, mock_db):
     agg = MagicMock()
-    agg.one.return_value = _agg_row(7.5, 8.0, 100)
+    agg.one.return_value = _agg_row(7.5, 8.0, 100, 1.58)
 
     dist = MagicMock()
     dist.all.return_value = _dist_rows({7: 30, 8: 40, 9: 20, 10: 10})
@@ -56,6 +56,8 @@ async def test_basic_stats(service, mock_db):
     assert result["avg_rating"] == 7.5
     assert result["median_rating"] == 8.0
     assert result["total_ratings"] == 100
+    assert result["stddev"] == 1.58
+    assert result["polarization_score"] == 0.35
     assert len(result["distribution"]) == 10
     assert result["distribution"][6] == {"rating": 7, "count": 30}
     assert result["distribution"][0] == {"rating": 1, "count": 0}
@@ -65,7 +67,7 @@ async def test_basic_stats(service, mock_db):
 @pytest.mark.asyncio
 async def test_no_ratings(service, mock_db):
     agg = MagicMock()
-    agg.one.return_value = _agg_row(None, None, 0)
+    agg.one.return_value = _agg_row(None, None, 0, None)
 
     dist = MagicMock()
     dist.all.return_value = []
@@ -77,6 +79,8 @@ async def test_no_ratings(service, mock_db):
     assert result["avg_rating"] == 0.0
     assert result["median_rating"] == 0.0
     assert result["total_ratings"] == 0
+    assert result["stddev"] == 0.0
+    assert result["polarization_score"] == 0.0
     assert all(b["count"] == 0 for b in result["distribution"])
     assert result["user_rating"] is None
 
@@ -84,7 +88,7 @@ async def test_no_ratings(service, mock_db):
 @pytest.mark.asyncio
 async def test_with_user_rating(service, mock_db):
     agg = MagicMock()
-    agg.one.return_value = _agg_row(6.0, 6.0, 50)
+    agg.one.return_value = _agg_row(6.0, 6.0, 50, 0.82)
 
     dist = MagicMock()
     dist.all.return_value = _dist_rows({5: 20, 6: 15, 7: 15})
@@ -102,7 +106,7 @@ async def test_with_user_rating(service, mock_db):
 @pytest.mark.asyncio
 async def test_user_not_rated(service, mock_db):
     agg = MagicMock()
-    agg.one.return_value = _agg_row(7.0, 7.0, 30)
+    agg.one.return_value = _agg_row(7.0, 7.0, 30, 1.0)
 
     dist = MagicMock()
     dist.all.return_value = _dist_rows({7: 30})

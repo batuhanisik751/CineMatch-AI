@@ -202,6 +202,8 @@ def mock_rating_service(sample_rating):
         "avg_rating": 7.5,
         "median_rating": 8.0,
         "total_ratings": 100,
+        "stddev": 1.58,
+        "polarization_score": 0.35,
         "distribution": [{"rating": i, "count": 10} for i in range(1, 11)],
         "user_rating": None,
     }

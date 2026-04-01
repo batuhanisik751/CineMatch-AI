@@ -268,7 +268,7 @@ export default function MovieDetail() {
               {!statsLoading && ratingStats && ratingStats.total_ratings > 0 && (
                 <div className="glass-card p-8 rounded-2xl space-y-6">
                   <h3 className="text-xl font-headline font-bold text-on-surface">Community Ratings</h3>
-                  <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="grid grid-cols-4 gap-4 text-center">
                     <div>
                       <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Avg</p>
                       <p className="text-on-surface font-bold text-lg">{ratingStats.avg_rating.toFixed(1)}</p>
@@ -281,7 +281,28 @@ export default function MovieDetail() {
                       <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Total</p>
                       <p className="text-on-surface font-bold text-lg">{ratingStats.total_ratings.toLocaleString()}</p>
                     </div>
+                    <div>
+                      <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Spread</p>
+                      <p className="text-on-surface font-bold text-lg">{ratingStats.stddev.toFixed(1)}</p>
+                    </div>
                   </div>
+                  {/* Polarization indicator */}
+                  {(() => {
+                    const p = ratingStats.polarization_score;
+                    const label = p < 0.2 ? "Strong consensus" : p < 0.4 ? "Mostly agreed" : p < 0.6 ? "Mixed opinions" : p < 0.8 ? "Divisive" : "Highly polarizing";
+                    const color = p < 0.2 ? "#4ade80" : p < 0.4 ? "#60a5fa" : p < 0.6 ? "#facc15" : p < 0.8 ? "#fb923c" : "#f87171";
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-on-surface-variant font-label uppercase tracking-widest">Polarization</span>
+                          <span className="font-bold" style={{ color }}>{label}</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(p * 100, 100)}%`, backgroundColor: color }} />
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={ratingStats.distribution} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />

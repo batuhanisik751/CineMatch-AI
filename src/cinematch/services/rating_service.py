@@ -108,7 +108,8 @@ class RatingService:
             text(
                 "SELECT AVG(rating), "
                 "PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY rating), "
-                "COUNT(*) "
+                "COUNT(*), "
+                "STDDEV_POP(rating) "
                 "FROM ratings WHERE movie_id = :mid"
             ),
             {"mid": movie_id},
@@ -117,6 +118,9 @@ class RatingService:
         avg_rating = round(float(row[0]), 2) if row[0] is not None else 0.0
         median_rating = round(float(row[1]), 2) if row[1] is not None else 0.0
         total_ratings = int(row[2])
+        stddev = round(float(row[3]), 2) if row[3] is not None else 0.0
+        # Max possible stddev for 1-10 range is 4.5 (half ratings at 1, half at 10)
+        polarization_score = round(stddev / 4.5, 2) if total_ratings > 0 else 0.0
 
         dist_result = await db.execute(
             text("SELECT rating, COUNT(*) FROM ratings WHERE movie_id = :mid GROUP BY rating"),
@@ -140,6 +144,8 @@ class RatingService:
             "avg_rating": avg_rating,
             "median_rating": median_rating,
             "total_ratings": total_ratings,
+            "stddev": stddev,
+            "polarization_score": polarization_score,
             "distribution": distribution,
             "user_rating": user_rating,
         }
