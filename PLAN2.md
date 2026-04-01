@@ -599,7 +599,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - polarization_score = stddev / max_possible_stddev (0 = consensus, 1 = maximally divisive)
   - Frontend: histogram chart on movie detail page
 
-### 7.6 Movie Popularity Timeline
+### 7.6 Movie Popularity Timeline ✅
 **Scope:** Single user
 **One-line:** Show when a movie gets rated most — spikes around releases, award seasons, trending moments.
 - **Data backing:** `ratings.timestamp` for a specific movie — group by month/week

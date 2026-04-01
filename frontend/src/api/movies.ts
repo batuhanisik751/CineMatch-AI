@@ -26,6 +26,7 @@ import type {
   TopChartsResponse,
   TrendingResponse,
   MovieConnectionsResponse,
+  MovieActivityResponse,
   MovieDNAResponse,
   MoviePathResponse,
 } from "./types";
@@ -258,5 +259,11 @@ export function getMoviePath(id1: number, id2: number, maxDepth = 6) {
 export function getMovieDNA(movieId: number) {
   return apiFetch<MovieDNAResponse>(
     `/api/v1/movies/${movieId}/dna`,
+  );
+}
+
+export function getMovieActivity(movieId: number, granularity = "month") {
+  return apiFetch<MovieActivityResponse>(
+    `/api/v1/movies/${movieId}/activity?granularity=${granularity}`,
   );
 }

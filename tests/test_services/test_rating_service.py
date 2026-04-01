@@ -76,3 +76,38 @@ async def test_get_rated_movie_ids_empty(service, mock_db):
     ids = await service.get_rated_movie_ids(1, mock_db)
 
     assert ids == set()
+
+
+@pytest.mark.asyncio
+async def test_get_movie_activity_groups_by_month(service, mock_db):
+    """get_movie_activity returns timeline grouped by month."""
+    from datetime import datetime, UTC
+
+    row1 = (datetime(2024, 1, 1, tzinfo=UTC), 15, 7.50)
+    row2 = (datetime(2024, 2, 1, tzinfo=UTC), 22, 8.10)
+    result = MagicMock()
+    result.all.return_value = [row1, row2]
+    mock_db.execute = AsyncMock(return_value=result)
+
+    data = await service.get_movie_activity(1, "month", mock_db)
+
+    assert data["movie_id"] == 1
+    assert data["granularity"] == "month"
+    assert len(data["timeline"]) == 2
+    assert data["timeline"][0]["period"] == "2024-01"
+    assert data["timeline"][0]["rating_count"] == 15
+    assert data["timeline"][1]["avg_rating"] == 8.10
+    assert data["total_ratings"] == 37
+
+
+@pytest.mark.asyncio
+async def test_get_movie_activity_empty(service, mock_db):
+    """get_movie_activity returns empty timeline when no ratings exist."""
+    result = MagicMock()
+    result.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=result)
+
+    data = await service.get_movie_activity(1, "month", mock_db)
+
+    assert data["timeline"] == []
+    assert data["total_ratings"] == 0

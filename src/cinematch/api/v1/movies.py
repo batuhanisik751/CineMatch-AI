@@ -46,6 +46,7 @@ from cinematch.schemas.movie import (
     KeywordSearchResponse,
     KeywordStats,
     KeywordSummary,
+    MovieActivityResponse,
     MovieConnection,
     MovieConnectionsResponse,
     MovieDNAResponse,
@@ -1058,3 +1059,20 @@ async def get_movie_dna(
             logger.warning("Failed to cache movie DNA", exc_info=True)
 
     return response
+
+
+@router.get("/{movie_id}/activity", response_model=MovieActivityResponse)
+async def get_movie_activity(
+    movie_id: int,
+    granularity: str = Query(default="month", pattern="^(month|week)$"),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    rating_service: RatingService = Depends(get_rating_service),
+):
+    """Get the popularity timeline for a movie — rating counts grouped by time period."""
+    movie = await movie_service.get_by_id(movie_id, db)
+    if movie is None:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    result = await rating_service.get_movie_activity(movie_id, granularity, db)
+    return MovieActivityResponse(**result)

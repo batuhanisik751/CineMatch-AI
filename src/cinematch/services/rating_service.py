@@ -149,3 +149,40 @@ class RatingService:
             "distribution": distribution,
             "user_rating": user_rating,
         }
+
+    async def get_movie_activity(
+        self,
+        movie_id: int,
+        granularity: str,
+        db: AsyncSession,
+    ) -> dict[str, Any]:
+        """Get rating activity timeline for a movie, grouped by time period."""
+        result = await db.execute(
+            text(
+                "SELECT DATE_TRUNC(:gran, timestamp) AS period, "
+                "COUNT(*) AS rating_count, "
+                "ROUND(AVG(rating)::numeric, 2) AS avg_rating "
+                "FROM ratings WHERE movie_id = :mid "
+                "GROUP BY 1 ORDER BY 1"
+            ),
+            {"gran": granularity, "mid": movie_id},
+        )
+        rows = result.all()
+
+        fmt = "%Y-%m" if granularity == "month" else "%Y-W%W"
+        timeline = [
+            {
+                "period": row[0].strftime(fmt),
+                "rating_count": int(row[1]),
+                "avg_rating": float(row[2]),
+            }
+            for row in rows
+        ]
+        total = sum(r["rating_count"] for r in timeline)
+
+        return {
+            "movie_id": movie_id,
+            "granularity": granularity,
+            "timeline": timeline,
+            "total_ratings": total,
+        }

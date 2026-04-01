@@ -207,6 +207,15 @@ def mock_rating_service(sample_rating):
         "distribution": [{"rating": i, "count": 10} for i in range(1, 11)],
         "user_rating": None,
     }
+    svc.get_movie_activity.return_value = {
+        "movie_id": 1,
+        "granularity": "month",
+        "timeline": [
+            {"period": "2024-01", "rating_count": 15, "avg_rating": 7.5},
+            {"period": "2024-02", "rating_count": 22, "avg_rating": 8.1},
+        ],
+        "total_ratings": 37,
+    }
     return svc
 
 

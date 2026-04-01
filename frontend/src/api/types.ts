@@ -796,3 +796,16 @@ export interface MovieDNAResponse {
   director: string | null;
   vote_average: number;
 }
+
+export interface ActivityPeriod {
+  period: string;
+  rating_count: number;
+  avg_rating: number;
+}
+
+export interface MovieActivityResponse {
+  movie_id: number;
+  granularity: string;
+  timeline: ActivityPeriod[];
+  total_ratings: number;
+}

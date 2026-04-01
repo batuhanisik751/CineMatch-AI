@@ -347,3 +347,16 @@ class MovieDNAResponse(BaseModel):
     mood_tags: list[str]
     director: str | None
     vote_average: float
+
+
+class ActivityPeriod(BaseModel):
+    period: str
+    rating_count: int
+    avg_rating: float
+
+
+class MovieActivityResponse(BaseModel):
+    movie_id: int
+    granularity: str
+    timeline: list[ActivityPeriod]
+    total_ratings: int

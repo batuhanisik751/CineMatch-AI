@@ -965,3 +965,45 @@ async def test_keyword_movies_pagination(client, mock_movie_service):
     call_kwargs = mock_movie_service.movies_by_keyword.call_args.kwargs
     assert call_kwargs["offset"] == 20
     assert call_kwargs["limit"] == 10
+
+
+# --- Movie Activity Timeline tests ---
+
+
+async def test_movie_activity_success(client, sample_movie):
+    resp = await client.get(f"/api/v1/movies/{sample_movie.id}/activity")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["movie_id"] == sample_movie.id
+    assert data["granularity"] == "month"
+    assert len(data["timeline"]) == 2
+    assert data["total_ratings"] == 37
+    assert data["timeline"][0]["period"] == "2024-01"
+    assert data["timeline"][0]["rating_count"] == 15
+
+
+async def test_movie_activity_week_granularity(client, sample_movie, mock_rating_service):
+    mock_rating_service.get_movie_activity.return_value = {
+        "movie_id": sample_movie.id,
+        "granularity": "week",
+        "timeline": [{"period": "2024-W01", "rating_count": 5, "avg_rating": 7.0}],
+        "total_ratings": 5,
+    }
+    resp = await client.get(
+        f"/api/v1/movies/{sample_movie.id}/activity", params={"granularity": "week"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["granularity"] == "week"
+
+
+async def test_movie_activity_invalid_granularity(client, sample_movie):
+    resp = await client.get(
+        f"/api/v1/movies/{sample_movie.id}/activity", params={"granularity": "year"}
+    )
+    assert resp.status_code == 422
+
+
+async def test_movie_activity_not_found(client, mock_movie_service):
+    mock_movie_service.get_by_id.return_value = None
+    resp = await client.get("/api/v1/movies/999/activity")
+    assert resp.status_code == 404
