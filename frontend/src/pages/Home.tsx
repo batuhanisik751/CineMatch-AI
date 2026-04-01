@@ -5,6 +5,7 @@ import { getMoodRecommendations, getSurpriseMovies } from "../api/recommendation
 import type { FeedResponse, MovieSummary } from "../api/types";
 import { getUserFeed } from "../api/users";
 import AddToListModal from "../components/AddToListModal";
+import AutocompleteSearch from "../components/AutocompleteSearch";
 import BottomNav from "../components/BottomNav";
 import MoodCarousel from "../components/MoodCarousel";
 import MoodPills from "../components/MoodPills";
@@ -18,7 +19,6 @@ import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Home() {
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
   const { userId } = useUserId();
   const [strategy, setStrategy] = useState("hybrid");
   const [popular, setPopular] = useState<MovieSummary[]>([]);
@@ -97,11 +97,6 @@ export default function Home() {
     new_in_decade: "history",
     trending: "trending_up",
     top_rated: "star",
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim()) navigate(`/discover?q=${encodeURIComponent(query.trim())}`);
   };
 
   const handleRecs = (e: React.FormEvent) => {
@@ -200,21 +195,12 @@ export default function Home() {
               Discover your next favorite movie
             </p>
             {/* Search Bar */}
-            <form
-              onSubmit={handleSearch}
-              className="w-full max-w-2xl mx-auto mt-12 relative group"
-            >
-              <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
-                <span className="material-symbols-outlined text-outline">search</span>
-              </div>
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full h-16 pl-16 pr-6 bg-surface-container-lowest border-none rounded-xl text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint shadow-2xl transition-all duration-300 font-body text-lg"
-                placeholder="Search for titles, directors, or genres..."
-                type="text"
-              />
-            </form>
+            <AutocompleteSearch
+              placeholder="Search for titles, directors, or genres..."
+              className="w-full max-w-2xl mx-auto mt-12"
+              inputClassName="w-full h-16 pl-16 pr-6 bg-surface-container-lowest border-none rounded-xl text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint shadow-2xl transition-all duration-300 font-body text-lg"
+              onNavigateToSearch={(q) => navigate(`/discover?q=${encodeURIComponent(q)}`)}
+            />
             <MoodPills
               onSelect={handleMoodSelect}
               activeMood={selectedMood}

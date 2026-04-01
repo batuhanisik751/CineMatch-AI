@@ -127,6 +127,9 @@ def mock_movie_service(sample_movie):
         {"total_movies": 1, "avg_vote": 8.2, "top_genres": ["Action", "Sci-Fi"]},
     )
     svc.surprise_movies.return_value = [sample_movie]
+    svc.autocomplete.return_value = [
+        (sample_movie.id, sample_movie.title, sample_movie.release_date, sample_movie.poster_path),
+    ]
     svc.advanced_search.return_value = ([sample_movie], 1)
     svc.find_direct_connections.return_value = (
         sample_movie,

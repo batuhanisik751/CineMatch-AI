@@ -26,6 +26,8 @@ from cinematch.schemas.movie import (
     ActorSummary,
     AdvancedSearchResponse,
     AdvancedSearchResult,
+    AutocompleteResponse,
+    AutocompleteSuggestion,
     ControversialMovieResult,
     ControversialResponse,
     DecadeMovieResult,
@@ -929,6 +931,46 @@ async def get_movie_path(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
         except Exception:
             logger.warning("Failed to cache movie path", exc_info=True)
+
+    return response
+
+
+@router.get("/autocomplete", response_model=AutocompleteResponse)
+async def autocomplete_movies(
+    q: str = Query(min_length=1, max_length=100),
+    limit: int = Query(default=8, ge=1, le=8),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """Fast autocomplete suggestions for movie titles."""
+    cache_key = f"autocomplete:{q.lower().strip()}:{limit}"
+
+    if cache_service is not None:
+        try:
+            cached = await cache_service.get(cache_key)
+            if cached:
+                return AutocompleteResponse.model_validate_json(cached)
+        except Exception:
+            logger.warning("Failed to read autocomplete cache", exc_info=True)
+
+    rows = await movie_service.autocomplete(q.strip(), db, limit=limit)
+    results = [
+        AutocompleteSuggestion(
+            id=row[0],
+            title=row[1],
+            year=row[2].year if row[2] else None,
+            poster_path=row[3],
+        )
+        for row in rows
+    ]
+    response = AutocompleteResponse(results=results, query=q)
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=300)
+        except Exception:
+            logger.warning("Failed to cache autocomplete results", exc_info=True)
 
     return response
 

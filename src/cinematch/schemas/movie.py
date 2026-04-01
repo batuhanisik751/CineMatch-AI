@@ -360,3 +360,15 @@ class MovieActivityResponse(BaseModel):
     granularity: str
     timeline: list[ActivityPeriod]
     total_ratings: int
+
+
+class AutocompleteSuggestion(BaseModel):
+    id: int
+    title: str
+    year: int | None
+    poster_path: str | None
+
+
+class AutocompleteResponse(BaseModel):
+    results: list[AutocompleteSuggestion]
+    query: str

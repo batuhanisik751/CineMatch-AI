@@ -74,6 +74,41 @@ class MovieService:
         movies = [row[0] for row in result.all()]
         return movies, total
 
+    async def autocomplete(
+        self,
+        query: str,
+        db: AsyncSession,
+        limit: int = 8,
+    ) -> list[tuple]:
+        """Lightweight autocomplete: returns (id, title, release_date, poster_path) tuples."""
+        pattern = f"%{query}%"
+        cols = (Movie.id, Movie.title, Movie.release_date, Movie.poster_path)
+
+        stmt = (
+            select(*cols)
+            .where(Movie.title.ilike(pattern))
+            .order_by(Movie.popularity.desc())
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        rows = result.all()
+
+        if rows:
+            return rows
+
+        if len(query) < 3:
+            return []
+
+        await db.execute(text("SELECT set_config('pg_trgm.similarity_threshold', '0.2', true)"))
+        stmt = (
+            select(*cols)
+            .where(Movie.title.op("%")(query))
+            .order_by(func.similarity(Movie.title, query).desc(), Movie.popularity.desc())
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return result.all()
+
     async def list_movies(
         self,
         db: AsyncSession,

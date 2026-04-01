@@ -615,7 +615,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 
 ## Category 8: Search & Navigation
 
-### 8.1 Autocomplete Search
+### 8.1 Autocomplete Search ✅
 **Scope:** Single user
 **One-line:** Real-time search suggestions as the user types, with fuzzy matching.
 - **Data backing:** `movies.title` with existing pg_trgm index for fuzzy matching
@@ -839,7 +839,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 9 | 1.3 Top Charts by Genre | Low | Discovery |
 | 10 | 3.7 Rating Streaks & Milestones | Low | Analytics |
 | 11 | 7.5 Community Sentiment ✅ | Low | Movie Detail |
-| 12 | 8.1 Autocomplete Search | Low | Search |
+| 12 | 8.1 Autocomplete Search ✅ | Low | Search |
 | 13 | 3.8 Global Platform Stats | Low | Analytics |
 | 14 | 2.8 Genre Affinity Radar | Low | Personalization |
 | 15 | 9.3 Blind Spot Detector | Low | Onboarding |

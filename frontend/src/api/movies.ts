@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type {
+  AutocompleteResponse,
   ActorFilmographyResponse,
   ActorSearchResponse,
   AdvancedSearchResponse,
@@ -30,6 +31,13 @@ import type {
   MovieDNAResponse,
   MoviePathResponse,
 } from "./types";
+
+export function autocompleteMovies(q: string, limit = 8, signal?: AbortSignal) {
+  return apiFetch<AutocompleteResponse>(
+    `/api/v1/movies/autocomplete?q=${encodeURIComponent(q)}&limit=${limit}`,
+    { signal },
+  );
+}
 
 export function searchMovies(q: string, limit = 20) {
   return apiFetch<MovieSearchResponse>(

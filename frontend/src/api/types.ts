@@ -809,3 +809,15 @@ export interface MovieActivityResponse {
   timeline: ActivityPeriod[];
   total_ratings: number;
 }
+
+export interface AutocompleteSuggestion {
+  id: number;
+  title: string;
+  year: number | null;
+  poster_path: string | null;
+}
+
+export interface AutocompleteResponse {
+  results: AutocompleteSuggestion[];
+  query: string;
+}
