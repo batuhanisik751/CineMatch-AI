@@ -23,6 +23,7 @@ from cinematch.api.deps import (
     get_hybrid_recommender,
     get_llm_service,
     get_movie_service,
+    get_onboarding_service,
     get_rating_service,
     get_streak_service,
     get_taste_profile_service,
@@ -778,6 +779,19 @@ def mock_challenge_service():
 
 
 @pytest.fixture()
+def mock_onboarding_service(sample_movie):
+    svc = AsyncMock()
+    svc.get_onboarding_movies.return_value = [sample_movie]
+    svc.get_onboarding_status.return_value = {
+        "user_id": 1,
+        "completed": False,
+        "rating_count": 3,
+        "threshold": 10,
+    }
+    return svc
+
+
+@pytest.fixture()
 def mock_db():
     return AsyncMock()
 
@@ -803,6 +817,7 @@ def app(
     mock_achievement_service,
     mock_bingo_service,
     mock_challenge_service,
+    mock_onboarding_service,
     mock_db,
 ):
     test_app = create_app()
@@ -829,6 +844,7 @@ def app(
     test_app.dependency_overrides[get_achievement_service] = lambda: mock_achievement_service
     test_app.dependency_overrides[get_bingo_service] = lambda: mock_bingo_service
     test_app.dependency_overrides[get_challenge_service] = lambda: mock_challenge_service
+    test_app.dependency_overrides[get_onboarding_service] = lambda: mock_onboarding_service
 
     return test_app
 

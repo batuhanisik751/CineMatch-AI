@@ -21,6 +21,7 @@ import PopularLists from "./pages/PopularLists";
 import Moods from "./pages/Moods";
 import Keywords from "./pages/Keywords";
 import MovieDetail from "./pages/MovieDetail";
+import Onboarding from "./pages/Onboarding";
 import PlatformStats from "./pages/PlatformStats";
 import Profile from "./pages/Profile";
 import Recommendations from "./pages/Recommendations";
@@ -45,6 +46,7 @@ export default function App() {
 
   return (
     <Routes>
+      <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/" element={<Home />} />
       <Route path="/discover" element={<Discover />} />
       <Route path="/trending" element={<Trending />} />

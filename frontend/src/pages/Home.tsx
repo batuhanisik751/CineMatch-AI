@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { discoverMovies, getHiddenGems, semanticSearchMovies } from "../api/movies";
+import { getOnboardingStatus } from "../api/onboarding";
 import { getMoodRecommendations, getSurpriseMovies } from "../api/recommendations";
 import type { FeedResponse, MovieSummary } from "../api/types";
 import { getUserFeed } from "../api/users";
@@ -43,6 +44,29 @@ export default function Home() {
 
   const [feed, setFeed] = useState<FeedResponse | null>(null);
   const [feedLoading, setFeedLoading] = useState(false);
+
+  const [onboardingNeeded, setOnboardingNeeded] = useState(false);
+  const [onboardingRated, setOnboardingRated] = useState(0);
+  const [onboardingThreshold, setOnboardingThreshold] = useState(10);
+  const onboardingChecked = useRef(false);
+
+  useEffect(() => {
+    if (!userId || onboardingChecked.current) return;
+    onboardingChecked.current = true;
+    getOnboardingStatus(userId)
+      .then((status) => {
+        if (!status.completed) {
+          setOnboardingNeeded(true);
+          setOnboardingRated(status.rating_count);
+          setOnboardingThreshold(status.threshold);
+          // Auto-redirect on first visit only (no ratings at all)
+          if (status.rating_count === 0) {
+            navigate("/onboarding", { replace: true });
+          }
+        }
+      })
+      .catch(() => {});
+  }, [userId, navigate]);
 
   useEffect(() => {
     discoverMovies({ sort_by: "popularity", limit: 8 })
@@ -181,6 +205,33 @@ export default function Home() {
     <>
       <TopNav />
       <main className="pt-20">
+        {/* Onboarding Banner */}
+        {onboardingNeeded && (
+          <section className="max-w-7xl mx-auto px-6 pt-4">
+            <div className="flex items-center justify-between gap-4 bg-primary-container rounded-xl px-6 py-4">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-2xl text-on-primary-container">
+                  movie_filter
+                </span>
+                <div>
+                  <p className="font-headline font-bold text-on-primary-container">
+                    Complete your taste profile
+                  </p>
+                  <p className="text-sm text-on-primary-container/70">
+                    Rate {onboardingThreshold - onboardingRated} more movie{onboardingThreshold - onboardingRated !== 1 ? "s" : ""} to unlock personalized recommendations
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/onboarding"
+                className="flex-shrink-0 px-5 py-2.5 bg-on-primary-container text-primary-container font-bold text-sm rounded-full hover:opacity-90 transition-opacity"
+              >
+                Continue
+              </Link>
+            </div>
+          </section>
+        )}
+
         {/* Hero Section */}
         <section className="relative h-[870px] flex flex-col items-center justify-center px-6 overflow-hidden">
           <div className="absolute inset-0 z-0">

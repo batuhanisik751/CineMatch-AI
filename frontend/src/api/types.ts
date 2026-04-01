@@ -824,6 +824,19 @@ export interface MovieActivityResponse {
   total_ratings: number;
 }
 
+export interface OnboardingMoviesResponse {
+  movies: MovieSummary[];
+  total: number;
+  user_id: number;
+}
+
+export interface OnboardingStatusResponse {
+  user_id: number;
+  completed: boolean;
+  rating_count: number;
+  threshold: number;
+}
+
 export interface AutocompleteSuggestion {
   id: number;
   title: string;

@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from cinematch.services.hybrid_recommender import HybridRecommender
     from cinematch.services.llm_service import LLMService
     from cinematch.services.movie_service import MovieService
+    from cinematch.services.onboarding_service import OnboardingService
     from cinematch.services.rating_comparison_service import RatingComparisonService
     from cinematch.services.rating_service import RatingService
     from cinematch.services.streak_service import StreakService
@@ -117,3 +118,7 @@ def get_challenge_service(request: Request) -> ChallengeService:
 
 def get_bingo_service(request: Request) -> BingoService:
     return request.app.state.bingo_service
+
+
+def get_onboarding_service(request: Request) -> OnboardingService:
+    return request.app.state.onboarding_service

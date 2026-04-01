@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     data_raw_dir: str = "data/raw"
     data_processed_dir: str = "data/processed"
 
+    # Onboarding
+    onboarding_threshold: int = 10
+
     # API
     api_host: str = "0.0.0.0"
     api_port: int = 8000
