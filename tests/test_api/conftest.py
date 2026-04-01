@@ -159,6 +159,14 @@ def mock_rating_service(sample_rating):
     svc.get_user_ratings.return_value = ([(sample_rating, "The Matrix")], 1)
     svc.bulk_check.return_value = {1: 9}
     svc.get_rated_movie_ids.return_value = {1}
+    svc.get_movie_rating_stats.return_value = {
+        "movie_id": 1,
+        "avg_rating": 7.5,
+        "median_rating": 8.0,
+        "total_ratings": 100,
+        "distribution": [{"rating": i, "count": 10} for i in range(1, 11)],
+        "user_rating": None,
+    }
     return svc
 
 

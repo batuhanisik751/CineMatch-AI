@@ -46,6 +46,7 @@ from cinematch.schemas.movie import (
     KeywordStats,
     KeywordSummary,
     MovieListResponse,
+    MovieRatingStatsResponse,
     MovieResponse,
     MovieSearchResponse,
     MovieSummary,
@@ -812,3 +813,55 @@ async def get_similar_movies(
         movie_title=movie.title,
         similar=similar,
     )
+
+
+@router.get("/{movie_id}/rating-stats", response_model=MovieRatingStatsResponse)
+async def get_movie_rating_stats(
+    movie_id: int,
+    user_id: int | None = Query(default=None, ge=1),
+    db: AsyncSession = Depends(get_db),
+    rating_service: RatingService = Depends(get_rating_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """Get community rating distribution for a movie, with optional user comparison."""
+    cache_key = f"movie_rating_stats:{movie_id}"
+
+    # Try cache for movie-level stats
+    cached_data: dict | None = None
+    if cache_service is not None:
+        try:
+            cached = await cache_service.get(cache_key)
+            if cached is not None:
+                import json
+
+                cached_data = json.loads(cached)
+        except Exception:
+            logger.warning("Failed to read movie rating stats cache", exc_info=True)
+
+    if cached_data is not None:
+        # Attach user rating separately (not cached)
+        if user_id is not None:
+            user_ratings = await rating_service.bulk_check(user_id, [movie_id], db)
+            cached_data["user_rating"] = user_ratings.get(movie_id)
+        else:
+            cached_data["user_rating"] = None
+        return MovieRatingStatsResponse(**cached_data)
+
+    result = await rating_service.get_movie_rating_stats(movie_id, db)
+
+    # Cache movie-level stats (without user_rating)
+    if cache_service is not None:
+        try:
+            import json
+
+            cache_payload = {**result, "user_rating": None}
+            await cache_service.set(cache_key, json.dumps(cache_payload), ttl=3600)
+        except Exception:
+            logger.warning("Failed to cache movie rating stats", exc_info=True)
+
+    # Attach user rating if requested
+    if user_id is not None:
+        user_ratings = await rating_service.bulk_check(user_id, [movie_id], db)
+        result["user_rating"] = user_ratings.get(movie_id)
+
+    return MovieRatingStatsResponse(**result)

@@ -4,6 +4,7 @@ import type {
   ActorSearchResponse,
   AdvancedSearchResponse,
   ControversialResponse,
+  MovieRatingStatsResponse,
   DecadeMoviesResponse,
   DecadesResponse,
   DirectorFilmographyResponse,
@@ -210,5 +211,14 @@ export function getControversialMovies(
   if (params.limit != null) qs.set("limit", String(params.limit));
   return apiFetch<ControversialResponse>(
     `/api/v1/movies/controversial?${qs.toString()}`,
+  );
+}
+
+export function getMovieRatingStats(movieId: number, userId?: number) {
+  const qs = new URLSearchParams();
+  if (userId != null) qs.set("user_id", String(userId));
+  const query = qs.toString();
+  return apiFetch<MovieRatingStatsResponse>(
+    `/api/v1/movies/${movieId}/rating-stats${query ? `?${query}` : ""}`,
   );
 }

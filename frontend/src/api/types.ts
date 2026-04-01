@@ -538,6 +538,15 @@ export interface ControversialResponse {
   limit: number;
 }
 
+export interface MovieRatingStatsResponse {
+  movie_id: number;
+  avg_rating: number;
+  median_rating: number;
+  total_ratings: number;
+  distribution: RatingHistogramBucket[];
+  user_rating: number | null;
+}
+
 export interface Milestone {
   threshold: number;
   reached: boolean;

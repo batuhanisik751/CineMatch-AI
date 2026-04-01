@@ -289,3 +289,12 @@ class ControversialResponse(BaseModel):
     results: list[ControversialMovieResult]
     min_ratings: int
     limit: int
+
+
+class MovieRatingStatsResponse(BaseModel):
+    movie_id: int
+    avg_rating: float
+    median_rating: float
+    total_ratings: int
+    distribution: list[RatingHistogramBucket]
+    user_rating: int | None

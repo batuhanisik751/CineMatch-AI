@@ -401,7 +401,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Step 3: Sort by minimum of the two predicted scores (both must like it)
   - Filter out movies either user has already rated
 
-### 4.4 Rating Comparison for a Movie
+### 4.4 Rating Comparison for a Movie ✅
 **Scope:** Single user
 **One-line:** See how your rating of a specific movie compares to the community distribution.
 - **Data backing:** `ratings` for the specific movie — all user ratings

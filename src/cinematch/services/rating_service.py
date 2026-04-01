@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from cinematch.models.movie import Movie
@@ -96,3 +96,50 @@ class RatingService:
         """Get all movie IDs the user has rated."""
         result = await db.execute(select(Rating.movie_id).where(Rating.user_id == user_id))
         return {r[0] for r in result.fetchall()}
+
+    async def get_movie_rating_stats(
+        self,
+        movie_id: int,
+        db: AsyncSession,
+        user_id: int | None = None,
+    ) -> dict[str, Any]:
+        """Get rating distribution stats for a movie, optionally including user's rating."""
+        agg_result = await db.execute(
+            text(
+                "SELECT AVG(rating), "
+                "PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY rating), "
+                "COUNT(*) "
+                "FROM ratings WHERE movie_id = :mid"
+            ),
+            {"mid": movie_id},
+        )
+        row = agg_result.one()
+        avg_rating = round(float(row[0]), 2) if row[0] is not None else 0.0
+        median_rating = round(float(row[1]), 2) if row[1] is not None else 0.0
+        total_ratings = int(row[2])
+
+        dist_result = await db.execute(
+            text("SELECT rating, COUNT(*) FROM ratings WHERE movie_id = :mid GROUP BY rating"),
+            {"mid": movie_id},
+        )
+        counts = {int(r[0]): int(r[1]) for r in dist_result.all()}
+        distribution = [{"rating": i, "count": counts.get(i, 0)} for i in range(1, 11)]
+
+        user_rating = None
+        if user_id is not None:
+            ur_result = await db.execute(
+                text("SELECT rating FROM ratings WHERE movie_id = :mid AND user_id = :uid"),
+                {"mid": movie_id, "uid": user_id},
+            )
+            ur_row = ur_result.one_or_none()
+            if ur_row is not None:
+                user_rating = int(ur_row[0])
+
+        return {
+            "movie_id": movie_id,
+            "avg_rating": avg_rating,
+            "median_rating": median_rating,
+            "total_ratings": total_ratings,
+            "distribution": distribution,
+            "user_rating": user_rating,
+        }

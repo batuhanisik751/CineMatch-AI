@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getMovie, getSimilarMovies } from "../api/movies";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Cell,
+  ResponsiveContainer,
+} from "recharts";
+import { getMovie, getMovieRatingStats, getSimilarMovies } from "../api/movies";
 import { addRating } from "../api/ratings";
-import type { MovieResponse, SimilarMovie } from "../api/types";
+import type { MovieRatingStatsResponse, MovieResponse, SimilarMovie } from "../api/types";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -27,6 +37,9 @@ export default function MovieDetail() {
   const [ratingMsg, setRatingMsg] = useState("");
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { setLocalRating } = useRated();
+  const [ratingStats, setRatingStats] = useState<MovieRatingStatsResponse | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsRefresh, setStatsRefresh] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -41,6 +54,15 @@ export default function MovieDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    if (!movie) return;
+    setStatsLoading(true);
+    getMovieRatingStats(movie.id, userId)
+      .then(setRatingStats)
+      .catch(() => setRatingStats(null))
+      .finally(() => setStatsLoading(false));
+  }, [movie?.id, userId, statsRefresh]);
+
   const handleRate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (userRating === 0 || !movie) return;
@@ -48,6 +70,7 @@ export default function MovieDetail() {
       await addRating(userId, movie.id, userRating);
       setLocalRating(movie.id, userRating);
       setRatingMsg("Rating submitted!");
+      setStatsRefresh((c) => c + 1);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to submit";
       setRatingMsg(msg);
@@ -191,6 +214,60 @@ export default function MovieDetail() {
                   {ratingMsg && <p className="text-sm text-center text-primary">{ratingMsg}</p>}
                 </form>
               </div>
+              {/* Community Rating Stats */}
+              {statsLoading && (
+                <div className="glass-card p-8 rounded-2xl space-y-4">
+                  <div className="h-5 w-40 bg-surface-container rounded animate-pulse" />
+                  <div className="h-48 bg-surface-container rounded animate-pulse" />
+                </div>
+              )}
+              {!statsLoading && ratingStats && ratingStats.total_ratings > 0 && (
+                <div className="glass-card p-8 rounded-2xl space-y-6">
+                  <h3 className="text-xl font-headline font-bold text-on-surface">Community Ratings</h3>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Avg</p>
+                      <p className="text-on-surface font-bold text-lg">{ratingStats.avg_rating.toFixed(1)}</p>
+                    </div>
+                    <div>
+                      <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Median</p>
+                      <p className="text-on-surface font-bold text-lg">{ratingStats.median_rating.toFixed(1)}</p>
+                    </div>
+                    <div>
+                      <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Total</p>
+                      <p className="text-on-surface font-bold text-lg">{ratingStats.total_ratings.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={ratingStats.distribution} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                      <XAxis dataKey="rating" tick={{ fill: "#a8a29e", fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "#a8a29e", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "#1c1b1f", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }}
+                        labelStyle={{ color: "#e5e2e3" }}
+                        itemStyle={{ color: "#d4c5ab" }}
+                        formatter={(value) => [typeof value === "number" ? value.toLocaleString() : String(value ?? "0"), "Ratings"]}
+                        labelFormatter={(label) => `Rating: ${label}/10`}
+                      />
+                      <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                        {ratingStats.distribution.map((entry) => (
+                          <Cell
+                            key={entry.rating}
+                            fill={ratingStats.user_rating !== null && entry.rating === ratingStats.user_rating ? "#FFC107" : "#4a4458"}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  {ratingStats.user_rating !== null && (
+                    <p className="text-center text-sm text-on-surface-variant">
+                      <span className="inline-block w-3 h-3 rounded-sm mr-1.5 align-middle" style={{ backgroundColor: "#FFC107" }} />
+                      Your rating: <span className="text-primary font-bold">{ratingStats.user_rating}/10</span>
+                    </p>
+                  )}
+                </div>
+              )}
               {/* Meta Links */}
               <div className="space-y-4 px-2">
                 <div className="flex items-center justify-between text-sm py-3 border-b border-outline-variant/10">
