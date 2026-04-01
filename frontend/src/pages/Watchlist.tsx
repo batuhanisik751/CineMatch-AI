@@ -66,6 +66,15 @@ export default function Watchlist() {
                 ? `${total} movie${total !== 1 ? "s" : ""} saved for later`
                 : "Movies you save will appear here"}
             </p>
+            {total > 0 && (
+              <Link
+                to="/watchlist/recommendations"
+                className="inline-flex items-center gap-2 mt-4 bg-primary-container/20 border border-primary-container/40 text-primary px-5 py-2.5 rounded-md font-bold hover:bg-primary-container hover:text-on-primary-container transition-all"
+              >
+                <span className="material-symbols-outlined text-lg">auto_awesome</span>
+                Get Recommendations Based on Your Watchlist
+              </Link>
+            )}
           </div>
 
           {loading && <LoadingSpinner text="Loading watchlist..." />}

@@ -78,3 +78,33 @@ async def test_bulk_check_watchlist(client):
 async def test_bulk_check_invalid_ids(client):
     resp = await client.get("/api/v1/users/1/watchlist/check?movie_ids=abc,def")
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_watchlist_recommendations_success(client):
+    resp = await client.get("/api/v1/users/1/watchlist/recommendations?limit=10")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user_id"] == 1
+    assert data["strategy"] == "watchlist"
+    assert len(data["recommendations"]) == 1
+    assert data["recommendations"][0]["feature_explanations"] == ["Based on your watchlist"]
+
+
+@pytest.mark.asyncio
+async def test_watchlist_recommendations_empty_watchlist(client, mock_watchlist_service):
+    mock_watchlist_service.get_watchlist_movie_ids.return_value = []
+    resp = await client.get("/api/v1/users/1/watchlist/recommendations")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["strategy"] == "watchlist"
+    assert data["recommendations"] == []
+
+
+@pytest.mark.asyncio
+async def test_watchlist_recommendations_service_unavailable(client, app):
+    from cinematch.api.deps import get_hybrid_recommender
+
+    app.dependency_overrides[get_hybrid_recommender] = lambda: None
+    resp = await client.get("/api/v1/users/1/watchlist/recommendations")
+    assert resp.status_code == 503

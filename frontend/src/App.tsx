@@ -26,6 +26,7 @@ import TopCharts from "./pages/TopCharts";
 import TasteEvolution from "./pages/TasteEvolution";
 import Trending from "./pages/Trending";
 import Watchlist from "./pages/Watchlist";
+import WatchlistRecommendations from "./pages/WatchlistRecommendations";
 
 export default function App() {
   const location = useLocation();
@@ -59,6 +60,7 @@ export default function App() {
       <Route path="/movies/:id" element={<MovieDetail />} />
       <Route path="/recommendations" element={<Recommendations />} />
       <Route path="/recommendations/from-seed/:movieId" element={<FromSeedRecommendations />} />
+      <Route path="/watchlist/recommendations" element={<WatchlistRecommendations />} />
       <Route path="/watchlist" element={<Watchlist />} />
       <Route path="/lists" element={<Lists />} />
       <Route path="/lists/popular" element={<PopularLists />} />

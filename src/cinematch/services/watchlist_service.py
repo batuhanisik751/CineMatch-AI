@@ -124,6 +124,16 @@ class WatchlistService:
         result = await db.execute(stmt)
         return result.scalar_one() > 0
 
+    async def get_watchlist_movie_ids(
+        self,
+        user_id: int,
+        db: AsyncSession,
+    ) -> list[int]:
+        """Return all movie IDs in the user's watchlist (unpaginated)."""
+        stmt = select(WatchlistItem.movie_id).where(WatchlistItem.user_id == user_id)
+        result = await db.execute(stmt)
+        return [row[0] for row in result.all()]
+
     async def bulk_check(
         self,
         user_id: int,

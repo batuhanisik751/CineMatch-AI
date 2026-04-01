@@ -42,6 +42,7 @@ class CacheService:
         await self.delete_pattern(f"mood_rec:{user_id}:*")
         await self.delete_pattern(f"feed:{user_id}:*")
         await self.delete_pattern(f"taste_profile:{user_id}")
+        await self.delete_pattern(f"watchlist_recs:{user_id}:*")
         logger.debug("Invalidated recommendation cache for user %s", user_id)
 
     async def close(self) -> None:

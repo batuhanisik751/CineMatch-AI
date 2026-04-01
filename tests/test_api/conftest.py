@@ -212,6 +212,7 @@ def mock_hybrid_recommender():
             score_breakdown=ScoreBreakdown(content_score=0.85, collab_score=0.6, alpha=0.5),
         ),
     ]
+    rec.watchlist_recommend.return_value = [(1, 0.85)]
     return rec
 
 
@@ -280,6 +281,7 @@ def mock_watchlist_service(sample_watchlist_item, sample_movie):
     )
     svc.is_in_watchlist.return_value = True
     svc.bulk_check.return_value = {1}
+    svc.get_watchlist_movie_ids.return_value = [1]
     return svc
 
 

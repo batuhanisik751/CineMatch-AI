@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type {
+  RecommendationsResponse,
   WatchlistItemResponse,
   WatchlistResponse,
   WatchlistBulkStatusResponse,
@@ -27,5 +28,11 @@ export function getWatchlist(userId: number, offset = 0, limit = 20) {
 export function bulkCheckWatchlist(userId: number, movieIds: number[]) {
   return apiFetch<WatchlistBulkStatusResponse>(
     `/api/v1/users/${userId}/watchlist/check?movie_ids=${movieIds.join(",")}`
+  );
+}
+
+export function getWatchlistRecommendations(userId: number, limit = 10) {
+  return apiFetch<RecommendationsResponse>(
+    `/api/v1/users/${userId}/watchlist/recommendations?limit=${limit}`
   );
 }

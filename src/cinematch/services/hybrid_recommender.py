@@ -706,6 +706,47 @@ class HybridRecommender:
         return results, True
 
     # ------------------------------------------------------------------
+    # Watchlist-based recommendations
+    # ------------------------------------------------------------------
+
+    async def watchlist_recommend(
+        self,
+        watchlist_movie_ids: list[int],
+        user_id: int,
+        db: AsyncSession,
+        top_k: int = 10,
+    ) -> list[tuple[int, float]]:
+        """Recommend movies similar to the user's watchlist via mean embedding.
+
+        Computes the mean FAISS vector of all watchlist movies, then performs
+        nearest-neighbor search excluding rated, dismissed, and watchlisted movies.
+        Returns ``[(movie_id, similarity_score), ...]``.
+        """
+        if not watchlist_movie_ids:
+            return []
+
+        vecs: list[np.ndarray] = []
+        for movie_id in watchlist_movie_ids:
+            faiss_idx = self._content._id_to_faiss_idx.get(movie_id)
+            if faiss_idx is None:
+                continue
+            vec = self._content._faiss_index.reconstruct(int(faiss_idx))
+            vecs.append(vec)
+
+        if not vecs:
+            return []
+
+        mean_vec = np.mean(vecs, axis=0)
+        norm = np.linalg.norm(mean_vec)
+        if norm > 0:
+            mean_vec = mean_vec / norm
+
+        excluded = await self._get_excluded_movie_ids(user_id, db)
+        excluded = excluded | set(watchlist_movie_ids)
+
+        return self._content.faiss_search_by_vector(mean_vec, top_k, exclude_ids=excluded)
+
+    # ------------------------------------------------------------------
     # Diverse seed selection
     # ------------------------------------------------------------------
 

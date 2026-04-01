@@ -465,7 +465,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Sort by vote_average descending
   - Same pattern works for actors: `GET /api/v1/users/{id}/actor-gaps`
 
-### 5.4 Watchlist Recommendations
+### 5.4 Watchlist Recommendations ✅
 **Scope:** Single user
 **One-line:** Recommend movies similar to what's on the user's watchlist.
 - **Data backing:** `watchlist` (user's saved movies), movie embeddings, FAISS

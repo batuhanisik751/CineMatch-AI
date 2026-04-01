@@ -178,3 +178,28 @@ async def test_bulk_check_empty_input(service, mock_db):
 
     assert result == set()
     mock_db.execute.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_get_watchlist_movie_ids(service, mock_db):
+    """Returns list of movie IDs in user's watchlist."""
+    result = MagicMock()
+    result.all.return_value = [(10,), (20,), (30,)]
+    mock_db.execute = AsyncMock(return_value=result)
+
+    ids = await service.get_watchlist_movie_ids(1, mock_db)
+
+    assert ids == [10, 20, 30]
+    mock_db.execute.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_get_watchlist_movie_ids_empty(service, mock_db):
+    """Returns empty list when watchlist has no items."""
+    result = MagicMock()
+    result.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=result)
+
+    ids = await service.get_watchlist_movie_ids(1, mock_db)
+
+    assert ids == []

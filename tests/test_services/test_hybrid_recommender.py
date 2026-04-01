@@ -802,3 +802,56 @@ async def test_from_seed_because_you_liked_points_to_seed(hybrid_recommender, mo
         assert r.because_you_liked.movie_id == 101
         assert r.because_you_liked.title == "Seed Movie"
         assert r.because_you_liked.your_rating == 10.0
+
+
+# ------------------------------------------------------------------
+# watchlist_recommend
+# ------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_watchlist_recommend_returns_similar_movies(hybrid_recommender, mock_db_session):
+    """Watchlist recommend returns neighbours of the mean watchlist embedding."""
+    mock_db_session.execute = AsyncMock(side_effect=_db_execute_factory(rated_ids=[]))
+
+    results = await hybrid_recommender.watchlist_recommend(
+        watchlist_movie_ids=[101, 102],
+        user_id=1,
+        db=mock_db_session,
+        top_k=3,
+    )
+
+    assert len(results) > 0
+    result_ids = [mid for mid, _ in results]
+    # Watchlisted movies must be excluded from results
+    assert 101 not in result_ids
+    assert 102 not in result_ids
+
+
+@pytest.mark.asyncio
+async def test_watchlist_recommend_empty_watchlist(hybrid_recommender, mock_db_session):
+    """Empty watchlist returns no recommendations."""
+    results = await hybrid_recommender.watchlist_recommend(
+        watchlist_movie_ids=[],
+        user_id=1,
+        db=mock_db_session,
+    )
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_watchlist_recommend_excludes_rated_movies(hybrid_recommender, mock_db_session):
+    """Rated movies are excluded from watchlist recommendations."""
+    mock_db_session.execute = AsyncMock(side_effect=_db_execute_factory(rated_ids=[(103,), (104,)]))
+
+    results = await hybrid_recommender.watchlist_recommend(
+        watchlist_movie_ids=[101],
+        user_id=1,
+        db=mock_db_session,
+        top_k=5,
+    )
+
+    result_ids = [mid for mid, _ in results]
+    assert 103 not in result_ids
+    assert 104 not in result_ids
+    assert 101 not in result_ids  # watchlisted movie excluded too

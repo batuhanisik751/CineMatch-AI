@@ -2,20 +2,92 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cinematch.api.deps import get_db, get_movie_service, get_watchlist_service
+from cinematch.api.deps import (
+    get_cache_service,
+    get_db,
+    get_hybrid_recommender,
+    get_movie_service,
+    get_watchlist_service,
+)
+from cinematch.core.cache import CacheService
+from cinematch.core.exceptions import ServiceUnavailableError
+from cinematch.schemas.movie import MovieSummary
+from cinematch.schemas.recommendation import RecommendationItem, RecommendationsResponse
 from cinematch.schemas.watchlist import (
     WatchlistAdd,
     WatchlistBulkStatusResponse,
     WatchlistItemResponse,
     WatchlistResponse,
 )
+from cinematch.services.hybrid_recommender import HybridRecommender
 from cinematch.services.movie_service import MovieService
 from cinematch.services.watchlist_service import WatchlistService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+@router.get(
+    "/users/{user_id}/watchlist/recommendations",
+    response_model=RecommendationsResponse,
+)
+async def get_watchlist_recommendations(
+    user_id: int,
+    limit: int = Query(default=10, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    watchlist_service: WatchlistService = Depends(get_watchlist_service),
+    hybrid_rec: HybridRecommender | None = Depends(get_hybrid_recommender),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """Recommend movies similar to what's on the user's watchlist."""
+    if hybrid_rec is None:
+        raise ServiceUnavailableError("Recommendation service")
+
+    watchlist_movie_ids = await watchlist_service.get_watchlist_movie_ids(user_id, db)
+    if not watchlist_movie_ids:
+        return RecommendationsResponse(user_id=user_id, strategy="watchlist", recommendations=[])
+
+    cache_key = f"watchlist_recs:{user_id}:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return RecommendationsResponse.model_validate_json(cached)
+
+    results = await hybrid_rec.watchlist_recommend(watchlist_movie_ids, user_id, db, top_k=limit)
+
+    rec_movie_ids = [mid for mid, _ in results]
+    movies_map = await movie_service.get_movies_by_ids(rec_movie_ids, db)
+
+    recommendations = []
+    for mid, score in results:
+        movie = movies_map.get(mid)
+        if movie is not None:
+            recommendations.append(
+                RecommendationItem(
+                    movie=MovieSummary.model_validate(movie),
+                    score=score,
+                    feature_explanations=["Based on your watchlist"],
+                )
+            )
+
+    response = RecommendationsResponse(
+        user_id=user_id, strategy="watchlist", recommendations=recommendations
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            logger.warning("Failed to cache watchlist recommendations", exc_info=True)
+
+    return response
 
 
 @router.get(
@@ -49,6 +121,7 @@ async def add_to_watchlist(
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     watchlist_service: WatchlistService = Depends(get_watchlist_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
 ):
     """Add a movie to the user's watchlist."""
     movie = await movie_service.get_by_id(body.movie_id, db)
@@ -56,6 +129,12 @@ async def add_to_watchlist(
         raise HTTPException(status_code=404, detail="Movie not found")
 
     item = await watchlist_service.add_to_watchlist(user_id, body.movie_id, db)
+
+    if cache_service is not None:
+        try:
+            await cache_service.delete_pattern(f"watchlist_recs:{user_id}:*")
+        except Exception:
+            pass
 
     resp = WatchlistItemResponse.model_validate(item)
     resp.movie_title = movie.title
@@ -75,11 +154,18 @@ async def remove_from_watchlist(
     movie_id: int,
     db: AsyncSession = Depends(get_db),
     watchlist_service: WatchlistService = Depends(get_watchlist_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
 ):
     """Remove a movie from the user's watchlist."""
     removed = await watchlist_service.remove_from_watchlist(user_id, movie_id, db)
     if not removed:
         raise HTTPException(status_code=404, detail="Movie not in watchlist")
+
+    if cache_service is not None:
+        try:
+            await cache_service.delete_pattern(f"watchlist_recs:{user_id}:*")
+        except Exception:
+            pass
 
 
 @router.get(
