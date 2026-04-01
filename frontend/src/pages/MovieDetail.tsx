@@ -13,6 +13,7 @@ import {
 import { addMovieToList, getUserLists } from "../api/lists";
 import { getMovie, getMovieRatingStats, getSimilarMovies } from "../api/movies";
 import { addRating } from "../api/ratings";
+import { languageName } from "../constants/languages";
 import type { MovieRatingStatsResponse, MovieResponse, SimilarMovie, UserListSummary } from "../api/types";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
@@ -168,7 +169,7 @@ export default function MovieDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             {/* Left: Details */}
             <div className="lg:col-span-8 space-y-16">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-12 border-b border-outline-variant/10">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-8 pb-12 border-b border-outline-variant/10">
                 <div>
                   <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Director</p>
                   <p className="text-on-surface font-bold">{movie.director || "Unknown"}</p>
@@ -184,6 +185,10 @@ export default function MovieDetail() {
                 <div>
                   <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Vote Count</p>
                   <p className="text-on-surface font-bold">{movie.vote_count.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Language</p>
+                  <p className="text-on-surface font-bold">{movie.original_language ? languageName(movie.original_language) : "N/A"}</p>
                 </div>
               </div>
               {/* Cast */}

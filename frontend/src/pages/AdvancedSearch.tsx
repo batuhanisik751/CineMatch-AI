@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { advancedSearchMovies, getGenres } from "../api/movies";
-import type { AdvancedSearchResult, GenreCount } from "../api/types";
+import { advancedSearchMovies, getGenres, getLanguages } from "../api/movies";
+import type { AdvancedSearchResult, GenreCount, LanguageCount } from "../api/types";
+import { languageName } from "../constants/languages";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -47,7 +48,10 @@ export default function AdvancedSearch() {
   const debouncedMinRating = params.get("min_rating") || "";
   const debouncedMaxRating = params.get("max_rating") || "";
 
+  const selectedLanguage = params.get("language") || null;
+
   const [genres, setGenres] = useState<GenreCount[]>([]);
+  const [languages, setLanguages] = useState<LanguageCount[]>([]);
   const [results, setResults] = useState<AdvancedSearchResult[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -96,10 +100,13 @@ export default function AdvancedSearch() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directorInput, keywordInput, castInput, minRatingInput, maxRatingInput]);
 
-  // Load genres once
+  // Load genres and languages once
   useEffect(() => {
     getGenres()
       .then((data) => setGenres(data.genres))
+      .catch(() => {});
+    getLanguages()
+      .then((data) => setLanguages(data.languages))
       .catch(() => {});
   }, []);
 
@@ -119,6 +126,7 @@ export default function AdvancedSearch() {
       director: debouncedDirector || undefined,
       keyword: debouncedKeyword || undefined,
       cast: debouncedCast || undefined,
+      language: selectedLanguage ?? undefined,
       sort_by: sortBy,
       offset,
       limit: PAGE_SIZE,
@@ -130,7 +138,7 @@ export default function AdvancedSearch() {
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
-  }, [selectedGenre, selectedDecade, sortBy, debouncedDirector, debouncedKeyword, debouncedCast, debouncedMinRating, debouncedMaxRating, offset]);
+  }, [selectedGenre, selectedDecade, selectedLanguage, sortBy, debouncedDirector, debouncedKeyword, debouncedCast, debouncedMinRating, debouncedMaxRating, offset]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
@@ -144,6 +152,7 @@ export default function AdvancedSearch() {
   if (debouncedDirector) activeFilters.push({ key: "director", label: `Director: ${debouncedDirector}` });
   if (debouncedKeyword) activeFilters.push({ key: "keyword", label: `Keyword: ${debouncedKeyword}` });
   if (debouncedCast) activeFilters.push({ key: "cast", label: `Cast: ${debouncedCast}` });
+  if (selectedLanguage) activeFilters.push({ key: "language", label: `Language: ${languageName(selectedLanguage)}` });
 
   const clearAll = () => {
     setDirectorInput("");
@@ -291,6 +300,29 @@ export default function AdvancedSearch() {
                     {SORT_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                    <span className="material-symbols-outlined text-outline text-sm">expand_more</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block font-label text-xs uppercase tracking-widest text-on-surface-variant font-bold">
+                  Language
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedLanguage || ""}
+                    onChange={(e) => updateParams({ language: e.target.value || null, offset: null })}
+                    className="bg-surface-container-lowest border-none rounded-lg p-3 pr-10 text-on-surface appearance-none focus:ring-2 focus:ring-surface-tint font-body text-sm"
+                  >
+                    <option value="">All Languages</option>
+                    {languages.map((l) => (
+                      <option key={l.code} value={l.code}>
+                        {languageName(l.code)} ({l.count.toLocaleString()})
                       </option>
                     ))}
                   </select>

@@ -153,6 +153,40 @@ async def test_genres_response_structure(client):
     assert data["genres"][0]["count"] == 50
 
 
+# --- Languages endpoint tests ---
+
+
+async def test_languages_success(client):
+    resp = await client.get("/api/v1/movies/languages")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "languages" in data
+    assert len(data["languages"]) == 3
+
+
+async def test_languages_response_structure(client):
+    resp = await client.get("/api/v1/movies/languages")
+    assert resp.status_code == 200
+    data = resp.json()
+    for item in data["languages"]:
+        assert "code" in item
+        assert "name" in item
+        assert "count" in item
+        assert isinstance(item["count"], int)
+    assert data["languages"][0]["code"] == "en"
+    assert data["languages"][0]["count"] == 8000
+
+
+# --- Discover with language filter ---
+
+
+async def test_discover_with_language(client, mock_movie_service):
+    resp = await client.get("/api/v1/movies/discover", params={"language": "ko"})
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.list_movies.call_args.kwargs
+    assert call_kwargs["language"] == "ko"
+
+
 # --- Semantic search endpoint tests ---
 
 

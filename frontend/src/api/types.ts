@@ -5,6 +5,7 @@ export interface MovieSummary {
   vote_average: number;
   release_date: string | null;
   poster_path: string | null;
+  original_language: string | null;
 }
 
 export interface MovieResponse {
@@ -22,6 +23,7 @@ export interface MovieResponse {
   vote_count: number;
   popularity: number;
   poster_path: string | null;
+  original_language: string | null;
 }
 
 export interface SimilarMovie {
@@ -55,6 +57,16 @@ export interface GenreCount {
 
 export interface GenresResponse {
   genres: GenreCount[];
+}
+
+export interface LanguageCount {
+  code: string;
+  name: string;
+  count: number;
+}
+
+export interface LanguagesResponse {
+  languages: LanguageCount[];
 }
 
 export interface SemanticSearchResult {

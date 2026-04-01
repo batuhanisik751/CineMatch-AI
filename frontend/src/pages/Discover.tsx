@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { discoverMovies, getGenres, searchMovies, semanticSearchMovies } from "../api/movies";
-import type { GenreCount, MovieSummary } from "../api/types";
+import { discoverMovies, getGenres, getLanguages, searchMovies, semanticSearchMovies } from "../api/movies";
+import type { GenreCount, LanguageCount, MovieSummary } from "../api/types";
+import { languageName } from "../constants/languages";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -31,8 +32,10 @@ export default function Discover() {
   const offset = Number(params.get("offset")) || 0;
   const searchMode: "title" | "vibe" = (params.get("mode") as "title" | "vibe") || "title";
   const searchQuery = params.get("q") || "";
+  const selectedLanguage = params.get("language") || null;
 
   const [genres, setGenres] = useState<GenreCount[]>([]);
+  const [languages, setLanguages] = useState<LanguageCount[]>([]);
   const [yearMin, setYearMin] = useState(params.get("year_min") || "");
   const [yearMax, setYearMax] = useState(params.get("year_max") || "");
   const [debouncedYearMin, setDebouncedYearMin] = useState(params.get("year_min") || "");
@@ -77,10 +80,13 @@ export default function Discover() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yearMin, yearMax]);
 
-  // Load genres once
+  // Load genres and languages once
   useEffect(() => {
     getGenres()
       .then((data) => setGenres(data.genres))
+      .catch(() => {});
+    getLanguages()
+      .then((data) => setLanguages(data.languages))
       .catch(() => {});
   }, []);
 
@@ -119,6 +125,7 @@ export default function Discover() {
         genre: selectedGenre ?? undefined,
         year_min: parsedMin && parsedMin >= 1888 ? parsedMin : undefined,
         year_max: parsedMax && parsedMax >= 1888 ? parsedMax : undefined,
+        language: selectedLanguage ?? undefined,
         sort_by: sortBy,
         offset,
         limit: PAGE_SIZE,
@@ -134,7 +141,7 @@ export default function Discover() {
         .catch((e) => setError(e.detail || e.message))
         .finally(() => setLoading(false));
     }
-  }, [searchQuery, searchMode, selectedGenre, sortBy, debouncedYearMin, debouncedYearMax, offset]);
+  }, [searchQuery, searchMode, selectedGenre, selectedLanguage, sortBy, debouncedYearMin, debouncedYearMax, offset]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
@@ -241,7 +248,7 @@ export default function Discover() {
                 ))}
               </div>
 
-              {/* Sort + Year filters */}
+              {/* Sort + Language + Year filters */}
               <div className="flex flex-wrap gap-4 items-end">
                 <div className="space-y-2">
                   <label className="block font-label text-xs uppercase tracking-widest text-on-surface-variant font-bold">
@@ -256,6 +263,29 @@ export default function Discover() {
                       {SORT_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                      <span className="material-symbols-outlined text-outline text-sm">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block font-label text-xs uppercase tracking-widest text-on-surface-variant font-bold">
+                    Language
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedLanguage || ""}
+                      onChange={(e) => updateParams({ language: e.target.value || null, offset: null })}
+                      className="bg-surface-container-lowest border-none rounded-lg p-3 pr-10 text-on-surface appearance-none focus:ring-2 focus:ring-surface-tint font-body text-sm"
+                    >
+                      <option value="">All Languages</option>
+                      {languages.map((l) => (
+                        <option key={l.code} value={l.code}>
+                          {languageName(l.code)} ({l.count.toLocaleString()})
                         </option>
                       ))}
                     </select>

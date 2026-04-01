@@ -81,7 +81,7 @@ async def test_get_rated_movie_ids_empty(service, mock_db):
 @pytest.mark.asyncio
 async def test_get_movie_activity_groups_by_month(service, mock_db):
     """get_movie_activity returns timeline grouped by month."""
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
 
     row1 = (datetime(2024, 1, 1, tzinfo=UTC), 15, 7.50)
     row2 = (datetime(2024, 2, 1, tzinfo=UTC), 22, 8.10)

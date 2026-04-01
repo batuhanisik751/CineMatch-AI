@@ -19,6 +19,7 @@ def _make_movie(id: int = 1, title: str = "The Matrix", release_date=None):
     m.vote_count = 20000
     m.release_date = release_date or date(1999, 3, 31)
     m.poster_path = "/poster.jpg"
+    m.original_language = "en"
     return m
 
 

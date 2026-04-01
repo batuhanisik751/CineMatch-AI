@@ -55,10 +55,12 @@ async def test_autocomplete_no_results(client, mock_movie_service):
 async def test_autocomplete_uses_cache(client, mock_movie_service, mock_cache_service):
     import json
 
-    cached_response = json.dumps({
-        "results": [{"id": 99, "title": "Cached Movie", "year": 2020, "poster_path": None}],
-        "query": "cached",
-    })
+    cached_response = json.dumps(
+        {
+            "results": [{"id": 99, "title": "Cached Movie", "year": 2020, "poster_path": None}],
+            "query": "cached",
+        }
+    )
     mock_cache_service.get.return_value = cached_response
 
     resp = await client.get("/api/v1/movies/autocomplete", params={"q": "cached"})

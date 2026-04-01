@@ -17,6 +17,7 @@ class MovieSummary(BaseModel):
     vote_average: float
     release_date: date | None
     poster_path: str | None
+    original_language: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -38,6 +39,7 @@ class MovieResponse(BaseModel):
     vote_count: int
     popularity: float
     poster_path: str | None
+    original_language: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -80,6 +82,16 @@ class GenreCount(BaseModel):
 
 class GenresResponse(BaseModel):
     genres: list[GenreCount]
+
+
+class LanguageCount(BaseModel):
+    code: str
+    name: str
+    count: int
+
+
+class LanguagesResponse(BaseModel):
+    languages: list[LanguageCount]
 
 
 class SemanticSearchResult(BaseModel):

@@ -116,12 +116,13 @@ class MovieService:
         genre: str | None = None,
         year_min: int | None = None,
         year_max: int | None = None,
+        language: str | None = None,
         sort_by: str = "popularity",
         sort_order: str = "desc",
         offset: int = 0,
         limit: int = 20,
     ) -> tuple[list[Movie], int]:
-        """List movies with optional genre/year filters, sorting, and pagination."""
+        """List movies with optional genre/year/language filters, sorting, and pagination."""
         filters = []
         if genre is not None:
             filters.append(Movie.genres.op("@>")(cast([genre], JSONB_TYPE)))
@@ -129,6 +130,8 @@ class MovieService:
             filters.append(extract("year", Movie.release_date) >= year_min)
         if year_max is not None:
             filters.append(extract("year", Movie.release_date) <= year_max)
+        if language is not None:
+            filters.append(Movie.original_language == language)
 
         count_stmt = select(func.count()).select_from(Movie)
         for f in filters:
@@ -159,6 +162,18 @@ class MovieService:
             "SELECT genre, COUNT(*)::int AS count "
             "FROM movies, jsonb_array_elements_text(genres) AS genre "
             "GROUP BY genre "
+            "ORDER BY count DESC"
+        )
+        result = await db.execute(stmt)
+        return [(row[0], row[1]) for row in result.all()]
+
+    async def get_language_counts(self, db: AsyncSession) -> list[tuple[str, int]]:
+        """Return all languages with their movie counts, ordered by count descending."""
+        stmt = text(
+            "SELECT original_language, COUNT(*)::int AS count "
+            "FROM movies "
+            "WHERE original_language IS NOT NULL AND original_language != '' "
+            "GROUP BY original_language "
             "ORDER BY count DESC"
         )
         result = await db.execute(stmt)
@@ -688,6 +703,7 @@ class MovieService:
         director: str | None = None,
         keyword: str | None = None,
         cast_name: str | None = None,
+        language: str | None = None,
         sort_by: str = "popularity",
         sort_order: str = "desc",
         offset: int = 0,
@@ -713,6 +729,8 @@ class MovieService:
             filters.append(
                 Movie.cast_names.op("@>")(func.jsonb_build_array(cast_name).cast(JSONB_TYPE))
             )
+        if language is not None:
+            filters.append(Movie.original_language == language)
 
         count_stmt = select(func.count()).select_from(Movie)
         for f in filters:

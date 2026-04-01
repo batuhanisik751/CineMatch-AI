@@ -12,7 +12,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 - FAISS IndexFlatIP: 29K movie embeddings for fast similarity search
 - Existing services: hybrid/content/collab recommender, mood search, semantic search, LLM explanations
 
-**Columns available in raw TMDb CSV but NOT yet imported:** `runtime`, `budget`, `revenue`, `original_language`, `spoken_languages`, `production_companies`, `production_countries`, `tagline`, `status`
+**Columns available in raw TMDb CSV but NOT yet imported:** `runtime`, `budget`, `revenue`, `spoken_languages`, `production_companies`, `production_countries`, `tagline`, `status`
+**Columns recently imported:** `original_language`
 
 ---
 
@@ -638,7 +639,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Frontend enhancement: prominent search bar with "Describe what you're looking for..." placeholder
   - Add example queries as clickable suggestions below the search bar
 
-### 8.3 Filter by Language (Pipeline Enhancement)
+### 8.3 Filter by Language (Pipeline Enhancement) ✅
 **Scope:** Single user
 **One-line:** Filter movies by original language (English, French, Korean, Japanese, etc.).
 - **Data backing:** `original_language` available in raw TMDb CSV but NOT currently imported
@@ -919,6 +920,6 @@ These features require importing additional columns from the TMDb CSV that we al
 | movies.imdb_id | Yes | Rating import/export (IMDb CSV mapping) |
 | movies.tmdb_id | Yes | Rating import/export (Letterboxd CSV mapping) |
 | TMDb runtime | **No** (in raw CSV) | Runtime filter, watch time stats, bingo, wrapped |
-| TMDb original_language | **No** (in raw CSV) | Language filter, international discovery |
+| TMDb original_language | **Yes** (imported) | Language filter, international discovery |
 | TMDb tagline | **No** (in raw CSV) | Richer movie cards, search enhancement |
 | TMDb budget/revenue | **No** (in raw CSV) | Sleeper hits, ROI lists, box office insights |

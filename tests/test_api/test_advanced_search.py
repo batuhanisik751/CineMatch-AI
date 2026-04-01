@@ -132,3 +132,10 @@ async def test_advanced_search_cached(client, mock_movie_service, mock_cache_ser
     resp = await client.get("/api/v1/movies/advanced-search", params={"genre": "Action"})
     assert resp.status_code == 200
     mock_movie_service.advanced_search.assert_not_called()
+
+
+async def test_advanced_search_language_filter(client, mock_movie_service):
+    resp = await client.get("/api/v1/movies/advanced-search", params={"language": "fr"})
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.advanced_search.call_args.kwargs
+    assert call_kwargs["language"] == "fr"

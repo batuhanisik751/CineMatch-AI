@@ -65,11 +65,11 @@ def seed_database(processed_dir: str | None = None) -> None:
                     text("""
                         INSERT INTO movies (id, tmdb_id, imdb_id, movielens_id, title, overview,
                             genres, keywords, cast_names, director, release_date,
-                            vote_average, vote_count, popularity, poster_path, embedding)
+                            vote_average, vote_count, popularity, poster_path, original_language, embedding)
                         VALUES (:id, :tmdb_id, :imdb_id, :movielens_id, :title, :overview,
                             CAST(:genres AS jsonb), CAST(:keywords AS jsonb), CAST(:cast_names AS jsonb),
                             :director, :release_date,
-                            :vote_average, :vote_count, :popularity, :poster_path, CAST(:embedding AS vector))
+                            :vote_average, :vote_count, :popularity, :poster_path, :original_language, CAST(:embedding AS vector))
                     """),
                     {
                         "id": int(row["movie_id"]),
@@ -87,6 +87,7 @@ def seed_database(processed_dir: str | None = None) -> None:
                         "vote_count": int(row["vote_count"]),
                         "popularity": float(row["popularity"]),
                         "poster_path": str(row["poster_path"]) if pd.notna(row.get("poster_path")) else None,
+                        "original_language": str(row["original_language"]) if pd.notna(row.get("original_language")) and row.get("original_language") else None,
                         "embedding": str(emb) if emb is not None else None,
                     },
                 )

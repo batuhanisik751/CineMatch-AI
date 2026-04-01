@@ -51,6 +51,7 @@ def _make_movie(id: int = 1, title: str = "The Matrix") -> MagicMock:
     m.vote_count = 20000
     m.popularity = 50.0
     m.poster_path = "/poster.jpg"
+    m.original_language = "en"
     m.embedding = None
     m.created_at = datetime(2024, 1, 1, tzinfo=UTC)
     return m
@@ -98,6 +99,7 @@ def mock_movie_service(sample_movie):
     svc.get_movies_by_ids.return_value = {sample_movie.id: sample_movie}
     svc.list_movies.return_value = ([sample_movie], 1)
     svc.get_genre_counts.return_value = [("Action", 50), ("Sci-Fi", 30)]
+    svc.get_language_counts.return_value = [("en", 8000), ("fr", 1200), ("ko", 800)]
     svc.semantic_search.return_value = []
     svc.trending.return_value = [(sample_movie, 42)]
     svc.hidden_gems.return_value = [sample_movie]

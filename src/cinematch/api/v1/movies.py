@@ -48,6 +48,8 @@ from cinematch.schemas.movie import (
     KeywordSearchResponse,
     KeywordStats,
     KeywordSummary,
+    LanguageCount,
+    LanguagesResponse,
     MovieActivityResponse,
     MovieConnection,
     MovieConnectionsResponse,
@@ -119,11 +121,38 @@ async def get_genres(
     return GenresResponse(genres=[GenreCount(genre=g, count=c) for g, c in rows])
 
 
+@router.get("/languages", response_model=LanguagesResponse)
+async def get_languages(
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    cache_key = "languages_list"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return LanguagesResponse.model_validate_json(cached)
+
+    rows = await movie_service.get_language_counts(db)
+    response = LanguagesResponse(
+        languages=[LanguageCount(code=code, name=code, count=count) for code, count in rows]
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=86400)
+        except Exception:
+            logger.warning("Failed to cache languages list", exc_info=True)
+
+    return response
+
+
 @router.get("/discover", response_model=MovieListResponse)
 async def discover_movies(
     genre: str | None = Query(default=None),
     year_min: int | None = Query(default=None, ge=1888, le=2030),
     year_max: int | None = Query(default=None, ge=1888, le=2030),
+    language: str | None = Query(default=None, max_length=10),
     sort_by: SortOption = Query(default=SortOption.popularity),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
@@ -138,6 +167,7 @@ async def discover_movies(
         genre=genre,
         year_min=year_min,
         year_max=year_max,
+        language=language,
         sort_by=sort_by.value,
         sort_order="asc" if sort_by == SortOption.title else "desc",
         offset=offset,
@@ -691,6 +721,7 @@ async def advanced_search(
     director: str | None = Query(default=None, max_length=255),
     keyword: str | None = Query(default=None, max_length=255),
     cast: str | None = Query(default=None, max_length=255),
+    language: str | None = Query(default=None, max_length=10),
     sort_by: SortOption = Query(default=SortOption.popularity),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
@@ -700,7 +731,7 @@ async def advanced_search(
 ):
     cache_key = (
         f"adv_search:{genre}:{decade}:{min_rating}:{max_rating}"
-        f":{director}:{keyword}:{cast}:{sort_by.value}:{offset}:{limit}"
+        f":{director}:{keyword}:{cast}:{language}:{sort_by.value}:{offset}:{limit}"
     )
     if cache_service is not None:
         cached = await cache_service.get(cache_key)
@@ -716,6 +747,7 @@ async def advanced_search(
         director=director,
         keyword=keyword,
         cast_name=cast,
+        language=language,
         sort_by=sort_by.value,
         offset=offset,
         limit=limit,

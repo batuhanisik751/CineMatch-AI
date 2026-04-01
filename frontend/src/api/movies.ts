@@ -11,6 +11,7 @@ import type {
   DirectorFilmographyResponse,
   DirectorSearchResponse,
   GenresResponse,
+  LanguagesResponse,
   HiddenGemsResponse,
   KeywordMoviesResponse,
   KeywordSearchResponse,
@@ -57,6 +58,7 @@ export function discoverMovies(params: {
   genre?: string;
   year_min?: number;
   year_max?: number;
+  language?: string;
   sort_by?: string;
   offset?: number;
   limit?: number;
@@ -65,6 +67,7 @@ export function discoverMovies(params: {
   if (params.genre) qs.set("genre", params.genre);
   if (params.year_min != null) qs.set("year_min", String(params.year_min));
   if (params.year_max != null) qs.set("year_max", String(params.year_max));
+  if (params.language) qs.set("language", params.language);
   if (params.sort_by) qs.set("sort_by", params.sort_by);
   if (params.offset != null) qs.set("offset", String(params.offset));
   if (params.limit != null) qs.set("limit", String(params.limit));
@@ -79,6 +82,10 @@ export function semanticSearchMovies(q: string, limit = 20) {
 
 export function getGenres() {
   return apiFetch<GenresResponse>("/api/v1/movies/genres");
+}
+
+export function getLanguages() {
+  return apiFetch<LanguagesResponse>("/api/v1/movies/languages");
 }
 
 export function getTrendingMovies(window = 7, limit = 20) {
@@ -198,6 +205,7 @@ export function advancedSearchMovies(params: {
   director?: string;
   keyword?: string;
   cast?: string;
+  language?: string;
   sort_by?: string;
   offset?: number;
   limit?: number;
@@ -210,6 +218,7 @@ export function advancedSearchMovies(params: {
   if (params.director) qs.set("director", params.director);
   if (params.keyword) qs.set("keyword", params.keyword);
   if (params.cast) qs.set("cast", params.cast);
+  if (params.language) qs.set("language", params.language);
   if (params.sort_by) qs.set("sort_by", params.sort_by);
   if (params.offset != null) qs.set("offset", String(params.offset));
   if (params.limit != null) qs.set("limit", String(params.limit));

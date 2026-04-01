@@ -62,6 +62,9 @@ def load_tmdb(tmdb_path: Path) -> pd.DataFrame:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     df["vote_count"] = df["vote_count"].astype(int)
 
+    # Language: plain ISO 639-1 code, fill missing
+    df["original_language"] = df["original_language"].fillna("")
+
     # Select and rename columns
     result = df[
         [
@@ -77,6 +80,7 @@ def load_tmdb(tmdb_path: Path) -> pd.DataFrame:
             "vote_count",
             "popularity",
             "poster_path",
+            "original_language",
         ]
     ].copy()
     result = result.rename(columns={"id": "tmdb_id"})
@@ -243,6 +247,7 @@ def clean_and_join(
             "vote_count",
             "popularity",
             "poster_path",
+            "original_language",
         ]
     ]
     movies_out.to_parquet(processed_dir / "movies_clean.parquet", index=False)
