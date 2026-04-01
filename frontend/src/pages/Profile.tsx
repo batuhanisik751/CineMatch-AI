@@ -18,8 +18,8 @@ import {
 } from "recharts";
 import { getDismissals, undismissMovie } from "../api/dismissals";
 import { getUserRatings } from "../api/ratings";
-import type { AffinitiesResponse, AffinityEntry, DismissalItemResponse, RatingComparisonResponse, RatingResponse, StreakResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
-import { getRatingComparison, getTasteProfile, getUser, getUserAffinities, getUserStats, getUserStreaks } from "../api/users";
+import type { AchievementResponse, AffinitiesResponse, AffinityEntry, DismissalItemResponse, RatingComparisonResponse, RatingResponse, StreakResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
+import { getRatingComparison, getTasteProfile, getUser, getUserAchievements, getUserAffinities, getUserStats, getUserStreaks } from "../api/users";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import TopNav from "../components/TopNav";
@@ -41,6 +41,7 @@ export default function Profile() {
   const [ratingComparison, setRatingComparison] = useState<RatingComparisonResponse | null>(null);
   const [affinities, setAffinities] = useState<AffinitiesResponse | null>(null);
   const [streaks, setStreaks] = useState<StreakResponse | null>(null);
+  const [achievements, setAchievements] = useState<AchievementResponse | null>(null);
   const [expandedAffinity, setExpandedAffinity] = useState<string | null>(null);
   const limit = 20;
 
@@ -77,6 +78,10 @@ export default function Profile() {
       // Fetch streaks (best-effort)
       getUserStreaks(userId)
         .then((s) => setStreaks(s))
+        .catch(() => {});
+      // Fetch achievements (best-effort)
+      getUserAchievements(userId)
+        .then((a) => setAchievements(a))
         .catch(() => {});
     } catch {
       // User hasn't rated anything yet — that's fine, not an error
@@ -218,6 +223,39 @@ export default function Profile() {
                   {m.label}
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* Achievements */}
+        {achievements && achievements.unlocked_count > 0 && (
+          <section className="glass-card p-8 rounded-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-3xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>emoji_events</span>
+                <h2 className="font-headline text-2xl font-extrabold tracking-tight text-on-surface">Achievements</h2>
+              </div>
+              <Link to="/achievements" className="text-sm text-primary hover:underline">
+                View all {achievements.unlocked_count}/{achievements.total_count}
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {achievements.badges
+                .filter((b) => b.unlocked)
+                .map((b) => (
+                  <div
+                    key={b.id}
+                    className="px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold bg-primary/20 text-primary"
+                  >
+                    <span
+                      className="material-symbols-outlined text-base"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      {b.icon}
+                    </span>
+                    {b.name}
+                  </div>
+                ))}
             </div>
           </section>
         )}

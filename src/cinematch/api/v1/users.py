@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import (
+    get_achievement_service,
     get_cache_service,
     get_db,
     get_feed_service,
@@ -20,6 +21,7 @@ from cinematch.api.deps import (
 from cinematch.core.cache import CacheService
 from cinematch.models.rating import Rating
 from cinematch.models.user import User
+from cinematch.schemas.achievement import AchievementResponse
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.rating import DiaryResponse
 from cinematch.schemas.rating_comparison import RatingComparisonResponse
@@ -35,6 +37,7 @@ from cinematch.schemas.user import (
     UserResponse,
     UserStatsResponse,
 )
+from cinematch.services.achievement_service import AchievementService
 from cinematch.services.feed_service import FeedService
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_comparison_service import RatingComparisonService
@@ -302,6 +305,32 @@ async def get_taste_evolution(
 
     result = await service.get_taste_evolution(user_id, db, granularity=granularity)
     response = TasteEvolutionResponse(**result)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=3600)
+        except Exception:
+            pass
+
+    return response
+
+
+@router.get("/{user_id}/achievements", response_model=AchievementResponse)
+async def get_achievements(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    achievement_service: AchievementService = Depends(get_achievement_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Achievement badges computed from rating history."""
+    cache_key = f"achievements:{user_id}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return AchievementResponse.model_validate_json(cached)
+
+    result = await achievement_service.get_achievements(user_id, db)
+    response = AchievementResponse(**result)
 
     if cache is not None:
         try:

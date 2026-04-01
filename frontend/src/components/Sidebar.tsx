@@ -19,6 +19,7 @@ const items = [
   { to: "/watchlist", icon: "bookmark", label: "Watchlist" },
   { to: "/lists", icon: "playlist_add", label: "My Lists" },
   { to: "/taste-evolution", icon: "timeline", label: "Taste Evolution" },
+  { to: "/achievements", icon: "emoji_events", label: "Achievements" },
   { to: "/platform-stats", icon: "bar_chart", label: "Platform Stats" },
   { to: "/profile", icon: "person", label: "Profile" },
 ];

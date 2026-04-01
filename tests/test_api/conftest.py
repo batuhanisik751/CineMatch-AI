@@ -10,6 +10,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from cinematch.api.deps import (
+    get_achievement_service,
     get_cache_service,
     get_content_recommender,
     get_db,
@@ -593,6 +594,35 @@ def mock_thematic_collection_service(sample_movie):
 
 
 @pytest.fixture()
+def mock_achievement_service():
+    from cinematch.services.achievement_service import BADGE_DEFS
+
+    svc = AsyncMock()
+    badges = []
+    for i, bdef in enumerate(BADGE_DEFS):
+        unlocked = i < 5
+        badges.append(
+            {
+                "id": bdef["id"],
+                "name": bdef["name"],
+                "description": bdef["description"],
+                "icon": bdef["icon"],
+                "unlocked": unlocked,
+                "progress": bdef["target"] if unlocked else 0,
+                "target": bdef["target"],
+                "unlocked_detail": None,
+            }
+        )
+    svc.get_achievements.return_value = {
+        "user_id": 1,
+        "badges": badges,
+        "unlocked_count": 5,
+        "total_count": 12,
+    }
+    return svc
+
+
+@pytest.fixture()
 def mock_db():
     return AsyncMock()
 
@@ -615,6 +645,7 @@ def app(
     mock_streak_service,
     mock_global_stats_service,
     mock_thematic_collection_service,
+    mock_achievement_service,
     mock_db,
 ):
     test_app = create_app()
@@ -638,6 +669,7 @@ def app(
     test_app.dependency_overrides[get_thematic_collection_service] = lambda: (
         mock_thematic_collection_service
     )
+    test_app.dependency_overrides[get_achievement_service] = lambda: mock_achievement_service
 
     return test_app
 

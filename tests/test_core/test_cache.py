@@ -66,9 +66,11 @@ async def test_invalidate_user_recs(cache_service, mock_redis):
         (0, []),
     ]
     await cache_service.invalidate_user_recs(42)
-    assert mock_redis.delete.call_count == 2
+    # 2 from delete_pattern (recs + mood_rec) + 1 direct delete (achievements)
+    assert mock_redis.delete.call_count == 3
     mock_redis.delete.assert_any_call("recs:42:hybrid:20", "recs:42:content:10")
     mock_redis.delete.assert_any_call("mood_rec:42:abc:0.3:20")
+    mock_redis.delete.assert_any_call("achievements:42")
 
 
 @pytest.mark.asyncio

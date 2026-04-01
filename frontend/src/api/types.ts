@@ -682,3 +682,21 @@ export interface ThematicCollectionDetailResponse {
   total: number;
   limit: number;
 }
+
+export interface AchievementBadge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  progress: number;
+  target: number;
+  unlocked_detail: string | null;
+}
+
+export interface AchievementResponse {
+  user_id: number;
+  badges: AchievementBadge[];
+  unlocked_count: number;
+  total_count: number;
+}

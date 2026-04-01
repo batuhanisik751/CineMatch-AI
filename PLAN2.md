@@ -482,7 +482,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 
 ## Category 6: Gamification & Engagement
 
-### 6.1 Achievement Badges
+### 6.1 Achievement Badges ✅
 **Scope:** Single user
 **One-line:** Unlock badges for rating milestones, genre exploration, and special patterns.
 - **Data backing:** `ratings` (counts, timestamps, genres via JOIN), `movies.genres`, `movies.director`
@@ -882,7 +882,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 44 | 4.5 Recommend to a Friend | Medium | Social |
 | 45 | 5.1 Custom User Lists | Medium | Lists |
 | 46 | 5.2 Auto-Generated Collections | Low-Med | Lists |
-| 47 | 6.1 Achievement Badges | Medium | Gamification |
+| 47 | 6.1 Achievement Badges ✅ | Medium | Gamification |
 | 48 | 6.2 Rating Challenges | Medium | Gamification |
 | 49 | 6.3 Movie Bingo | Medium | Gamification |
 | 50 | 7.3 Movie Connections / Six Degrees | Medium | Movie Detail |

@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
+import Achievements from "./pages/Achievements";
 import Actors from "./pages/Actors";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import Collections from "./pages/Collections";
@@ -66,6 +67,7 @@ export default function App() {
       <Route path="/lists/popular" element={<PopularLists />} />
       <Route path="/lists/:id" element={<ListDetail key={navCountRef.current} />} />
       <Route path="/diary" element={<Diary />} />
+      <Route path="/achievements" element={<Achievements />} />
       <Route path="/taste-evolution" element={<TasteEvolution />} />
       <Route path="/platform-stats" element={<PlatformStats />} />
       <Route path="/profile" element={<Profile />} />
