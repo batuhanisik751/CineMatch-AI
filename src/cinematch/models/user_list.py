@@ -25,9 +25,7 @@ class UserList(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    __table_args__ = (
-        UniqueConstraint("user_id", "name", name="uq_user_list_name"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_user_list_name"),)
 
     def __repr__(self) -> str:
         return f"<UserList(id={self.id}, user={self.user_id}, name={self.name!r})>"

@@ -654,3 +654,31 @@ export interface GlobalStatsResponse {
   most_active_user: GlobalStatsUserRef | null;
   ratings_this_week: number;
 }
+
+export interface ThematicCollectionSummary {
+  id: string;
+  title: string;
+  collection_type: string;
+  movie_count: number;
+  preview_posters: string[];
+}
+
+export interface ThematicCollectionsResponse {
+  results: ThematicCollectionSummary[];
+  collection_type: string | null;
+}
+
+export interface ThematicCollectionMovieResult {
+  movie: MovieSummary;
+  avg_rating: number;
+  rating_count: number;
+}
+
+export interface ThematicCollectionDetailResponse {
+  id: string;
+  title: string;
+  collection_type: string;
+  results: ThematicCollectionMovieResult[];
+  total: number;
+  limit: number;
+}

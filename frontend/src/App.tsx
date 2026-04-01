@@ -4,6 +4,7 @@ import Actors from "./pages/Actors";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import Collections from "./pages/Collections";
 import Controversial from "./pages/Controversial";
+import Curated from "./pages/Curated";
 import Decades from "./pages/Decades";
 import Diary from "./pages/Diary";
 import Directors from "./pages/Directors";
@@ -52,6 +53,7 @@ export default function App() {
       <Route path="/actors" element={<Actors key={navCountRef.current} />} />
       <Route path="/keywords" element={<Keywords key={navCountRef.current} />} />
       <Route path="/collections" element={<Collections key={navCountRef.current} />} />
+      <Route path="/curated" element={<Curated key={navCountRef.current} />} />
       <Route path="/advanced-search" element={<AdvancedSearch />} />
       <Route path="/search" element={<Search />} />
       <Route path="/movies/:id" element={<MovieDetail />} />

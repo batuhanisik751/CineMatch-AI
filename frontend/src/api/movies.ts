@@ -21,6 +21,8 @@ import type {
   PopularKeywordsResponse,
   SemanticSearchResponse,
   SimilarMoviesResponse,
+  ThematicCollectionDetailResponse,
+  ThematicCollectionsResponse,
   TopChartsResponse,
   TrendingResponse,
 } from "./types";
@@ -220,5 +222,20 @@ export function getMovieRatingStats(movieId: number, userId?: number) {
   const query = qs.toString();
   return apiFetch<MovieRatingStatsResponse>(
     `/api/v1/movies/${movieId}/rating-stats${query ? `?${query}` : ""}`,
+  );
+}
+
+export function getThematicCollections(type?: string) {
+  const qs = new URLSearchParams();
+  if (type) qs.set("collection_type", type);
+  const query = qs.toString();
+  return apiFetch<ThematicCollectionsResponse>(
+    `/api/v1/movies/thematic-collections${query ? `?${query}` : ""}`,
+  );
+}
+
+export function getThematicCollectionDetail(id: string, limit = 20) {
+  return apiFetch<ThematicCollectionDetailResponse>(
+    `/api/v1/movies/thematic-collections/${encodeURIComponent(id)}?limit=${limit}`,
   );
 }

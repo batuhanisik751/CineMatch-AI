@@ -23,6 +23,7 @@ from cinematch.api.deps import (
     get_rating_service,
     get_streak_service,
     get_taste_profile_service,
+    get_thematic_collection_service,
     get_user_list_service,
     get_user_stats_service,
     get_watchlist_service,
@@ -551,6 +552,45 @@ def mock_feed_service(sample_movie):
 
 
 @pytest.fixture()
+def mock_thematic_collection_service(sample_movie):
+    from cinematch.schemas.movie import MovieSummary
+    from cinematch.schemas.thematic_collection import (
+        ThematicCollectionDetailResponse,
+        ThematicCollectionMovieResult,
+        ThematicCollectionsResponse,
+        ThematicCollectionSummary,
+    )
+
+    svc = AsyncMock()
+    summary = ThematicCollectionSummary(
+        id="genre_decade:Action:1990",
+        title="Best Action of the 1990s",
+        collection_type="genre_decade",
+        movie_count=25,
+        preview_posters=["/poster.jpg"],
+    )
+    svc.list_collections.return_value = ThematicCollectionsResponse(
+        results=[summary],
+        collection_type=None,
+    )
+    svc.get_collection.return_value = ThematicCollectionDetailResponse(
+        id="genre_decade:Action:1990",
+        title="Best Action of the 1990s",
+        collection_type="genre_decade",
+        results=[
+            ThematicCollectionMovieResult(
+                movie=MovieSummary.model_validate(sample_movie),
+                avg_rating=8.5,
+                rating_count=150,
+            )
+        ],
+        total=1,
+        limit=20,
+    )
+    return svc
+
+
+@pytest.fixture()
 def mock_db():
     return AsyncMock()
 
@@ -572,6 +612,7 @@ def app(
     mock_taste_profile_service,
     mock_streak_service,
     mock_global_stats_service,
+    mock_thematic_collection_service,
     mock_db,
 ):
     test_app = create_app()
@@ -592,6 +633,9 @@ def app(
     test_app.dependency_overrides[get_taste_profile_service] = lambda: mock_taste_profile_service
     test_app.dependency_overrides[get_streak_service] = lambda: mock_streak_service
     test_app.dependency_overrides[get_global_stats_service] = lambda: mock_global_stats_service
+    test_app.dependency_overrides[get_thematic_collection_service] = lambda: (
+        mock_thematic_collection_service
+    )
 
     return test_app
 

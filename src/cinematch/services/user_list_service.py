@@ -144,18 +144,14 @@ class UserListService:
     ) -> list[tuple[UserList, int, list[str]]]:
         """Return all lists for a user with movie_count and preview posters."""
         lists_result = await db.execute(
-            select(UserList)
-            .where(UserList.user_id == user_id)
-            .order_by(UserList.updated_at.desc())
+            select(UserList).where(UserList.user_id == user_id).order_by(UserList.updated_at.desc())
         )
         lists_ = list(lists_result.scalars().all())
 
         out: list[tuple[UserList, int, list[str]]] = []
         for ul in lists_:
             count_result = await db.execute(
-                select(func.count())
-                .select_from(UserListItem)
-                .where(UserListItem.list_id == ul.id)
+                select(func.count()).select_from(UserListItem).where(UserListItem.list_id == ul.id)
             )
             movie_count = count_result.scalar_one()
 
@@ -270,9 +266,7 @@ class UserListService:
         for idx, item in enumerate(remaining.scalars().all()):
             if item.position != idx:
                 await db.execute(
-                    update(UserListItem)
-                    .where(UserListItem.id == item.id)
-                    .values(position=idx)
+                    update(UserListItem).where(UserListItem.id == item.id).values(position=idx)
                 )
 
         ul.updated_at = datetime.now(UTC)

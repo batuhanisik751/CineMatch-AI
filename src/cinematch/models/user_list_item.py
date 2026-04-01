@@ -23,9 +23,7 @@ class UserListItem(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    __table_args__ = (
-        UniqueConstraint("list_id", "movie_id", name="uq_list_item_list_movie"),
-    )
+    __table_args__ = (UniqueConstraint("list_id", "movie_id", name="uq_list_item_list_movie"),)
 
     def __repr__(self) -> str:
         return f"<UserListItem(list={self.list_id}, movie={self.movie_id}, pos={self.position})>"

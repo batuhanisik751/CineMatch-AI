@@ -123,6 +123,8 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/movies/keywords/search?q=time&limit=20` | Search keywords by partial match |
 | GET | `/api/v1/movies/keywords/movies?keyword=time+travel&offset=0&limit=20` | Movies by keyword with stats (total, avg rating, top genres) |
 | GET | `/api/v1/movies/advanced-search?genre=Sci-Fi&decade=2010s&min_rating=7&director=Villeneuve&keyword=dystopia&cast=Gosling&sort_by=popularity&offset=0&limit=20` | Multi-criteria discovery combining genre, decade, rating range, director, keyword, and cast filters |
+| GET | `/api/v1/movies/thematic-collections?collection_type=genre_decade` | Browse auto-generated thematic collections (types: `genre_decade`, `director`, `year`; omit param for all) |
+| GET | `/api/v1/movies/thematic-collections/{collection_id}?limit=20` | Ranked movies within a specific collection (e.g., `genre_decade:Sci-Fi:2010`, `director:Christopher Nolan`, `year:2023`) |
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
 | GET | `/api/v1/movies/{id}/rating-stats?user_id=42` | Per-movie rating distribution (avg, median, histogram 1-10, user's rating highlighted) |
 | GET | `/api/v1/users/{id}` | User details |
@@ -200,7 +202,8 @@ If Ollama is not running, the app still works — recommendations use the algori
 19. **Rating Streaks & Milestones:** Tracks consecutive-day rating streaks and celebrates milestone badges. The Profile page shows a "Current Streak" counter (with fire icon) and "Longest Streak" record (with trophy icon), plus a row of milestone badges (10, 25, 50, 100, 250, 500, 1000 ratings) — reached milestones glow in gold, unreached ones stay muted. Streaks include a "yesterday grace" so users don't lose their streak before the day is over. Backed by `GET /api/v1/users/{id}/streaks` with window-function SQL for consecutive-date grouping and Redis caching (5 min TTL).
 20. **Movie Rating Comparison:** On each movie's detail page, a "Community Ratings" card shows the full rating distribution (1-10 histogram), average, median, and total ratings. When a user is logged in, their own rating bar is highlighted in gold so they can instantly see whether they're an outlier. Movie-level stats are cached for 1 hour; the user's individual rating is fetched separately (uncached) so the cache is not per-user. The histogram auto-refreshes after the user submits a new rating.
 21. **Custom User Lists:** Named, ordered movie collections that users can create, edit, and share. Full CRUD for lists and items — create public or private lists, add/remove movies, reorder with up/down controls, search and add movies from within a list. "Add to List" button on every MovieCard across all pages via a reusable modal. Browse popular public lists at `/lists/popular`. Backed by `user_lists` and `user_list_items` tables with cascade deletes and compound indexes.
-22. **Watch History Awareness:** Every MovieCard across all pages shows a "Rated X/10" badge (in tertiary-container colors, distinct from the match-percent badge) when the user has already rated that movie — powered by a shared `useRated` hook that batch-fetches ratings via `GET /users/{id}/ratings/check`. All five discovery endpoints (trending, hidden gems, top charts, search, discover) accept optional `user_id` + `exclude_rated=true` params; filtering is applied post-cache in Python so the global Redis cache is preserved and only per-user results are trimmed.
+22. **Curated Thematic Collections:** Auto-generated browsable collections like "Best Sci-Fi of the 2010s", "Christopher Nolan: A Filmography", and "Highest Rated 2023". Three collection types — genre+decade combos, director filmographies, and per-year rankings — computed on-demand from existing movie and rating data with 6-hour Redis caching. A dedicated `/curated` page presents a two-level drill-down: browse a grid of collection cards (with 2x2 poster previews, movie counts, and type filter tabs), then drill into any collection for ranked movies with numbered badges, avg ratings, and rating counts. No new database tables — pure SQL aggregation over existing `movies` and `ratings`.
+23. **Watch History Awareness:** Every MovieCard across all pages shows a "Rated X/10" badge (in tertiary-container colors, distinct from the match-percent badge) when the user has already rated that movie — powered by a shared `useRated` hook that batch-fetches ratings via `GET /users/{id}/ratings/check`. All five discovery endpoints (trending, hidden gems, top charts, search, discover) accept optional `user_id` + `exclude_rated=true` params; filtering is applied post-cache in Python so the global Redis cache is preserved and only per-user results are trimmed.
 
 ## Data Pipeline
 
@@ -235,6 +238,8 @@ Redis caches API responses with automatic invalidation:
 | `popular_keywords:{limit}` | 6 hours | Manual |
 | `keyword_movies:{keyword}:{offset}:{limit}` | 6 hours | Manual |
 | `adv_search:{filters}:{sort}:{offset}:{limit}` | 1 hour | Manual |
+| `thematic_list:{type}` | 6 hours | Manual |
+| `thematic_detail:{collection_id}:{limit}` | 6 hours | Manual |
 | `top_charts:{genre}:{limit}` | 6 hours | Manual |
 | `movie:{id}` | 1 hour | Manual |
 | `similar:{id}:{top_k}` | 30 min | Never (content similarity is stable) |
@@ -261,7 +266,7 @@ src/cinematch/
 ├── api/
 │   ├── deps.py                   # Dependency injection (get_db, services)
 │   └── v1/                       # REST endpoints
-│       ├── movies.py             # GET /{id}, /search, /semantic-search, /discover, /genres, /decades, /directors, /actors, /keywords, /advanced-search, /{id}/similar, /{id}/rating-stats
+│       ├── movies.py             # GET /{id}, /search, /semantic-search, /discover, /genres, /decades, /directors, /actors, /keywords, /advanced-search, /thematic-collections, /{id}/similar, /{id}/rating-stats
 │       ├── ratings.py            # POST/GET /users/{id}/ratings
 │       ├── recommendations.py    # GET /users/{id}/recommendations, /from-seed/{movie_id}, POST /recommendations/mood
 │       ├── users.py              # GET /users/{id}, /users/{id}/stats, /users/{id}/surprise, /users/{id}/completions, /users/{id}/feed, /users/{id}/taste-profile, /users/{id}/rating-comparison, /users/{id}/streaks, /users/{id}/taste-evolution, /users/{id}/affinities
@@ -285,6 +290,7 @@ src/cinematch/
 │   ├── watchlist_service.py      # Watchlist CRUD (add, remove, list, bulk check)
 │   ├── dismissal_service.py     # Dismissal CRUD ("Not Interested" feedback)
 │   ├── user_list_service.py      # Custom user lists CRUD (create, edit, delete, add/remove/reorder items)
+│   ├── thematic_collection_service.py  # Auto-generated curated collections (genre+decade, director, year)
 │   └── llm_service.py            # Ollama LLM client for re-ranking + explanations
 ├── models/          # SQLAlchemy ORM models
 ├── schemas/         # Pydantic request/response schemas

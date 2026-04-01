@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from cinematch.services.streak_service import StreakService
     from cinematch.services.taste_evolution_service import TasteEvolutionService
     from cinematch.services.taste_profile_service import TasteProfileService
+    from cinematch.services.thematic_collection_service import ThematicCollectionService
     from cinematch.services.user_list_service import UserListService
     from cinematch.services.user_stats_service import UserStatsService
     from cinematch.services.watchlist_service import WatchlistService
@@ -93,6 +94,10 @@ def get_taste_evolution_service(request: Request) -> TasteEvolutionService:
 
 def get_global_stats_service(request: Request) -> GlobalStatsService:
     return request.app.state.global_stats_service
+
+
+def get_thematic_collection_service(request: Request) -> ThematicCollectionService:
+    return request.app.state.thematic_collection_service
 
 
 def get_user_list_service(request: Request) -> UserListService:

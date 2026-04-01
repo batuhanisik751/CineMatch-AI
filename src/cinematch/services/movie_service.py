@@ -875,3 +875,108 @@ class MovieService:
             for mid in ordered_ids
             if mid in movies_map
         ]
+
+    async def genre_decade_counts(
+        self,
+        db: AsyncSession,
+        *,
+        min_count: int = 5,
+    ) -> list[tuple[str, int, int]]:
+        """Return (genre, decade, movie_count) for genre-decade combos with enough movies."""
+        stmt = text(
+            "SELECT genre, "
+            "(FLOOR(EXTRACT(YEAR FROM release_date) / 10) * 10)::int AS decade, "
+            "COUNT(*)::int AS cnt "
+            "FROM movies, jsonb_array_elements_text(genres) AS genre "
+            "WHERE release_date IS NOT NULL "
+            "GROUP BY genre, decade "
+            "HAVING COUNT(*) >= :min_count "
+            "ORDER BY decade DESC, genre"
+        )
+        result = await db.execute(stmt, {"min_count": min_count})
+        return [(row[0], int(row[1]), int(row[2])) for row in result.all()]
+
+    async def top_by_genre_decade(
+        self,
+        db: AsyncSession,
+        *,
+        genre: str,
+        decade: int,
+        min_ratings: int = 10,
+        limit: int = 20,
+    ) -> list[tuple[Movie, float, int]]:
+        """Top-rated movies in a genre within a specific decade."""
+        year_min = decade
+        year_max = decade + 9
+
+        avg_rating_col = func.avg(Rating.rating).label("avg_rating")
+        rating_count_col = func.count(Rating.id).label("rating_count")
+
+        stmt = (
+            select(Movie, avg_rating_col, rating_count_col)
+            .join(Rating, Rating.movie_id == Movie.id)
+            .where(
+                Movie.genres.op("@>")(cast([genre], JSONB_TYPE)),
+                extract("year", Movie.release_date) >= year_min,
+                extract("year", Movie.release_date) <= year_max,
+            )
+            .group_by(Movie.id)
+            .having(func.count(Rating.id) >= min_ratings)
+            .order_by(desc(avg_rating_col))
+            .limit(limit)
+        )
+
+        result = await db.execute(stmt)
+        return [(row[0], float(row[1]), int(row[2])) for row in result.all()]
+
+    async def top_by_year(
+        self,
+        db: AsyncSession,
+        *,
+        year: int,
+        min_ratings: int = 10,
+        limit: int = 20,
+    ) -> list[tuple[Movie, float, int]]:
+        """Top-rated movies for a specific year."""
+        avg_rating_col = func.avg(Rating.rating).label("avg_rating")
+        rating_count_col = func.count(Rating.id).label("rating_count")
+
+        stmt = (
+            select(Movie, avg_rating_col, rating_count_col)
+            .join(Rating, Rating.movie_id == Movie.id)
+            .where(extract("year", Movie.release_date) == year)
+            .group_by(Movie.id)
+            .having(func.count(Rating.id) >= min_ratings)
+            .order_by(desc(avg_rating_col))
+            .limit(limit)
+        )
+
+        result = await db.execute(stmt)
+        return [(row[0], float(row[1]), int(row[2])) for row in result.all()]
+
+    async def genre_decade_preview_posters(
+        self,
+        db: AsyncSession,
+        *,
+        genre: str,
+        decade: int,
+        limit: int = 4,
+    ) -> list[str]:
+        """Return up to N poster_paths for top movies in a genre-decade combo."""
+        year_min = decade
+        year_max = decade + 9
+
+        stmt = (
+            select(Movie.poster_path)
+            .where(
+                Movie.genres.op("@>")(cast([genre], JSONB_TYPE)),
+                extract("year", Movie.release_date) >= year_min,
+                extract("year", Movie.release_date) <= year_max,
+                Movie.poster_path.isnot(None),
+            )
+            .order_by(desc(Movie.vote_average))
+            .limit(limit)
+        )
+
+        result = await db.execute(stmt)
+        return [row[0] for row in result.all()]

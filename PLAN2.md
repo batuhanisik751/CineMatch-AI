@@ -440,7 +440,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Public lists browsable at `/api/v1/lists/popular` (ranked by item count or follower count)
   - Migration: 2 new tables with compound indexes
 
-### 5.2 Auto-Generated Thematic Collections
+### 5.2 Auto-Generated Thematic Collections ✅
 **Scope:** Single user
 **One-line:** System-generated lists like "Best Sci-Fi of the 2010s" or "Christopher Nolan: Complete Works."
 - **Data backing:** `movies.genres`, `movies.release_date`, `movies.director`, `ratings` for ranking

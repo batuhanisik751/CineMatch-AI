@@ -14,6 +14,7 @@ from cinematch.api.deps import (
     get_embedding_service,
     get_movie_service,
     get_rating_service,
+    get_thematic_collection_service,
 )
 from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import ServiceUnavailableError
@@ -64,10 +65,15 @@ from cinematch.schemas.movie import (
     TrendingMovieResult,
     TrendingResponse,
 )
+from cinematch.schemas.thematic_collection import (
+    ThematicCollectionDetailResponse,
+    ThematicCollectionsResponse,
+)
 from cinematch.services.content_recommender import ContentRecommender
 from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_service import RatingService
+from cinematch.services.thematic_collection_service import ThematicCollectionService
 
 logger = logging.getLogger(__name__)
 
@@ -770,6 +776,69 @@ async def controversial_movies(
             logger.warning("Failed to cache controversial movies", exc_info=True)
 
     return response
+
+
+# ------------------------------------------------------------------
+# Thematic collections
+# ------------------------------------------------------------------
+
+
+@router.get("/thematic-collections", response_model=ThematicCollectionsResponse)
+async def list_thematic_collections(
+    collection_type: str | None = Query(default=None, pattern="^(genre_decade|director|year)$"),
+    db: AsyncSession = Depends(get_db),
+    thematic_service: ThematicCollectionService = Depends(get_thematic_collection_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """List available auto-generated thematic collections."""
+    cache_key = f"thematic_list:{collection_type or 'all'}"
+
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return ThematicCollectionsResponse.model_validate_json(cached)
+
+    response = await thematic_service.list_collections(db, collection_type=collection_type)
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache thematic collections list", exc_info=True)
+
+    return response
+
+
+@router.get(
+    "/thematic-collections/{collection_id:path}",
+    response_model=ThematicCollectionDetailResponse,
+)
+async def get_thematic_collection(
+    collection_id: str,
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    thematic_service: ThematicCollectionService = Depends(get_thematic_collection_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """Get ranked movies for a specific thematic collection."""
+    cache_key = f"thematic_detail:{collection_id}:{limit}"
+
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return ThematicCollectionDetailResponse.model_validate_json(cached)
+
+    result = await thematic_service.get_collection(db, collection_id=collection_id, limit=limit)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Collection not found")
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, result.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache thematic collection detail", exc_info=True)
+
+    return result
 
 
 @router.get("/{movie_id}", response_model=MovieResponse)

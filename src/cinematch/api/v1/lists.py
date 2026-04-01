@@ -65,9 +65,7 @@ async def create_list(
     list_service: UserListService = Depends(get_user_list_service),
 ):
     """Create a new user list."""
-    ul = await list_service.create_list(
-        user_id, body.name, body.description, body.is_public, db
-    )
+    ul = await list_service.create_list(user_id, body.name, body.description, body.is_public, db)
     return UserListResponse(
         id=ul.id,
         user_id=ul.user_id,
@@ -120,8 +118,7 @@ async def get_list(
         raise HTTPException(status_code=404, detail="List not found")
     ul, rows, total = result
     items = [
-        _item_response(item, title, pp, genres, va, rd)
-        for item, title, pp, genres, va, rd in rows
+        _item_response(item, title, pp, genres, va, rd) for item, title, pp, genres, va, rd in rows
     ]
     return UserListDetailResponse(
         id=ul.id,
@@ -149,7 +146,9 @@ async def update_list(
 ):
     """Update list metadata."""
     ul = await list_service.update_list(
-        user_id, list_id, db,
+        user_id,
+        list_id,
+        db,
         name=body.name,
         description=body.description,
         is_public=body.is_public,
