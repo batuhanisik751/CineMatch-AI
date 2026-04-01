@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cinematch.api.deps import (
     get_achievement_service,
     get_cache_service,
+    get_challenge_service,
     get_db,
     get_feed_service,
     get_movie_service,
@@ -22,6 +23,7 @@ from cinematch.core.cache import CacheService
 from cinematch.models.rating import Rating
 from cinematch.models.user import User
 from cinematch.schemas.achievement import AchievementResponse
+from cinematch.schemas.challenge import ChallengesProgressResponse
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.rating import DiaryResponse
 from cinematch.schemas.rating_comparison import RatingComparisonResponse
@@ -38,6 +40,7 @@ from cinematch.schemas.user import (
     UserStatsResponse,
 )
 from cinematch.services.achievement_service import AchievementService
+from cinematch.services.challenge_service import ChallengeService
 from cinematch.services.feed_service import FeedService
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_comparison_service import RatingComparisonService
@@ -335,6 +338,32 @@ async def get_achievements(
     if cache is not None:
         try:
             await cache.set(cache_key, response.model_dump_json(), ttl=3600)
+        except Exception:
+            pass
+
+    return response
+
+
+@router.get("/{user_id}/challenges/progress", response_model=ChallengesProgressResponse)
+async def get_challenge_progress(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    challenge_service: ChallengeService = Depends(get_challenge_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Weekly challenge progress for a user."""
+    cache_key = f"challenges:progress:{user_id}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return ChallengesProgressResponse.model_validate_json(cached)
+
+    result = await challenge_service.get_user_progress(user_id, db)
+    response = ChallengesProgressResponse(**result)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=120)
         except Exception:
             pass
 

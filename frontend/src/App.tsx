@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Achievements from "./pages/Achievements";
 import Actors from "./pages/Actors";
+import Challenges from "./pages/Challenges";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import Collections from "./pages/Collections";
 import Controversial from "./pages/Controversial";
@@ -68,6 +69,7 @@ export default function App() {
       <Route path="/lists/:id" element={<ListDetail key={navCountRef.current} />} />
       <Route path="/diary" element={<Diary />} />
       <Route path="/achievements" element={<Achievements />} />
+      <Route path="/challenges" element={<Challenges />} />
       <Route path="/taste-evolution" element={<TasteEvolution />} />
       <Route path="/platform-stats" element={<PlatformStats />} />
       <Route path="/profile" element={<Profile />} />

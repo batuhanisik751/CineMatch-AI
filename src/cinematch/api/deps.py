@@ -11,6 +11,7 @@ from cinematch.db.session import get_db
 if TYPE_CHECKING:
     from cinematch.core.cache import CacheService
     from cinematch.services.achievement_service import AchievementService
+    from cinematch.services.challenge_service import ChallengeService
     from cinematch.services.content_recommender import ContentRecommender
     from cinematch.services.dismissal_service import DismissalService
     from cinematch.services.embedding_service import EmbeddingService
@@ -107,3 +108,7 @@ def get_user_list_service(request: Request) -> UserListService:
 
 def get_achievement_service(request: Request) -> AchievementService:
     return request.app.state.achievement_service
+
+
+def get_challenge_service(request: Request) -> ChallengeService:
+    return request.app.state.challenge_service

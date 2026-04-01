@@ -700,3 +700,32 @@ export interface AchievementResponse {
   unlocked_count: number;
   total_count: number;
 }
+
+export interface Challenge {
+  id: string;
+  template: string;
+  title: string;
+  description: string;
+  icon: string;
+  target: number;
+  parameter: string;
+}
+
+export interface ChallengeWithProgress extends Challenge {
+  progress: number;
+  completed: boolean;
+  qualifying_movie_ids: number[];
+}
+
+export interface ChallengesCurrentResponse {
+  week: string;
+  challenges: Challenge[];
+}
+
+export interface ChallengesProgressResponse {
+  user_id: number;
+  week: string;
+  challenges: ChallengeWithProgress[];
+  completed_count: number;
+  total_count: number;
+}

@@ -12,6 +12,7 @@ from httpx import ASGITransport, AsyncClient
 from cinematch.api.deps import (
     get_achievement_service,
     get_cache_service,
+    get_challenge_service,
     get_content_recommender,
     get_db,
     get_dismissal_service,
@@ -623,6 +624,71 @@ def mock_achievement_service():
 
 
 @pytest.fixture()
+def mock_challenge_service():
+    svc = AsyncMock()
+    challenge_defs = [
+        {
+            "id": "genre_horror_2026w14",
+            "template": "genre",
+            "title": "Rate 5 Horror movies",
+            "description": "Explore the Horror genre this week",
+            "icon": "movie_filter",
+            "target": 5,
+            "parameter": "Horror",
+        },
+        {
+            "id": "decade_1990s_2026w14",
+            "template": "decade",
+            "title": "Explore the 1990s",
+            "description": "Travel back to the 1990s and rate 5 films",
+            "icon": "history",
+            "target": 5,
+            "parameter": "1990s",
+        },
+        {
+            "id": "director_christopher_nolan_2026w14",
+            "template": "director",
+            "title": "Director deep-dive: Christopher Nolan",
+            "description": "Watch and rate 5 films by Christopher Nolan",
+            "icon": "person",
+            "target": 5,
+            "parameter": "Christopher Nolan",
+        },
+    ]
+    svc.get_current_challenges.return_value = {
+        "week": "2026-W14",
+        "challenges": challenge_defs,
+    }
+    svc.get_user_progress.return_value = {
+        "user_id": 1,
+        "week": "2026-W14",
+        "challenges": [
+            {
+                **challenge_defs[0],
+                "progress": 5,
+                "completed": True,
+                "qualifying_movie_ids": [1, 2, 3, 4, 5],
+            },
+            {
+                **challenge_defs[1],
+                "progress": 2,
+                "completed": False,
+                "qualifying_movie_ids": [10, 20],
+            },
+            {
+                **challenge_defs[2],
+                "progress": 0,
+                "completed": False,
+                "qualifying_movie_ids": [],
+            },
+        ],
+        "completed_count": 1,
+        "total_count": 3,
+    }
+    return svc
+
+
+@pytest.fixture()
 def mock_db():
     return AsyncMock()
 
@@ -646,6 +712,7 @@ def app(
     mock_global_stats_service,
     mock_thematic_collection_service,
     mock_achievement_service,
+    mock_challenge_service,
     mock_db,
 ):
     test_app = create_app()
@@ -670,6 +737,7 @@ def app(
         mock_thematic_collection_service
     )
     test_app.dependency_overrides[get_achievement_service] = lambda: mock_achievement_service
+    test_app.dependency_overrides[get_challenge_service] = lambda: mock_challenge_service
 
     return test_app
 

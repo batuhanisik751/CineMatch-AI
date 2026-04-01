@@ -506,7 +506,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Compute from ratings data at query time, cache in Redis (1h TTL)
   - No new tables needed — pure computation
 
-### 6.2 Rating Challenges
+### 6.2 Rating Challenges ✅
 **Scope:** Single user
 **One-line:** Periodic challenges like "Rate 5 horror movies this week" to encourage exploration.
 - **Data backing:** `movies.genres`, `movies.release_date`, `movies.director`, `ratings`

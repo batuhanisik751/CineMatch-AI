@@ -138,6 +138,8 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/users/{id}/rating-comparison` | You vs. community — user avg, community avg, agreement %, most overrated and most underrated movies |
 | GET | `/api/v1/users/{id}/streaks` | Rating streaks & milestones — current streak, longest streak, total ratings, milestone badges (10/25/50/100/250/500/1000) |
 | GET | `/api/v1/users/{id}/achievements` | Achievement badges — 12 badges computed on-the-fly from rating history (milestones, genre exploration, streaks, timestamps, director completionism) |
+| GET | `/api/v1/challenges/current` | This week's active challenges — 3 deterministic challenges (genre, decade, director) rotated weekly via date hash, no manual curation |
+| GET | `/api/v1/users/{id}/challenges/progress` | User's progress on the current week's challenges — qualifying ratings counted per challenge with completion status |
 | GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid&diversity=medium` | Recommendations with smart explanations (strategy: `hybrid`/`content`/`collab`, diversity: `low`/`medium`/`high`) |
 | GET | `/api/v1/users/{id}/recommendations/from-seed/{movie_id}?limit=20` | "More Like This" — personalized recommendations branching from a seed movie |
 | POST | `/api/v1/recommendations/mood` | Mood-based discovery (body: `{"mood": "dark gritty thriller", "user_id": 1, "alpha": 0.3, "limit": 20}`) |
@@ -207,6 +209,7 @@ If Ollama is not running, the app still works — recommendations use the algori
 22. **Watchlist Recommendations:** "If these are on your list, you'll also want these" — computes the mean embedding of all watchlist movies, runs FAISS nearest-neighbor search with the mean vector, filters out already-rated, dismissed, and watchlisted movies, and returns recommendations with "Based on your watchlist" explanations. Dedicated `/watchlist/recommendations` page accessible via a button on the Watchlist page. Cache is invalidated on watchlist add/remove, new ratings, and dismissals.
 24. **Curated Thematic Collections:** Auto-generated browsable collections like "Best Sci-Fi of the 2010s", "Christopher Nolan: A Filmography", and "Highest Rated 2023". Three collection types — genre+decade combos, director filmographies, and per-year rankings — computed on-demand from existing movie and rating data with 6-hour Redis caching. A dedicated `/curated` page presents a two-level drill-down: browse a grid of collection cards (with 2x2 poster previews, movie counts, and type filter tabs), then drill into any collection for ranked movies with numbered badges, avg ratings, and rating counts. No new database tables — pure SQL aggregation over existing `movies` and `ratings`.
 25. **Achievement Badges:** 12 gamification badges computed on-the-fly from user rating history — First Rating, Century Club (100), Marathon Runner (500), Genre Explorer (10+ genres), Decade Hopper (5+ decades), Director Devotee (5+ films by one director), The Critic (avg < 5.0), Easy to Please (avg > 8.0), Weekend Warrior (5+ in one weekend), Night Owl (10+ midnight-5am ratings), Streak Master (7-day streak), and Completionist (all films by a director with 5+ in DB). Computed via 5 batched SQL queries, cached 1 hour in Redis, invalidated on new ratings. Dedicated `/achievements` page with progress bars for locked badges and a compact unlocked-badges section on the Profile page.
+27. **Weekly Rating Challenges:** Three time-bound challenges rotate every Monday — one genre challenge ("Rate 5 Horror movies"), one decade challenge ("Explore the 1960s"), and one director challenge ("Director deep-dive: Kubrick") — all selected deterministically via a SHA-256 date hash so every user sees the same challenges each week with no manual curation. Progress is tracked by querying the user's ratings within the ISO week window against genre (JSONB containment), decade (EXTRACT), and director (exact match) criteria. Challenges and progress are cached in Redis (24h and 2min TTL respectively). Dedicated `/challenges` page with a 3-column card grid, color-coded progress bars (green for complete, amber for in-progress), and a completion counter in the header.
 26. **Watch History Awareness:** Every MovieCard across all pages shows a "Rated X/10" badge (in tertiary-container colors, distinct from the match-percent badge) when the user has already rated that movie — powered by a shared `useRated` hook that batch-fetches ratings via `GET /users/{id}/ratings/check`. All five discovery endpoints (trending, hidden gems, top charts, search, discover) accept optional `user_id` + `exclude_rated=true` params; filtering is applied post-cache in Python so the global Redis cache is preserved and only per-user results are trimmed.
 
 ## Data Pipeline
@@ -256,6 +259,8 @@ Redis caches API responses with automatic invalidation:
 | `watchlist_recs:{user_id}:{limit}` | 10 min | On watchlist add/remove, new rating, or dismissal |
 | `streaks:{user_id}` | 5 min | On new rating from this user |
 | `achievements:{user_id}` | 1 hour | On new rating from this user |
+| `challenges:current:{week}` | 24 hours | Never (deterministic per week) |
+| `challenges:progress:{user_id}` | 2 min | On new rating from this user |
 | `global_stats` | 1 hour | Manual |
 | `search:{query_hash}:{limit}` | 10 min | Never |
 
@@ -275,7 +280,8 @@ src/cinematch/
 │       ├── movies.py             # GET /{id}, /search, /semantic-search, /discover, /genres, /decades, /directors, /actors, /keywords, /advanced-search, /thematic-collections, /{id}/similar, /{id}/rating-stats
 │       ├── ratings.py            # POST/GET /users/{id}/ratings
 │       ├── recommendations.py    # GET /users/{id}/recommendations, /from-seed/{movie_id}, POST /recommendations/mood
-│       ├── users.py              # GET /users/{id}, /users/{id}/stats, /users/{id}/surprise, /users/{id}/completions, /users/{id}/feed, /users/{id}/taste-profile, /users/{id}/rating-comparison, /users/{id}/streaks, /users/{id}/taste-evolution, /users/{id}/affinities, /users/{id}/achievements
+│       ├── users.py              # GET /users/{id}, /users/{id}/stats, /users/{id}/surprise, /users/{id}/completions, /users/{id}/feed, /users/{id}/taste-profile, /users/{id}/rating-comparison, /users/{id}/streaks, /users/{id}/taste-evolution, /users/{id}/affinities, /users/{id}/achievements, /users/{id}/challenges/progress
+│       ├── challenges.py         # GET /challenges/current (weekly rotating challenges)
 │       ├── watchlist.py          # POST/DELETE/GET /users/{id}/watchlist, GET /users/{id}/watchlist/recommendations
 │       ├── dismissals.py         # POST/DELETE/GET /users/{id}/dismissals ("Not Interested")
 │       ├── lists.py              # CRUD /users/{id}/lists, /lists/{id}, /lists/popular (custom movie collections)
@@ -293,6 +299,7 @@ src/cinematch/
 │   ├── taste_profile_service.py  # Natural-language taste profile generation (template-based + optional LLM)
 │   ├── streak_service.py         # Rating streaks & milestones (consecutive-day tracking)
 │   ├── achievement_service.py    # Achievement badges (12 badges computed from rating history)
+│   ├── challenge_service.py      # Weekly rating challenges (deterministic rotation + progress tracking)
 │   ├── global_stats_service.py   # Platform-wide aggregate statistics
 │   ├── watchlist_service.py      # Watchlist CRUD (add, remove, list, bulk check)
 │   ├── dismissal_service.py     # Dismissal CRUD ("Not Interested" feedback)
