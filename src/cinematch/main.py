@@ -23,6 +23,7 @@ from cinematch.core.exceptions import (
 )
 from cinematch.core.logging import setup_logging
 from cinematch.services.achievement_service import AchievementService
+from cinematch.services.bingo_service import BingoService
 from cinematch.services.challenge_service import ChallengeService
 from cinematch.services.collab_recommender import CollabRecommender
 from cinematch.services.content_recommender import ContentRecommender
@@ -143,6 +144,7 @@ async def lifespan(app: FastAPI):
     app.state.global_stats_service = GlobalStatsService()
     app.state.achievement_service = AchievementService()
     app.state.challenge_service = ChallengeService()
+    app.state.bingo_service = BingoService()
     app.state.taste_profile_service = TasteProfileService(
         user_stats_service=app.state.user_stats_service,
         llm_service=getattr(app.state, "llm_service", None),

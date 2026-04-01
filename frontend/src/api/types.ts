@@ -717,6 +717,24 @@ export interface ChallengeWithProgress extends Challenge {
   qualifying_movie_ids: number[];
 }
 
+export interface BingoCell {
+  index: number;
+  template: string;
+  label: string;
+  parameter: string | null;
+  completed: boolean;
+  movie_id: number | null;
+}
+
+export interface BingoCardResponse {
+  user_id: number;
+  seed: string;
+  cells: BingoCell[];
+  completed_lines: number[][];
+  total_completed: number;
+  bingo_count: number;
+}
+
 export interface ChallengesCurrentResponse {
   week: string;
   challenges: Challenge[];

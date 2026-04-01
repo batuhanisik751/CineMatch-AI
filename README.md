@@ -140,6 +140,7 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/users/{id}/achievements` | Achievement badges — 12 badges computed on-the-fly from rating history (milestones, genre exploration, streaks, timestamps, director completionism) |
 | GET | `/api/v1/challenges/current` | This week's active challenges — 3 deterministic challenges (genre, decade, director) rotated weekly via date hash, no manual curation |
 | GET | `/api/v1/users/{id}/challenges/progress` | User's progress on the current week's challenges — qualifying ratings counted per challenge with completion status |
+| GET | `/api/v1/users/{id}/bingo?seed=YYYY-MM` | Monthly Movie Bingo card — 5x5 grid of movie categories (genre, decade, director, keyword, rating filters), cells marked from all-time ratings, detects completed rows/cols/diagonals |
 | GET | `/api/v1/users/{id}/recommendations?top_k=20&strategy=hybrid&diversity=medium` | Recommendations with smart explanations (strategy: `hybrid`/`content`/`collab`, diversity: `low`/`medium`/`high`) |
 | GET | `/api/v1/users/{id}/recommendations/from-seed/{movie_id}?limit=20` | "More Like This" — personalized recommendations branching from a seed movie |
 | POST | `/api/v1/recommendations/mood` | Mood-based discovery (body: `{"mood": "dark gritty thriller", "user_id": 1, "alpha": 0.3, "limit": 20}`) |
@@ -300,6 +301,7 @@ src/cinematch/
 │   ├── streak_service.py         # Rating streaks & milestones (consecutive-day tracking)
 │   ├── achievement_service.py    # Achievement badges (12 badges computed from rating history)
 │   ├── challenge_service.py      # Weekly rating challenges (deterministic rotation + progress tracking)
+│   ├── bingo_service.py          # Monthly Movie Bingo (deterministic 5x5 card from seed, progress from ratings)
 │   ├── global_stats_service.py   # Platform-wide aggregate statistics
 │   ├── watchlist_service.py      # Watchlist CRUD (add, remove, list, bulk check)
 │   ├── dismissal_service.py     # Dismissal CRUD ("Not Interested" feedback)

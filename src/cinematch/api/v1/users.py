@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import (
     get_achievement_service,
+    get_bingo_service,
     get_cache_service,
     get_challenge_service,
     get_db,
@@ -23,6 +24,7 @@ from cinematch.core.cache import CacheService
 from cinematch.models.rating import Rating
 from cinematch.models.user import User
 from cinematch.schemas.achievement import AchievementResponse
+from cinematch.schemas.bingo import BingoCardResponse
 from cinematch.schemas.challenge import ChallengesProgressResponse
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.rating import DiaryResponse
@@ -40,6 +42,7 @@ from cinematch.schemas.user import (
     UserStatsResponse,
 )
 from cinematch.services.achievement_service import AchievementService
+from cinematch.services.bingo_service import BingoService
 from cinematch.services.challenge_service import ChallengeService
 from cinematch.services.feed_service import FeedService
 from cinematch.services.movie_service import MovieService
@@ -364,6 +367,33 @@ async def get_challenge_progress(
     if cache is not None:
         try:
             await cache.set(cache_key, response.model_dump_json(), ttl=120)
+        except Exception:
+            pass
+
+    return response
+
+
+@router.get("/{user_id}/bingo", response_model=BingoCardResponse)
+async def get_user_bingo(
+    user_id: int,
+    seed: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
+    db: AsyncSession = Depends(get_db),
+    bingo_service: BingoService = Depends(get_bingo_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Monthly Movie Bingo card with user progress."""
+    cache_key = f"bingo:{user_id}:{seed}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return BingoCardResponse.model_validate_json(cached)
+
+    result = await bingo_service.get_user_bingo(user_id, seed, db)
+    response = BingoCardResponse(**result)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=3600)
         except Exception:
             pass
 

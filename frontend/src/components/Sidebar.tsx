@@ -21,6 +21,7 @@ const items = [
   { to: "/taste-evolution", icon: "timeline", label: "Taste Evolution" },
   { to: "/challenges", icon: "flag", label: "Challenges" },
   { to: "/achievements", icon: "emoji_events", label: "Achievements" },
+  { to: "/bingo", icon: "grid_view", label: "Movie Bingo" },
   { to: "/platform-stats", icon: "bar_chart", label: "Platform Stats" },
   { to: "/profile", icon: "person", label: "Profile" },
 ];

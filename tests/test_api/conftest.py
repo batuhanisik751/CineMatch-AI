@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient
 
 from cinematch.api.deps import (
     get_achievement_service,
+    get_bingo_service,
     get_cache_service,
     get_challenge_service,
     get_content_recommender,
@@ -624,6 +625,44 @@ def mock_achievement_service():
 
 
 @pytest.fixture()
+def mock_bingo_service():
+    svc = AsyncMock()
+    cells = []
+    for i in range(25):
+        if i == 12:
+            cells.append(
+                {
+                    "index": i,
+                    "template": "free",
+                    "label": "FREE",
+                    "parameter": None,
+                    "completed": True,
+                    "movie_id": None,
+                }
+            )
+        else:
+            cells.append(
+                {
+                    "index": i,
+                    "template": "genre",
+                    "label": f"A Genre{i} movie",
+                    "parameter": f"Genre{i}",
+                    "completed": False,
+                    "movie_id": None,
+                }
+            )
+    svc.get_user_bingo.return_value = {
+        "user_id": 1,
+        "seed": "2026-04",
+        "cells": cells,
+        "completed_lines": [],
+        "total_completed": 1,
+        "bingo_count": 0,
+    }
+    return svc
+
+
+@pytest.fixture()
 def mock_challenge_service():
     svc = AsyncMock()
     challenge_defs = [
@@ -712,6 +751,7 @@ def app(
     mock_global_stats_service,
     mock_thematic_collection_service,
     mock_achievement_service,
+    mock_bingo_service,
     mock_challenge_service,
     mock_db,
 ):
@@ -737,6 +777,7 @@ def app(
         mock_thematic_collection_service
     )
     test_app.dependency_overrides[get_achievement_service] = lambda: mock_achievement_service
+    test_app.dependency_overrides[get_bingo_service] = lambda: mock_bingo_service
     test_app.dependency_overrides[get_challenge_service] = lambda: mock_challenge_service
 
     return test_app

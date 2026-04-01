@@ -518,7 +518,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Endpoint: `GET /api/v1/users/{id}/challenges/progress` — checks user's ratings against challenge criteria
   - Challenges rotate weekly (deterministic from date hash, no manual curation)
 
-### 6.3 "Movie Bingo" Card
+### 6.3 "Movie Bingo" Card ✅
 **Scope:** Single user
 **One-line:** Personalized bingo card of movie categories to complete (e.g., "A movie from before 1970").
 - **Data backing:** `movies.genres`, `movies.release_date`, `movies.director`, `movies.keywords`, `movies.vote_average`
@@ -884,7 +884,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 46 | 5.2 Auto-Generated Collections | Low-Med | Lists |
 | 47 | 6.1 Achievement Badges ✅ | Medium | Gamification |
 | 48 | 6.2 Rating Challenges | Medium | Gamification |
-| 49 | 6.3 Movie Bingo | Medium | Gamification |
+| 49 | 6.3 Movie Bingo ✅ | Medium | Gamification |
 | 50 | 7.3 Movie Connections / Six Degrees | Medium | Movie Detail |
 | 51 | 7.4 Movie DNA Breakdown | Low-Med | Movie Detail |
 | 52 | 1.10 Multi-Criteria Discovery | Medium | Discovery |
