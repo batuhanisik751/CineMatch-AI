@@ -48,6 +48,7 @@ from cinematch.schemas.movie import (
     KeywordSummary,
     MovieConnection,
     MovieConnectionsResponse,
+    MovieDNAResponse,
     MovieListResponse,
     MoviePathResponse,
     MovieRatingStatsResponse,
@@ -1024,3 +1025,36 @@ async def get_movie_rating_stats(
         result["user_rating"] = user_ratings.get(movie_id)
 
     return MovieRatingStatsResponse(**result)
+
+
+@router.get("/{movie_id}/dna", response_model=MovieDNAResponse)
+async def get_movie_dna(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    content_rec: ContentRecommender | None = Depends(get_content_recommender),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """Get a movie's DNA breakdown: genre weights, keywords, decade, and mood tags."""
+    if content_rec is None:
+        raise ServiceUnavailableError("Content recommendation service")
+
+    cache_key = f"movie_dna:{movie_id}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return MovieDNAResponse.model_validate_json(cached)
+
+    result = await movie_service.get_movie_dna(movie_id, db, content_rec)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    response = MovieDNAResponse(**result)
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache movie DNA", exc_info=True)
+
+    return response

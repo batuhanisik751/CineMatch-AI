@@ -886,7 +886,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 48 | 6.2 Rating Challenges | Medium | Gamification |
 | 49 | 6.3 Movie Bingo ✅ | Medium | Gamification |
 | 50 | 7.3 Movie Connections / Six Degrees ✅ | Medium | Movie Detail |
-| 51 | 7.4 Movie DNA Breakdown | Low-Med | Movie Detail |
+| 51 | 7.4 Movie DNA Breakdown ✅ | Low-Med | Movie Detail |
 | 52 | 1.10 Multi-Criteria Discovery | Medium | Discovery |
 | 53 | 1.11 Complete the Collection | Medium | Discovery |
 | 54 | 9.1 Quick Rate Onboarding | Medium | Onboarding |

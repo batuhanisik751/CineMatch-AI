@@ -324,3 +324,24 @@ class MoviePathResponse(BaseModel):
     path: list[PathStep]
     degrees: int
     found: bool
+
+
+class GenreWeight(BaseModel):
+    genre: str
+    weight: float
+
+
+class KeywordWeight(BaseModel):
+    keyword: str
+    weight: float
+
+
+class MovieDNAResponse(BaseModel):
+    movie_id: int
+    title: str
+    genres: list[GenreWeight]
+    top_keywords: list[KeywordWeight]
+    decade: int | None
+    mood_tags: list[str]
+    director: str | None
+    vote_average: float

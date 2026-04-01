@@ -171,6 +171,22 @@ def mock_movie_service(sample_movie):
             "user_rated_count": 0,
         },
     )
+    svc.get_movie_dna.return_value = {
+        "movie_id": sample_movie.id,
+        "title": sample_movie.title,
+        "genres": [
+            {"genre": "Action", "weight": 0.91},
+            {"genre": "Sci-Fi", "weight": 0.73},
+        ],
+        "top_keywords": [
+            {"keyword": "hacker", "weight": 1.0},
+            {"keyword": "simulation", "weight": 0.8},
+        ],
+        "decade": 1990,
+        "mood_tags": ["cyberpunk", "dystopia"],
+        "director": "Lana Wachowski",
+        "vote_average": 8.2,
+    }
     return svc
 
 

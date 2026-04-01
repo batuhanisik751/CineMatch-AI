@@ -12,7 +12,11 @@ from cinematch.models.movie import Movie
 from cinematch.models.rating import Rating
 
 if TYPE_CHECKING:
+    from collections import Counter
+
     from sqlalchemy.ext.asyncio import AsyncSession
+
+    from cinematch.services.content_recommender import ContentRecommender
 
 
 class MovieService:
@@ -1126,3 +1130,70 @@ class MovieService:
                 break
 
         return movie1, movie2, [], False
+
+    async def get_movie_dna(
+        self,
+        movie_id: int,
+        db: AsyncSession,
+        content_recommender: ContentRecommender,
+    ) -> dict | None:
+        """Compute a movie's DNA: genre weights, keyword weights, decade, and mood tags."""
+        from collections import Counter
+
+        movie = await self.get_by_id(movie_id, db)
+        if movie is None:
+            return None
+
+        # Decade from release date
+        decade = None
+        if movie.release_date is not None:
+            decade = movie.release_date.year // 10 * 10
+
+        # Find 10 nearest neighbors via content recommender
+        similar_pairs = await content_recommender.get_similar_movies(movie_id, db, top_k=10)
+        neighbor_ids = [mid for mid, _ in similar_pairs]
+        neighbors_map = await self.get_movies_by_ids(neighbor_ids, db)
+        neighbors = [neighbors_map[mid] for mid in neighbor_ids if mid in neighbors_map]
+
+        # Genre weights: frequency across movie + neighbors, normalized
+        all_movies = [movie, *neighbors]
+        genre_counter: Counter[str] = Counter()
+        for m in all_movies:
+            for g in m.genres or []:
+                genre_counter[g] += 1
+        total_movies = len(all_movies)
+        genre_weights = [
+            {"genre": g, "weight": round(count / total_movies, 2)}
+            for g, count in genre_counter.most_common()
+        ]
+
+        # Keyword weights: frequency across movie + neighbors, top 10
+        keyword_counter: Counter[str] = Counter()
+        for m in all_movies:
+            for kw in m.keywords or []:
+                keyword_counter[kw] += 1
+        max_kw_count = keyword_counter.most_common(1)[0][1] if keyword_counter else 1
+        top_keywords = [
+            {"keyword": kw, "weight": round(count / max_kw_count, 2)}
+            for kw, count in keyword_counter.most_common(10)
+        ]
+
+        # Mood tags: keywords in >=2 neighbors but NOT in this movie
+        movie_keywords = set(movie.keywords or [])
+        neighbor_kw_counter: Counter[str] = Counter()
+        for n in neighbors:
+            for kw in n.keywords or []:
+                if kw not in movie_keywords:
+                    neighbor_kw_counter[kw] += 1
+        mood_tags = [kw for kw, count in neighbor_kw_counter.most_common(5) if count >= 2]
+
+        return {
+            "movie_id": movie.id,
+            "title": movie.title,
+            "genres": genre_weights,
+            "top_keywords": top_keywords,
+            "decade": decade,
+            "mood_tags": mood_tags,
+            "director": movie.director,
+            "vote_average": movie.vote_average,
+        }

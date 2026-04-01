@@ -24,6 +24,7 @@ import { useRated } from "../hooks/useRated";
 import { useUserId } from "../hooks/useUserId";
 import { useWatchlist } from "../hooks/useWatchlist";
 import MovieConnections from "../components/MovieConnections";
+import MovieDNA from "../components/MovieDNA";
 
 function posterUrl(path: string | null, size = "w500") {
   return path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
@@ -327,6 +328,15 @@ export default function MovieDetail() {
             </div>
           </div>
         </section>
+
+        {/* Movie DNA */}
+        {movie && (
+          <section className="bg-surface-container-lowest py-10 overflow-hidden">
+            <div className="max-w-7xl mx-auto px-8">
+              <MovieDNA movieId={movie.id} />
+            </div>
+          </section>
+        )}
 
         {/* Similar Movies */}
         {similar.length > 0 && (

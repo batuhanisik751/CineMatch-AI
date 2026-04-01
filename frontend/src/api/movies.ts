@@ -26,6 +26,7 @@ import type {
   TopChartsResponse,
   TrendingResponse,
   MovieConnectionsResponse,
+  MovieDNAResponse,
   MoviePathResponse,
 } from "./types";
 
@@ -251,5 +252,11 @@ export function getMovieConnections(id1: number, id2: number) {
 export function getMoviePath(id1: number, id2: number, maxDepth = 6) {
   return apiFetch<MoviePathResponse>(
     `/api/v1/movies/${id1}/path/${id2}?max_depth=${maxDepth}`,
+  );
+}
+
+export function getMovieDNA(movieId: number) {
+  return apiFetch<MovieDNAResponse>(
+    `/api/v1/movies/${movieId}/dna`,
   );
 }

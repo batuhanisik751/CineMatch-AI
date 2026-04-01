@@ -773,3 +773,24 @@ export interface MoviePathResponse {
   degrees: number;
   found: boolean;
 }
+
+export interface GenreWeight {
+  genre: string;
+  weight: number;
+}
+
+export interface KeywordWeight {
+  keyword: string;
+  weight: number;
+}
+
+export interface MovieDNAResponse {
+  movie_id: number;
+  title: string;
+  genres: GenreWeight[];
+  top_keywords: KeywordWeight[];
+  decade: number | null;
+  mood_tags: string[];
+  director: string | null;
+  vote_average: number;
+}
