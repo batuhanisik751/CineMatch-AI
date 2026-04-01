@@ -16,6 +16,7 @@ from cinematch.api.deps import (
     get_dismissal_service,
     get_embedding_service,
     get_feed_service,
+    get_global_stats_service,
     get_hybrid_recommender,
     get_llm_service,
     get_movie_service,
@@ -393,6 +394,43 @@ def mock_streak_service():
 
 
 @pytest.fixture()
+def mock_global_stats_service():
+    svc = AsyncMock()
+    svc.get_global_stats.return_value = {
+        "total_movies": 29000,
+        "total_users": 162000,
+        "total_ratings": 24700000,
+        "avg_rating": 6.8,
+        "most_rated_movie": {
+            "id": 1,
+            "title": "The Shawshank Redemption",
+            "poster_path": "/poster.jpg",
+            "vote_average": 8.7,
+            "genres": ["Drama"],
+            "release_date": "1994-09-23",
+            "rating_count": 5000,
+        },
+        "highest_rated_movie": {
+            "id": 2,
+            "title": "The Godfather",
+            "poster_path": "/godfather.jpg",
+            "vote_average": 8.9,
+            "genres": ["Crime", "Drama"],
+            "release_date": "1972-03-14",
+            "rating_count": 3000,
+            "avg_user_rating": 9.1,
+        },
+        "most_active_user": {
+            "id": 42,
+            "movielens_id": 42,
+            "rating_count": 3000,
+        },
+        "ratings_this_week": 120,
+    }
+    return svc
+
+
+@pytest.fixture()
 def mock_feed_service(sample_movie):
     from cinematch.schemas.movie import MovieSummary
     from cinematch.schemas.user import FeedResponse, FeedSection
@@ -453,6 +491,7 @@ def app(
     mock_feed_service,
     mock_taste_profile_service,
     mock_streak_service,
+    mock_global_stats_service,
     mock_db,
 ):
     test_app = create_app()
@@ -471,6 +510,7 @@ def app(
     test_app.dependency_overrides[get_feed_service] = lambda: mock_feed_service
     test_app.dependency_overrides[get_taste_profile_service] = lambda: mock_taste_profile_service
     test_app.dependency_overrides[get_streak_service] = lambda: mock_streak_service
+    test_app.dependency_overrides[get_global_stats_service] = lambda: mock_global_stats_service
 
     return test_app
 

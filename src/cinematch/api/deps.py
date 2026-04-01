@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from cinematch.services.dismissal_service import DismissalService
     from cinematch.services.embedding_service import EmbeddingService
     from cinematch.services.feed_service import FeedService
+    from cinematch.services.global_stats_service import GlobalStatsService
     from cinematch.services.hybrid_recommender import HybridRecommender
     from cinematch.services.llm_service import LLMService
     from cinematch.services.movie_service import MovieService
@@ -87,3 +88,7 @@ def get_streak_service(request: Request) -> StreakService:
 
 def get_taste_evolution_service(request: Request) -> TasteEvolutionService:
     return request.app.state.taste_evolution_service
+
+
+def get_global_stats_service(request: Request) -> GlobalStatsService:
+    return request.app.state.global_stats_service

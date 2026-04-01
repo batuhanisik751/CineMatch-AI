@@ -17,6 +17,7 @@ const items = [
   { to: "/recommendations", icon: "auto_awesome", label: "Recommendations" },
   { to: "/watchlist", icon: "bookmark", label: "Watchlist" },
   { to: "/taste-evolution", icon: "timeline", label: "Taste Evolution" },
+  { to: "/platform-stats", icon: "bar_chart", label: "Platform Stats" },
   { to: "/profile", icon: "person", label: "Profile" },
 ];
 
@@ -33,7 +34,7 @@ export default function Sidebar() {
           Premium Member
         </p>
       </div>
-      <nav className="flex flex-col gap-1">
+      <nav className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
         {items.map((item) => {
           const active =
             (item.to === "/" && pathname === "/") ||

@@ -14,6 +14,7 @@ import Home from "./pages/Home";
 import Moods from "./pages/Moods";
 import Keywords from "./pages/Keywords";
 import MovieDetail from "./pages/MovieDetail";
+import PlatformStats from "./pages/PlatformStats";
 import Profile from "./pages/Profile";
 import Recommendations from "./pages/Recommendations";
 import Search from "./pages/Search";
@@ -56,6 +57,7 @@ export default function App() {
       <Route path="/watchlist" element={<Watchlist />} />
       <Route path="/diary" element={<Diary />} />
       <Route path="/taste-evolution" element={<TasteEvolution />} />
+      <Route path="/platform-stats" element={<PlatformStats />} />
       <Route path="/profile" element={<Profile />} />
     </Routes>
   );

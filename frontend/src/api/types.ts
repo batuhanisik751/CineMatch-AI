@@ -562,3 +562,33 @@ export interface TasteEvolutionResponse {
   granularity: string;
   periods: TasteEvolutionPeriod[];
 }
+
+// Global platform stats
+
+export interface GlobalStatsMovieRef {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  vote_average: number;
+  genres: string[];
+  release_date: string | null;
+  rating_count: number;
+  avg_user_rating: number | null;
+}
+
+export interface GlobalStatsUserRef {
+  id: number;
+  movielens_id: number;
+  rating_count: number;
+}
+
+export interface GlobalStatsResponse {
+  total_movies: number;
+  total_users: number;
+  total_ratings: number;
+  avg_rating: number;
+  most_rated_movie: GlobalStatsMovieRef | null;
+  highest_rated_movie: GlobalStatsMovieRef | null;
+  most_active_user: GlobalStatsUserRef | null;
+  ratings_this_week: number;
+}

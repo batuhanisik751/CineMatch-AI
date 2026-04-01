@@ -18,7 +18,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 
 ## Category 1: Discovery & Exploration
 
-### 1.1 Trending Now
+### 1.1 Trending Now ✅
+**Scope:** Single user
 **One-line:** Surface the most-rated movies in the last N days as a trending feed.
 - **Data backing:** `ratings.timestamp` — count ratings grouped by movie within a time window
 - **Complexity:** Low
@@ -29,7 +30,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Cache in Redis (1h TTL)
   - Add `trending()` method to `MovieService`
 
-### 1.2 Hidden Gems
+### 1.2 Hidden Gems ✅
+**Scope:** Single user
 **One-line:** Discover high-quality movies that most users haven't found yet.
 - **Data backing:** `movies.vote_average`, `movies.vote_count`, ratings count per movie
 - **Complexity:** Low
@@ -40,7 +42,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Optional genre filter parameter
   - Cache in Redis (6h TTL)
 
-### 1.3 Top Charts by Genre
+### 1.3 Top Charts by Genre ✅
+**Scope:** Single user
 **One-line:** Pre-computed "Best of" lists for each genre ranked by in-system average rating.
 - **Data backing:** `movies.genres` (JSONB with GIN index), `ratings.rating`, `ratings.movie_id`
 - **Complexity:** Low
@@ -51,7 +54,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Cache per genre in Redis (6h TTL)
   - New "Charts" page in frontend with genre tabs
 
-### 1.4 Decade Explorer
+### 1.4 Decade Explorer ✅
+**Scope:** Single user
 **One-line:** Browse and discover movies organized by decade with per-decade stats.
 - **Data backing:** `movies.release_date` — extract decade; `ratings` for per-decade top films
 - **Complexity:** Low
@@ -61,7 +65,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Endpoint: `GET /api/v1/movies/discover?year_min=1990&year_max=1999&sort_by=rating` (already exists, just needs frontend)
   - Frontend: visual decade timeline with clickable periods
 
-### 1.5 Director Spotlight
+### 1.5 Director Spotlight ✅
+**Scope:** Single user
 **One-line:** Browse a director's complete filmography with the user's ratings overlaid.
 - **Data backing:** `movies.director`, `ratings` (user's ratings for those films)
 - **Complexity:** Low
@@ -72,7 +77,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - If user_id provided, join with ratings to show user's scores
   - Frontend: filmography page with rated/unrated indicators, avg rating for this director
 
-### 1.6 Actor Filmography
+### 1.6 Actor Filmography ✅
+**Scope:** Single user
 **One-line:** Browse all movies featuring a specific actor with personal ratings overlaid.
 - **Data backing:** `movies.cast_names` (JSONB array, top 5 per movie)
 - **Complexity:** Low
@@ -82,7 +88,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Query: filter movies WHERE cast_names @> '["Tom Hanks"]' (GIN-indexed JSONB containment)
   - Same filmography page pattern as Director Spotlight
 
-### 1.7 "Movies Like This" Enhanced
+### 1.7 "Movies Like This" Enhanced ✅
+**Scope:** Single user
 **One-line:** Augment existing similar movies with collaborative "users who liked this also liked."
 - **Data backing:** `ratings` table — co-occurrence analysis of high-rated movies
 - **Complexity:** Low-Medium
@@ -93,7 +100,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Exclude the source movie, return with co-occurrence count
   - Display as second row on movie detail page: "Users who loved this also loved..."
 
-### 1.8 Serendipity Mode / "Surprise Me"
+### 1.8 Serendipity Mode / "Surprise Me" ✅
+**Scope:** Single user
 **One-line:** One-click random recommendation from outside the user's typical taste profile.
 - **Data backing:** User's genre distribution (from stats), all movies, random selection with anti-genre filter
 - **Complexity:** Low
@@ -104,7 +112,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Optional: use ALS item factors to find movies far from user's preference vector (high negative dot product)
   - Frontend: "Surprise Me" button on home page
 
-### 1.9 Keyword/Tag Cloud Explorer
+### 1.9 Keyword/Tag Cloud Explorer ✅
+**Scope:** Single user
 **One-line:** Browse movies by their crowd-sourced keyword tags with visual tag cloud.
 - **Data backing:** `movies.keywords` (JSONB array, aggregated from MovieLens tags — 100K+ unique tags)
 - **Complexity:** Low-Medium
@@ -115,7 +124,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Query: filter movies WHERE keywords @> '["time travel"]'
   - Frontend: interactive tag cloud on explore page, click to filter
 
-### 1.10 Multi-Criteria Discovery
+### 1.10 Multi-Criteria Discovery ✅
+**Scope:** Single user
 **One-line:** Advanced filter combining genre + decade + rating range + director + keyword in one query.
 - **Data backing:** All movie columns: genres, release_date, vote_average, director, keywords, cast_names
 - **Complexity:** Medium
@@ -125,7 +135,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Build dynamic SQLAlchemy query with chained filters
   - Reuse existing discover endpoint pattern with extended parameters
 
-### 1.11 "Complete the Collection" Suggestions
+### 1.11 "Complete the Collection" Suggestions ✅
+**Scope:** Single user
 **One-line:** For users who've rated most films by a director/in a franchise, suggest the ones they're missing.
 - **Data backing:** `movies.director`, `movies.cast_names`, `movies.keywords` (franchise tags), `ratings`
 - **Complexity:** Medium
@@ -139,7 +150,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 
 ## Category 2: Personalization & Recommendations
 
-### 2.1 Mood Presets
+### 2.1 Mood Presets ✅
+**Scope:** Single user
 **One-line:** Curated mood buttons that map to semantic search queries for instant vibe-based discovery.
 - **Data backing:** Existing semantic search (embeddings + FAISS), predefined mood-to-query mapping
 - **Complexity:** Low
@@ -149,7 +161,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Each maps to a crafted search phrase sent to existing `POST /api/v1/recommendations/mood`
   - Display results as themed carousel rows
 
-### 2.2 Personalized Home Feed
+### 2.2 Personalized Home Feed ✅
+**Scope:** Single user
 **One-line:** Replace static home carousels with dynamically named rows tailored to the user's taste.
 - **Data backing:** User's top-rated movies, genre distribution, ALS recommendations, trending data
 - **Complexity:** Medium
@@ -164,7 +177,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
     - "New to you in {decade}" — unrated popular movies from user's favorite decade
   - Each section calls existing services internally
 
-### 2.3 "More Like This" from Any Seed
+### 2.3 "More Like This" from Any Seed ✅
+**Scope:** Single user
 **One-line:** Let users pick any movie as a seed and get personalized recommendations branching from it.
 - **Data backing:** Movie embeddings (pgvector/FAISS), ALS item factors, user's rating history
 - **Complexity:** Medium
@@ -176,7 +190,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Filter out already-rated movies
   - Return with explanation: "Similar to {seed} and matches your taste"
 
-### 2.4 Recommendation Diversity Controls
+### 2.4 Recommendation Diversity Controls ✅
+**Scope:** Single user
 **One-line:** Let users adjust how adventurous vs. safe their recommendations are.
 - **Data backing:** Existing hybrid recommender alpha parameter, MMR diversity_lambda
 - **Complexity:** Low-Medium
@@ -186,7 +201,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Map to MMR lambda values: low=0.9 (relevance-heavy), medium=0.7 (default), high=0.4 (diversity-heavy)
   - Frontend: slider or toggle on recommendations page
 
-### 2.5 "Not Interested" / Negative Feedback
+### 2.5 "Not Interested" / Negative Feedback ✅
+**Scope:** Single user
 **One-line:** Let users dismiss recommendations they're not interested in, improving future suggestions.
 - **Data backing:** New `dismissals` table (user_id, movie_id, dismissed_at)
 - **Complexity:** Medium
@@ -198,7 +214,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Invalidate recommendation cache on dismiss (same as rating)
   - Migration: single new table
 
-### 2.6 Watch History Awareness
+### 2.6 Watch History Awareness ✅
+**Scope:** Single user
 **One-line:** Automatically exclude rated movies from recommendations and highlight unrated ones.
 - **Data backing:** `ratings` table (user_id, movie_id)
 - **Complexity:** Low
@@ -209,7 +226,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Add `exclude_rated=true` param to discover/search endpoints
   - Frontend: badge on already-rated movies showing user's rating
 
-### 2.7 Taste Profile Summary
+### 2.7 Taste Profile Summary ✅
+**Scope:** Single user
 **One-line:** A natural-language summary of the user's movie taste generated from their rating patterns.
 - **Data backing:** User stats (genre distribution, top directors, top actors, avg rating, rating count)
 - **Complexity:** Medium
@@ -223,7 +241,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
     - Decade preference → "Your sweet spot is {decade}s cinema"
   - Optional: if LLM enabled, pass stats to Ollama for a more natural summary
 
-### 2.8 Genre Affinity Radar Chart
+### 2.8 Genre Affinity Radar Chart ✅
+**Scope:** Single user
 **One-line:** Visual radar/spider chart showing how much a user leans into each genre.
 - **Data backing:** Existing `UserStatsService.genre_distribution` — already computes genre percentages
 - **Complexity:** Low
@@ -237,7 +256,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 
 ## Category 3: Analytics & Stats
 
-### 3.1 Film Diary / Rating Calendar
+### 3.1 Film Diary / Rating Calendar ✅
+**Scope:** Single user
 **One-line:** Calendar heatmap (GitHub-style) showing daily rating activity over time.
 - **Data backing:** `ratings.timestamp` — every rating has a precise timestamp
 - **Complexity:** Low
@@ -249,6 +269,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Click a day to expand and see movies rated that day
 
 ### 3.2 CineMatch Wrapped (Year in Review)
+**Scope:** Single user
 **One-line:** Spotify Wrapped-style annual summary of a user's movie year.
 - **Data backing:** `ratings` (timestamped), `movies` (genres, director, cast, release_date), ALS user factors
 - **Complexity:** Medium
@@ -264,7 +285,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Cache in Redis (24h TTL)
   - Frontend: scrollable visual summary with large stat cards
 
-### 3.3 Rating Distribution Insights
+### 3.3 Rating Distribution Insights ✅
+**Scope:** Single user
 **One-line:** Show how a user's ratings compare to the community's ratings for the same movies.
 - **Data backing:** `ratings` — user's ratings vs. AVG(rating) for same movies
 - **Complexity:** Low
@@ -276,7 +298,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - "Most overrated" = movies where user rated much higher than community avg
   - "Most underrated" = movies where user rated much lower
 
-### 3.4 Taste Evolution Timeline
+### 3.4 Taste Evolution Timeline ✅
+**Scope:** Single user
 **One-line:** Track how a user's genre preferences have shifted over time.
 - **Data backing:** `ratings.timestamp`, `movies.genres` — slice genre distribution by time period
 - **Complexity:** Medium
@@ -287,7 +310,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Return: [{period: "2024-Q1", genres: {Action: 40%, Drama: 30%, ...}}, ...]
   - Frontend: stacked area chart or alluvial diagram showing genre flow over time
 
-### 3.5 Director/Actor Affinity Ranking
+### 3.5 Director/Actor Affinity Ranking ✅
+**Scope:** Single user
 **One-line:** Ranked list of directors and actors by how much the user loves their work (weighted avg rating).
 - **Data backing:** `movies.director`, `movies.cast_names`, `ratings.rating`
 - **Complexity:** Low
@@ -298,7 +322,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Add to stats response or new endpoint: `GET /api/v1/users/{id}/affinities`
   - Return: [{name, role, avg_rating, count, films_rated: [...]}]
 
-### 3.6 Controversial Movies
+### 3.6 Controversial Movies ✅
+**Scope:** Single user
 **One-line:** Movies with the highest rating variance across all users — love-it-or-hate-it films.
 - **Data backing:** `ratings.rating` — compute STDDEV per movie
 - **Complexity:** Low
@@ -309,7 +334,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Return with avg + stddev + rating histogram per movie
   - Frontend: bar showing the polarized distribution
 
-### 3.7 Rating Streak & Milestones
+### 3.7 Rating Streak & Milestones ✅
+**Scope:** Single user
 **One-line:** Track consecutive-day rating streaks and celebrate milestones (100th rating, etc.).
 - **Data backing:** `ratings.timestamp` — compute consecutive dates with at least one rating
 - **Complexity:** Low
@@ -320,7 +346,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Milestones: 10, 25, 50, 100, 250, 500, 1000 ratings
   - Frontend: streak counter on profile, milestone badges
 
-### 3.8 Global Platform Stats
+### 3.8 Global Platform Stats ✅
+**Scope:** Single user
 **One-line:** Public dashboard showing platform-wide statistics and interesting facts.
 - **Data backing:** All tables — aggregate counts, averages, distributions
 - **Complexity:** Low
@@ -336,6 +363,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 ## Category 4: Social & Comparison
 
 ### 4.1 Taste Compatibility Score
+**Scope:** Multiple user
 **One-line:** Compare movie taste between two users using their ALS latent vectors.
 - **Data backing:** ALS user factors (128-dim vectors for 162K users), genre distributions from ratings
 - **Complexity:** Medium
@@ -348,6 +376,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Return: {compatibility_pct, genre_overlap: [...], shared_movies: [...], biggest_disagreements: [...]}
 
 ### 4.2 "Movie Soulmate" Finder
+**Scope:** Multiple user
 **One-line:** Find the user in the system with the most similar taste to you.
 - **Data backing:** ALS user factors (128-dim, 162K users)
 - **Complexity:** Medium
@@ -360,6 +389,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Optimization: use numpy batch dot product, or pre-build a user-factor FAISS index
 
 ### 4.3 Shared Watchlist / "Watch Together"
+**Scope:** Multiple user
 **One-line:** Find movies on both users' watchlists or recommend movies both would enjoy.
 - **Data backing:** `watchlist` table, ALS user factors, movie embeddings
 - **Complexity:** Medium
@@ -372,6 +402,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Filter out movies either user has already rated
 
 ### 4.4 Rating Comparison for a Movie
+**Scope:** Single user
 **One-line:** See how your rating of a specific movie compares to the community distribution.
 - **Data backing:** `ratings` for the specific movie — all user ratings
 - **Complexity:** Low
@@ -382,6 +413,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Frontend: histogram with user's rating highlighted
 
 ### 4.5 "Recommend to a Friend"
+**Scope:** Multiple user
 **One-line:** Given a friend's user_id, suggest movies they'd love that you've already rated highly.
 - **Data backing:** User's high ratings, friend's ALS predicted scores, friend's existing ratings (to exclude)
 - **Complexity:** Medium
@@ -397,6 +429,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 ## Category 5: Lists & Curation
 
 ### 5.1 Custom User Lists
+**Scope:** Single user
 **One-line:** Named, ordered movie collections users can create, edit, and share.
 - **Data backing:** New tables; movie data from existing `movies` table
 - **Complexity:** Medium
@@ -408,6 +441,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Migration: 2 new tables with compound indexes
 
 ### 5.2 Auto-Generated Thematic Collections
+**Scope:** Single user
 **One-line:** System-generated lists like "Best Sci-Fi of the 2010s" or "Christopher Nolan: Complete Works."
 - **Data backing:** `movies.genres`, `movies.release_date`, `movies.director`, `ratings` for ranking
 - **Complexity:** Low-Medium
@@ -418,7 +452,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Templates: "Best {Genre} of the {Decade}", "{Director}: A Filmography", "Highest Rated {Year}"
   - Cache generated collections in Redis (6h TTL)
 
-### 5.3 "Movies You Haven't Seen by Directors You Love"
+### 5.3 "Movies You Haven't Seen by Directors You Love" ✅
+**Scope:** Single user
 **One-line:** Auto-curated list of unwatched films from the user's favorite directors.
 - **Data backing:** `movies.director`, `ratings` (to find favorite directors and already-seen films)
 - **Complexity:** Low
@@ -431,6 +466,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Same pattern works for actors: `GET /api/v1/users/{id}/actor-gaps`
 
 ### 5.4 Watchlist Recommendations
+**Scope:** Single user
 **One-line:** Recommend movies similar to what's on the user's watchlist.
 - **Data backing:** `watchlist` (user's saved movies), movie embeddings, FAISS
 - **Complexity:** Low-Medium
@@ -447,6 +483,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 ## Category 6: Gamification & Engagement
 
 ### 6.1 Achievement Badges
+**Scope:** Single user
 **One-line:** Unlock badges for rating milestones, genre exploration, and special patterns.
 - **Data backing:** `ratings` (counts, timestamps, genres via JOIN), `movies.genres`, `movies.director`
 - **Complexity:** Medium
@@ -470,6 +507,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - No new tables needed — pure computation
 
 ### 6.2 Rating Challenges
+**Scope:** Single user
 **One-line:** Periodic challenges like "Rate 5 horror movies this week" to encourage exploration.
 - **Data backing:** `movies.genres`, `movies.release_date`, `movies.director`, `ratings`
 - **Complexity:** Medium
@@ -481,6 +519,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Challenges rotate weekly (deterministic from date hash, no manual curation)
 
 ### 6.3 "Movie Bingo" Card
+**Scope:** Single user
 **One-line:** Personalized bingo card of movie categories to complete (e.g., "A movie from before 1970").
 - **Data backing:** `movies.genres`, `movies.release_date`, `movies.director`, `movies.keywords`, `movies.vote_average`
 - **Complexity:** Medium
@@ -496,7 +535,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 
 ## Category 7: Enhanced Movie Detail
 
-### 7.1 "Why This Score?" Decomposition
+### 7.1 "Why This Score?" Decomposition ✅
+**Scope:** Single user
 **One-line:** For any recommended movie, show exactly how the content and collaborative scores were computed.
 - **Data backing:** Already computed internally in `HybridRecommender._hybrid_recommend()` — content_score, collab_score, alpha
 - **Complexity:** Low
@@ -507,7 +547,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Frontend: small stacked bar or pie showing content vs. collab contribution
   - "78% taste match + 22% popular with similar users"
 
-### 7.2 Enhanced "Because You Liked" Explanations
+### 7.2 Enhanced "Because You Liked" Explanations ✅
+**Scope:** Single user
 **One-line:** Rich explanation tags on every recommendation showing genre/director/actor overlap.
 - **Data backing:** `movies.genres`, `movies.director`, `movies.cast_names`, user's rating history
 - **Complexity:** Low
@@ -523,6 +564,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Pure server-side string generation, no LLM needed
 
 ### 7.3 Movie Connections / "Six Degrees"
+**Scope:** Single user
 **One-line:** Show how two movies are connected through shared cast, directors, genres, or keywords.
 - **Data backing:** `movies.director`, `movies.cast_names`, `movies.genres`, `movies.keywords`
 - **Complexity:** Medium
@@ -534,6 +576,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Extension: find shortest path between two movies through shared people (BFS on actor/director graph)
 
 ### 7.4 Movie "DNA" Breakdown
+**Scope:** Single user
 **One-line:** Visual breakdown of what makes a movie unique — its genre mix, keyword themes, era, and tone.
 - **Data backing:** `movies.genres`, `movies.keywords`, `movies.release_date`, `movies.vote_average`, embedding vector
 - **Complexity:** Low-Medium
@@ -545,6 +588,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Frontend: visual "DNA strip" or tag cloud showing movie's character
 
 ### 7.5 Community Sentiment for a Movie
+**Scope:** Single user
 **One-line:** Show rating distribution, average, and how polarizing a movie is across all users.
 - **Data backing:** `ratings` for the specific movie — all ratings from all users
 - **Complexity:** Low
@@ -556,6 +600,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Frontend: histogram chart on movie detail page
 
 ### 7.6 Movie Popularity Timeline
+**Scope:** Single user
 **One-line:** Show when a movie gets rated most — spikes around releases, award seasons, trending moments.
 - **Data backing:** `ratings.timestamp` for a specific movie — group by month/week
 - **Complexity:** Low
@@ -571,6 +616,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 ## Category 8: Search & Navigation
 
 ### 8.1 Autocomplete Search
+**Scope:** Single user
 **One-line:** Real-time search suggestions as the user types, with fuzzy matching.
 - **Data backing:** `movies.title` with existing pg_trgm index for fuzzy matching
 - **Complexity:** Low
@@ -581,7 +627,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Debounce on frontend (300ms)
   - Cache popular prefixes in Redis
 
-### 8.2 Natural Language Search
+### 8.2 Natural Language Search ✅
+**Scope:** Single user
 **One-line:** Search by description like "a heist movie set in space with a twist ending."
 - **Data backing:** Already implemented as semantic search via embeddings + FAISS
 - **Complexity:** Low (mostly frontend polish)
@@ -592,6 +639,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Add example queries as clickable suggestions below the search bar
 
 ### 8.3 Filter by Language (Pipeline Enhancement)
+**Scope:** Single user
 **One-line:** Filter movies by original language (English, French, Korean, Japanese, etc.).
 - **Data backing:** `original_language` available in raw TMDb CSV but NOT currently imported
 - **Complexity:** Low-Medium (requires pipeline change + migration)
@@ -603,6 +651,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Endpoint: add `language` param to existing `/api/v1/movies/discover`
 
 ### 8.4 Filter by Runtime (Pipeline Enhancement)
+**Scope:** Single user
 **One-line:** Filter movies by length — "quick watch" (<90min) vs "epic" (>180min).
 - **Data backing:** `runtime` available in raw TMDb CSV but NOT currently imported
 - **Complexity:** Low-Medium (requires pipeline change + migration)
@@ -613,7 +662,8 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Endpoint: add `min_runtime`, `max_runtime` params to discover
   - Preset buttons: "Quick Watch (<90min)", "Standard (90-150min)", "Epic (>150min)"
 
-### 8.5 Search by Cast Combination
+### 8.5 Search by Cast Combination ✅
+**Scope:** Single user
 **One-line:** Find movies where two specific actors both appear.
 - **Data backing:** `movies.cast_names` (JSONB array)
 - **Complexity:** Low
@@ -628,6 +678,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 ## Category 9: Onboarding & Utility
 
 ### 9.1 Quick Rate Onboarding
+**Scope:** Single user
 **One-line:** New user flow where they rate 10-20 popular, genre-diverse movies to bootstrap their taste profile.
 - **Data backing:** `movies.vote_count` + `movies.genres` to select popular, diverse films; `ratings` to capture input
 - **Complexity:** Medium
@@ -640,6 +691,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Store ratings via existing `POST /api/v1/users/{id}/ratings`
 
 ### 9.2 Rewatch Recommender
+**Scope:** Single user
 **One-line:** Suggest movies the user rated highly long ago that are worth revisiting.
 - **Data backing:** `ratings.rating` + `ratings.timestamp` — find high ratings with old timestamps
 - **Complexity:** Low
@@ -651,6 +703,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Frontend: "Revisit your favorites" section on profile or home
 
 ### 9.3 Blind Spot Detector
+**Scope:** Single user
 **One-line:** Popular, highly-regarded movies the user has never rated — their cinematic blind spots.
 - **Data backing:** `movies.vote_count`, `movies.vote_average`, `ratings` (to find unrated)
 - **Complexity:** Low
@@ -662,6 +715,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Frontend: checklist-style display with "Have you seen this?" prompts
 
 ### 9.4 Compare Two Movies Side-by-Side
+**Scope:** Single user
 **One-line:** Visual comparison of any two movies across all metadata dimensions.
 - **Data backing:** All movie columns (genres, director, cast, votes, release_date, keywords, embedding similarity)
 - **Complexity:** Low
@@ -676,6 +730,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Frontend: side-by-side card layout with highlighted overlaps
 
 ### 9.5 Import/Export Ratings (CSV)
+**Scope:** Single user
 **One-line:** Import ratings from Letterboxd/IMDb CSV exports; export CineMatch ratings as CSV.
 - **Data backing:** `movies.imdb_id`, `movies.tmdb_id` for mapping; `ratings` table for storage
 - **Complexity:** Medium
@@ -688,6 +743,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Rescale ratings to 1-10 if source uses different scale (Letterboxd 0.5-5.0, IMDb 1-10)
 
 ### 9.6 Tastemaker Score
+**Scope:** Single user
 **One-line:** Identify users whose high ratings predict what others will later enjoy — community taste leaders.
 - **Data backing:** `ratings.rating` + `ratings.timestamp` — find early raters of later-popular films
 - **Complexity:** Medium
@@ -700,6 +756,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Cache heavily (computation is expensive, recalculate weekly)
 
 ### 9.7 Predicted Match Percentage
+**Scope:** Single user
 **One-line:** Show a "94% match" score on every movie card based on the user's taste profile.
 - **Data backing:** ALS model (collab score) + embedding similarity (content score) — hybrid prediction
 - **Complexity:** Low-Medium
@@ -712,6 +769,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Cache per user-movie pair in Redis (15min TTL, invalidate on new rating)
 
 ### 9.8 Seasonal / Contextual Recommendations
+**Scope:** Single user
 **One-line:** Time-aware recommendations — horror in October, holiday films in December, summer blockbusters in June.
 - **Data backing:** `movies.keywords`, `movies.genres`, `movies.release_date`, current date
 - **Complexity:** Low
@@ -733,6 +791,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 These features require importing additional columns from the TMDb CSV that we already download but don't currently use. No new external data sources needed.
 
 ### 10.1 Import Runtime Field
+**Scope:** Single user
 **One-line:** Add movie runtime (minutes) from TMDb CSV to enable duration-based features.
 - **Data backing:** `runtime` column in `TMDB_all_movies.csv`
 - **Complexity:** Low
@@ -740,6 +799,7 @@ These features require importing additional columns from the TMDb CSV that we al
 - **Implementation:** Add to cleaner.py column selection, migration for movies table, seed update
 
 ### 10.2 Import Original Language
+**Scope:** Single user
 **One-line:** Add original_language from TMDb CSV to enable language-based filtering and stats.
 - **Data backing:** `original_language` column in `TMDB_all_movies.csv`
 - **Complexity:** Low
@@ -747,6 +807,7 @@ These features require importing additional columns from the TMDb CSV that we al
 - **Implementation:** Same pattern as runtime — cleaner.py + migration + seed
 
 ### 10.3 Import Tagline
+**Scope:** Single user
 **One-line:** Add movie taglines from TMDb CSV for richer movie cards and search.
 - **Data backing:** `tagline` column in `TMDB_all_movies.csv`
 - **Complexity:** Low
