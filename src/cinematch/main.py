@@ -35,6 +35,7 @@ from cinematch.services.rating_service import RatingService
 from cinematch.services.streak_service import StreakService
 from cinematch.services.taste_evolution_service import TasteEvolutionService
 from cinematch.services.taste_profile_service import TasteProfileService
+from cinematch.services.user_list_service import UserListService
 from cinematch.services.user_stats_service import UserStatsService
 from cinematch.services.watchlist_service import WatchlistService
 
@@ -129,6 +130,7 @@ async def lifespan(app: FastAPI):
     app.state.user_stats_service = UserStatsService()
     app.state.watchlist_service = WatchlistService()
     app.state.dismissal_service = DismissalService()
+    app.state.user_list_service = UserListService()
     app.state.rating_comparison_service = RatingComparisonService()
     app.state.streak_service = StreakService()
     app.state.taste_evolution_service = TasteEvolutionService()

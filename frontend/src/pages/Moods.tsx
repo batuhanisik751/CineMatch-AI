@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { semanticSearchMovies } from "../api/movies";
 import { getMoodRecommendations } from "../api/recommendations";
 import type { MovieSummary } from "../api/types";
+import AddToListModal from "../components/AddToListModal";
 import BottomNav from "../components/BottomNav";
 import MoodCarousel from "../components/MoodCarousel";
 import MoodPills from "../components/MoodPills";
@@ -25,6 +26,7 @@ export default function Moods() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
   const [activeMoods, setActiveMoods] = useState<Map<string, MoodResult>>(new Map());
   const abortControllers = useRef<Map<string, AbortController>>(new Map());
   const moodFallback = useRef(false);
@@ -204,6 +206,7 @@ export default function Moods() {
           </div>
         </div>
       </main>
+      <AddToListModal movieId={addToListMovieId} onClose={() => setAddToListMovieId(null)} />
       <BottomNav />
     </>
   );

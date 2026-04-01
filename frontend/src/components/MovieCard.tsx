@@ -11,6 +11,7 @@ interface Props {
   matchPercent?: number;
   isBookmarked?: boolean;
   onToggleBookmark?: (movieId: number) => void;
+  onAddToList?: (movieId: number) => void;
   isDismissed?: boolean;
   onDismiss?: (movieId: number) => void;
   userRating?: number | null;
@@ -19,7 +20,7 @@ interface Props {
   scoreBreakdown?: ScoreBreakdown | null;
 }
 
-export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleBookmark, isDismissed, onDismiss, userRating, becauseYouLiked, featureExplanations, scoreBreakdown }: Props) {
+export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleBookmark, onAddToList, isDismissed, onDismiss, userRating, becauseYouLiked, featureExplanations, scoreBreakdown }: Props) {
   const year = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
   const poster = posterUrl(movie.poster_path);
 
@@ -40,22 +41,41 @@ export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleB
             <span className="material-symbols-outlined text-5xl text-outline">movie</span>
           </div>
         )}
-        {onToggleBookmark && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleBookmark(movie.id);
-            }}
-            className="absolute top-4 left-4 bg-[#131314]/60 backdrop-blur-md p-1.5 rounded border border-white/10 hover:bg-[#131314]/80 transition-colors z-10"
-          >
-            <span
-              className="material-symbols-outlined text-[18px] text-primary"
-              style={isBookmarked ? { fontVariationSettings: "'FILL' 1" } : undefined}
-            >
-              bookmark
-            </span>
-          </button>
+        {(onToggleBookmark || onAddToList) && (
+          <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
+            {onToggleBookmark && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleBookmark(movie.id);
+                }}
+                className="bg-[#131314]/60 backdrop-blur-md p-1.5 rounded border border-white/10 hover:bg-[#131314]/80 transition-colors"
+              >
+                <span
+                  className="material-symbols-outlined text-[18px] text-primary"
+                  style={isBookmarked ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                >
+                  bookmark
+                </span>
+              </button>
+            )}
+            {onAddToList && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onAddToList(movie.id);
+                }}
+                className="bg-[#131314]/60 backdrop-blur-md p-1.5 rounded border border-white/10 hover:bg-[#131314]/80 transition-colors"
+                title="Add to list"
+              >
+                <span className="material-symbols-outlined text-[18px] text-primary">
+                  playlist_add
+                </span>
+              </button>
+            )}
+          </div>
         )}
         <div className="absolute top-4 right-4 bg-[#131314]/60 backdrop-blur-md px-2 py-1 rounded flex items-center gap-1 border border-white/10">
           <span

@@ -4,6 +4,7 @@ import { discoverMovies, getHiddenGems, semanticSearchMovies } from "../api/movi
 import { getMoodRecommendations, getSurpriseMovies } from "../api/recommendations";
 import type { FeedResponse, MovieSummary } from "../api/types";
 import { getUserFeed } from "../api/users";
+import AddToListModal from "../components/AddToListModal";
 import BottomNav from "../components/BottomNav";
 import MoodCarousel from "../components/MoodCarousel";
 import MoodPills from "../components/MoodPills";
@@ -26,6 +27,7 @@ export default function Home() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [moodMovies, setMoodMovies] = useState<MovieSummary[]>([]);
@@ -293,6 +295,7 @@ export default function Home() {
                     movie={m}
                     isBookmarked={isInWatchlist(m.id)}
                     onToggleBookmark={toggle}
+                    onAddToList={(id) => setAddToListMovieId(id)}
                     isDismissed={isDismissed(m.id)}
                     onDismiss={toggleDismiss}
                     userRating={getRating(m.id)}
@@ -383,6 +386,7 @@ export default function Home() {
                               movie={m}
                               isBookmarked={isInWatchlist(m.id)}
                               onToggleBookmark={toggle}
+                              onAddToList={(id) => setAddToListMovieId(id)}
                               isDismissed={isDismissed(m.id)}
                               onDismiss={toggleDismiss}
                               userRating={getRating(m.id)}
@@ -422,7 +426,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {popular.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
                           </div>
                         ))}
                       </div>
@@ -439,7 +443,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {topRated.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
                           </div>
                         ))}
                       </div>
@@ -456,7 +460,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {gems.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
                           </div>
                         ))}
                       </div>
@@ -468,6 +472,7 @@ export default function Home() {
           </div>
         </section>
       </main>
+      <AddToListModal movieId={addToListMovieId} onClose={() => setAddToListMovieId(null)} />
       <BottomNav />
     </>
   );

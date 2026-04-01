@@ -6,6 +6,7 @@ import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
+import AddToListModal from "../components/AddToListModal";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
@@ -22,6 +23,7 @@ export default function Search() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!q) return;
@@ -65,7 +67,7 @@ export default function Search() {
           {!loading && !error && (
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {results.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} isBookmarked={isInWatchlist(movie.id)} onToggleBookmark={toggle} isDismissed={isDismissed(movie.id)} onDismiss={toggleDismiss} userRating={getRating(movie.id)} />
+                <MovieCard key={movie.id} movie={movie} isBookmarked={isInWatchlist(movie.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(movie.id)} onDismiss={toggleDismiss} userRating={getRating(movie.id)} />
               ))}
             </section>
           )}
@@ -77,6 +79,7 @@ export default function Search() {
           )}
         </div>
       </main>
+      <AddToListModal movieId={addToListMovieId} onClose={() => setAddToListMovieId(null)} />
       <BottomNav />
     </>
   );

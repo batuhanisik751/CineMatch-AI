@@ -5,6 +5,7 @@ import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
+import AddToListModal from "../components/AddToListModal";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
@@ -17,6 +18,7 @@ export default function Collections() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   const [groups, setGroups] = useState<CollectionGroup[]>([]);
   const [totalMissing, setTotalMissing] = useState(0);
@@ -153,6 +155,7 @@ export default function Collections() {
                             movie={movie}
                             isBookmarked={isInWatchlist(movie.id)}
                             onToggleBookmark={toggle}
+                            onAddToList={(id) => setAddToListMovieId(id)}
                             isDismissed={isDismissed(movie.id)}
                             onDismiss={toggleDismiss}
                             userRating={getRating(movie.id)}
@@ -167,6 +170,7 @@ export default function Collections() {
           )}
         </div>
       </main>
+      <AddToListModal movieId={addToListMovieId} onClose={() => setAddToListMovieId(null)} />
       <BottomNav />
     </>
   );

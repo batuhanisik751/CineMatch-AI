@@ -13,6 +13,7 @@ import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
+import AddToListModal from "../components/AddToListModal";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
@@ -23,6 +24,7 @@ export default function Actors() {
   const { userId } = useUserId();
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
+  const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   // Level 1 state (browse/search)
   const [actors, setActors] = useState<ActorSummary[]>([]);
@@ -272,7 +274,7 @@ export default function Actors() {
                         <MovieCard
                           movie={item.movie}
                           isBookmarked={isInWatchlist(item.movie.id)}
-                          onToggleBookmark={toggle} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
+                          onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
                         />
                         <div className="mt-2 flex items-center gap-3 text-xs font-medium">
                           {item.user_rating != null ? (
@@ -318,6 +320,7 @@ export default function Actors() {
           )}
         </div>
       </main>
+      <AddToListModal movieId={addToListMovieId} onClose={() => setAddToListMovieId(null)} />
       <BottomNav />
     </>
   );

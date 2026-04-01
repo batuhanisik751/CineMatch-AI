@@ -428,7 +428,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 
 ## Category 5: Lists & Curation
 
-### 5.1 Custom User Lists
+### 5.1 Custom User Lists ✅
 **Scope:** Single user
 **One-line:** Named, ordered movie collections users can create, edit, and share.
 - **Data backing:** New tables; movie data from existing `movies` table

@@ -19,6 +19,8 @@ from cinematch.models import (  # noqa: F401
     Rating,
     RecommendationCache,
     User,
+    UserList,
+    UserListItem,
     WatchlistItem,
 )
 

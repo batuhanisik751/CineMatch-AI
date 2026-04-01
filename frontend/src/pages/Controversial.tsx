@@ -15,6 +15,7 @@ import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
+import AddToListModal from "../components/AddToListModal";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
@@ -45,6 +46,7 @@ export default function Controversial() {
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } =
     useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   const fetchData = () => {
     setLoading(true);
@@ -125,6 +127,7 @@ export default function Controversial() {
                         movie={item.movie}
                         isBookmarked={isInWatchlist(item.movie.id)}
                         onToggleBookmark={toggle}
+                        onAddToList={(id) => setAddToListMovieId(id)}
                         isDismissed={isDismissed(item.movie.id)}
                         onDismiss={toggleDismiss}
                         userRating={getRating(item.movie.id)}
@@ -224,6 +227,7 @@ export default function Controversial() {
           )}
         </div>
       </main>
+      <AddToListModal movieId={addToListMovieId} onClose={() => setAddToListMovieId(null)} />
       <BottomNav />
     </>
   );

@@ -572,6 +572,59 @@ export interface TasteEvolutionResponse {
   periods: TasteEvolutionPeriod[];
 }
 
+// Custom user lists
+
+export interface UserListSummary {
+  id: number;
+  user_id: number;
+  name: string;
+  description: string | null;
+  is_public: boolean;
+  movie_count: number;
+  preview_posters: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserListItemResponse {
+  movie_id: number;
+  position: number;
+  added_at: string;
+  movie_title: string | null;
+  poster_path: string | null;
+  genres: string[];
+  vote_average: number;
+  release_date: string | null;
+}
+
+export interface UserListDetailResponse {
+  id: number;
+  user_id: number;
+  name: string;
+  description: string | null;
+  is_public: boolean;
+  movie_count: number;
+  items: UserListItemResponse[];
+  total: number;
+  offset: number;
+  limit: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserListsResponse {
+  user_id: number;
+  lists: UserListSummary[];
+  total: number;
+}
+
+export interface PopularListsResponse {
+  lists: UserListSummary[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
 // Global platform stats
 
 export interface GlobalStatsMovieRef {

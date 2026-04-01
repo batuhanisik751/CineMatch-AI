@@ -10,12 +10,14 @@ import {
   Cell,
   ResponsiveContainer,
 } from "recharts";
+import { addMovieToList, getUserLists } from "../api/lists";
 import { getMovie, getMovieRatingStats, getSimilarMovies } from "../api/movies";
 import { addRating } from "../api/ratings";
-import type { MovieRatingStatsResponse, MovieResponse, SimilarMovie } from "../api/types";
+import type { MovieRatingStatsResponse, MovieResponse, SimilarMovie, UserListSummary } from "../api/types";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
+import Modal from "../components/Modal";
 import StarRating from "../components/StarRating";
 import TopNav from "../components/TopNav";
 import { useRated } from "../hooks/useRated";
@@ -40,6 +42,31 @@ export default function MovieDetail() {
   const [ratingStats, setRatingStats] = useState<MovieRatingStatsResponse | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsRefresh, setStatsRefresh] = useState(0);
+
+  // Add to List state
+  const [showListModal, setShowListModal] = useState(false);
+  const [userLists, setUserLists] = useState<UserListSummary[]>([]);
+  const [listsLoading, setListsLoading] = useState(false);
+  const [addedToLists, setAddedToLists] = useState<Set<number>>(new Set());
+
+  const openListModal = () => {
+    setShowListModal(true);
+    setListsLoading(true);
+    getUserLists(userId)
+      .then((resp) => setUserLists(resp.lists))
+      .catch(() => setUserLists([]))
+      .finally(() => setListsLoading(false));
+  };
+
+  const handleAddToList = async (listId: number) => {
+    if (!movie) return;
+    try {
+      await addMovieToList(userId, listId, movie.id);
+      setAddedToLists((prev) => new Set([...prev, listId]));
+    } catch {
+      // silent
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -200,6 +227,21 @@ export default function MovieDetail() {
                   </span>
                 </button>
               </div>
+              {/* Add to List */}
+              <div className="glass-card p-8 rounded-2xl flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-headline font-bold text-on-surface">Add to List</h3>
+                  <p className="text-sm text-on-surface-variant">Save to a collection</p>
+                </div>
+                <button
+                  onClick={openListModal}
+                  className="p-2 rounded-lg hover:bg-surface-container transition-colors"
+                >
+                  <span className="material-symbols-outlined text-3xl text-primary">
+                    playlist_add
+                  </span>
+                </button>
+              </div>
               <div className="glass-card p-8 rounded-2xl space-y-6">
                 <h3 className="text-xl font-headline font-bold text-on-surface">Rate this Movie</h3>
                 <form onSubmit={handleRate} className="space-y-4">
@@ -327,6 +369,56 @@ export default function MovieDetail() {
         )}
       </main>
       <BottomNav />
+
+      {/* Add to List modal */}
+      <Modal isOpen={showListModal} title="Add to List" onClose={() => setShowListModal(false)}>
+        <div className="space-y-3">
+          {listsLoading ? (
+            <p className="text-sm text-on-surface-variant animate-pulse">Loading lists...</p>
+          ) : userLists.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-on-surface-variant text-sm">No lists yet</p>
+              <Link
+                to="/lists"
+                className="text-primary text-sm font-bold mt-2 inline-block"
+                onClick={() => setShowListModal(false)}
+              >
+                Create your first list
+              </Link>
+            </div>
+          ) : (
+            <div className="max-h-64 overflow-y-auto space-y-2">
+              {userLists.map((list) => {
+                const added = addedToLists.has(list.id);
+                return (
+                  <div
+                    key={list.id}
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-on-surface truncate">{list.name}</p>
+                      <p className="text-xs text-on-surface-variant">{list.movie_count} movies</p>
+                    </div>
+                    {added ? (
+                      <span className="text-xs text-primary font-bold uppercase tracking-widest flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px]">check</span>
+                        Added
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleAddToList(list.id)}
+                        className="text-xs font-bold uppercase tracking-widest text-primary-container hover:text-primary transition-colors"
+                      >
+                        + Add
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </Modal>
     </>
   );
 }

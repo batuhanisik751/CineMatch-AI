@@ -4,7 +4,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from cinematch.api.v1 import dismissals, movies, ratings, recommendations, stats, users, watchlist
+from cinematch.api.v1 import (
+    dismissals,
+    lists,
+    movies,
+    ratings,
+    recommendations,
+    stats,
+    users,
+    watchlist,
+)
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
@@ -14,4 +23,5 @@ api_v1_router.include_router(ratings.router, tags=["ratings"])
 api_v1_router.include_router(recommendations.router, tags=["recommendations"])
 api_v1_router.include_router(watchlist.router, tags=["watchlist"])
 api_v1_router.include_router(dismissals.router, tags=["dismissals"])
+api_v1_router.include_router(lists.router, tags=["lists"])
 api_v1_router.include_router(stats.router, prefix="/stats", tags=["stats"])

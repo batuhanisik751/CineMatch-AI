@@ -23,6 +23,7 @@ from cinematch.api.deps import (
     get_rating_service,
     get_streak_service,
     get_taste_profile_service,
+    get_user_list_service,
     get_user_stats_service,
     get_watchlist_service,
 )
@@ -438,6 +439,76 @@ def mock_global_stats_service():
     return svc
 
 
+def _make_user_list(id: int = 1, user_id: int = 1, name: str = "Favorites") -> MagicMock:
+    ul = MagicMock()
+    ul.id = id
+    ul.user_id = user_id
+    ul.name = name
+    ul.description = "My favorite movies"
+    ul.is_public = False
+    ul.created_at = datetime(2024, 6, 15, 12, 0, 0, tzinfo=UTC)
+    ul.updated_at = datetime(2024, 6, 15, 12, 0, 0, tzinfo=UTC)
+    return ul
+
+
+def _make_list_item(list_id: int = 1, movie_id: int = 1, position: int = 0) -> MagicMock:
+    item = MagicMock()
+    item.id = 1
+    item.list_id = list_id
+    item.movie_id = movie_id
+    item.position = position
+    item.added_at = datetime(2024, 6, 15, 12, 0, 0, tzinfo=UTC)
+    item.movie_title = None
+    item.poster_path = None
+    item.genres = []
+    item.vote_average = 0.0
+    item.release_date = None
+    return item
+
+
+@pytest.fixture()
+def sample_user_list():
+    return _make_user_list()
+
+
+@pytest.fixture()
+def sample_list_item():
+    return _make_list_item()
+
+
+@pytest.fixture()
+def mock_user_list_service(sample_user_list, sample_list_item, sample_movie):
+    svc = AsyncMock()
+    svc.create_list.return_value = sample_user_list
+    svc.update_list.return_value = sample_user_list
+    svc.delete_list.return_value = True
+    svc.get_list.return_value = (
+        sample_user_list,
+        [
+            (
+                sample_list_item,
+                "The Matrix",
+                "/poster.jpg",
+                ["Action", "Sci-Fi"],
+                8.2,
+                date(1999, 3, 31),
+            )
+        ],
+        1,
+    )
+    svc.get_user_lists.return_value = [
+        (sample_user_list, 3, ["/poster.jpg", "/poster2.jpg"]),
+    ]
+    svc.get_popular_lists.return_value = (
+        [(sample_user_list, 3, ["/poster.jpg"])],
+        1,
+    )
+    svc.add_item.return_value = sample_list_item
+    svc.remove_item.return_value = True
+    svc.reorder_items.return_value = True
+    return svc
+
+
 @pytest.fixture()
 def mock_feed_service(sample_movie):
     from cinematch.schemas.movie import MovieSummary
@@ -495,6 +566,7 @@ def app(
     mock_user_stats_service,
     mock_watchlist_service,
     mock_dismissal_service,
+    mock_user_list_service,
     mock_cache_service,
     mock_feed_service,
     mock_taste_profile_service,
@@ -514,6 +586,7 @@ def app(
     test_app.dependency_overrides[get_user_stats_service] = lambda: mock_user_stats_service
     test_app.dependency_overrides[get_watchlist_service] = lambda: mock_watchlist_service
     test_app.dependency_overrides[get_dismissal_service] = lambda: mock_dismissal_service
+    test_app.dependency_overrides[get_user_list_service] = lambda: mock_user_list_service
     test_app.dependency_overrides[get_cache_service] = lambda: mock_cache_service
     test_app.dependency_overrides[get_feed_service] = lambda: mock_feed_service
     test_app.dependency_overrides[get_taste_profile_service] = lambda: mock_taste_profile_service

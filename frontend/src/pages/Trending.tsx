@@ -5,6 +5,7 @@ import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
+import AddToListModal from "../components/AddToListModal";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
@@ -26,6 +27,7 @@ export default function Trending() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   const fetchTrending = (w: number) => {
     setLoading(true);
@@ -92,7 +94,7 @@ export default function Trending() {
                     <MovieCard
                       movie={item.movie}
                       isBookmarked={isInWatchlist(item.movie.id)}
-                      onToggleBookmark={toggle} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
+                      onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
                       userRating={getRating(item.movie.id)}
                     />
                     <p className="mt-2 text-xs text-on-surface-variant font-medium">
@@ -112,6 +114,7 @@ export default function Trending() {
           )}
         </div>
       </main>
+      <AddToListModal movieId={addToListMovieId} onClose={() => setAddToListMovieId(null)} />
       <BottomNav />
     </>
   );

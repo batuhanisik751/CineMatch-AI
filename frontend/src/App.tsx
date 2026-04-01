@@ -11,6 +11,9 @@ import Discover from "./pages/Discover";
 import FromSeedRecommendations from "./pages/FromSeedRecommendations";
 import HiddenGems from "./pages/HiddenGems";
 import Home from "./pages/Home";
+import ListDetail from "./pages/ListDetail";
+import Lists from "./pages/Lists";
+import PopularLists from "./pages/PopularLists";
 import Moods from "./pages/Moods";
 import Keywords from "./pages/Keywords";
 import MovieDetail from "./pages/MovieDetail";
@@ -55,6 +58,9 @@ export default function App() {
       <Route path="/recommendations" element={<Recommendations />} />
       <Route path="/recommendations/from-seed/:movieId" element={<FromSeedRecommendations />} />
       <Route path="/watchlist" element={<Watchlist />} />
+      <Route path="/lists" element={<Lists />} />
+      <Route path="/lists/popular" element={<PopularLists />} />
+      <Route path="/lists/:id" element={<ListDetail key={navCountRef.current} />} />
       <Route path="/diary" element={<Diary />} />
       <Route path="/taste-evolution" element={<TasteEvolution />} />
       <Route path="/platform-stats" element={<PlatformStats />} />

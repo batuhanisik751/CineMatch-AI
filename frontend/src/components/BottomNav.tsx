@@ -9,6 +9,7 @@ const items = [
   { to: "/moods", icon: "mood", label: "Moods" },
   { to: "/recommendations", icon: "auto_awesome", label: "Match" },
   { to: "/watchlist", icon: "bookmark", label: "Watchlist" },
+  { to: "/lists", icon: "playlist_add", label: "Lists" },
   { to: "/profile", icon: "person", label: "Profile" },
 ];
 

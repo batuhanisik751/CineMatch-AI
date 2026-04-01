@@ -16,6 +16,7 @@ const items = [
   { to: "/advanced-search", icon: "tune", label: "Advanced" },
   { to: "/recommendations", icon: "auto_awesome", label: "Recommendations" },
   { to: "/watchlist", icon: "bookmark", label: "Watchlist" },
+  { to: "/lists", icon: "playlist_add", label: "My Lists" },
   { to: "/taste-evolution", icon: "timeline", label: "Taste Evolution" },
   { to: "/platform-stats", icon: "bar_chart", label: "Platform Stats" },
   { to: "/profile", icon: "person", label: "Profile" },

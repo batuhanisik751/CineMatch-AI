@@ -6,6 +6,7 @@ import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
 import LoadingSpinner from "../components/LoadingSpinner";
 import MovieCard from "../components/MovieCard";
+import AddToListModal from "../components/AddToListModal";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
@@ -56,6 +57,7 @@ export default function AdvancedSearch() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   // Helper: update URL params while preserving existing ones
   const updateParams = useCallback(
@@ -393,7 +395,7 @@ export default function AdvancedSearch() {
               </p>
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {results.map((r) => (
-                  <MovieCard key={r.movie.id} movie={r.movie} isBookmarked={isInWatchlist(r.movie.id)} onToggleBookmark={toggle} isDismissed={isDismissed(r.movie.id)} onDismiss={toggleDismiss} userRating={getRating(r.movie.id)} />
+                  <MovieCard key={r.movie.id} movie={r.movie} isBookmarked={isInWatchlist(r.movie.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(r.movie.id)} onDismiss={toggleDismiss} userRating={getRating(r.movie.id)} />
                 ))}
               </section>
 
@@ -429,6 +431,7 @@ export default function AdvancedSearch() {
           )}
         </div>
       </main>
+      <AddToListModal movieId={addToListMovieId} onClose={() => setAddToListMovieId(null)} />
       <BottomNav />
     </>
   );
