@@ -40,6 +40,8 @@ export default function AdvancedSearch() {
   const [castInput, setCastInput] = useState(params.get("cast") || "");
   const [minRatingInput, setMinRatingInput] = useState(params.get("min_rating") || "");
   const [maxRatingInput, setMaxRatingInput] = useState(params.get("max_rating") || "");
+  const [minRuntimeInput, setMinRuntimeInput] = useState(params.get("min_runtime") || "");
+  const [maxRuntimeInput, setMaxRuntimeInput] = useState(params.get("max_runtime") || "");
 
   // Debounced values derived from URL
   const debouncedDirector = params.get("director") || "";
@@ -47,6 +49,8 @@ export default function AdvancedSearch() {
   const debouncedCast = params.get("cast") || "";
   const debouncedMinRating = params.get("min_rating") || "";
   const debouncedMaxRating = params.get("max_rating") || "";
+  const debouncedMinRuntime = params.get("min_runtime") || "";
+  const debouncedMaxRuntime = params.get("max_runtime") || "";
 
   const selectedLanguage = params.get("language") || null;
 
@@ -91,6 +95,8 @@ export default function AdvancedSearch() {
         cast: castInput || null,
         min_rating: minRatingInput || null,
         max_rating: maxRatingInput || null,
+        min_runtime: minRuntimeInput || null,
+        max_runtime: maxRuntimeInput || null,
         offset: null,
       });
     }, 600);
@@ -98,7 +104,7 @@ export default function AdvancedSearch() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [directorInput, keywordInput, castInput, minRatingInput, maxRatingInput]);
+  }, [directorInput, keywordInput, castInput, minRatingInput, maxRatingInput, minRuntimeInput, maxRuntimeInput]);
 
   // Load genres and languages once
   useEffect(() => {
@@ -117,6 +123,8 @@ export default function AdvancedSearch() {
 
     const parsedMin = debouncedMinRating ? Number(debouncedMinRating) : undefined;
     const parsedMax = debouncedMaxRating ? Number(debouncedMaxRating) : undefined;
+    const parsedMinRuntime = debouncedMinRuntime ? Number(debouncedMinRuntime) : undefined;
+    const parsedMaxRuntime = debouncedMaxRuntime ? Number(debouncedMaxRuntime) : undefined;
 
     advancedSearchMovies({
       genre: selectedGenre ?? undefined,
@@ -127,6 +135,8 @@ export default function AdvancedSearch() {
       keyword: debouncedKeyword || undefined,
       cast: debouncedCast || undefined,
       language: selectedLanguage ?? undefined,
+      min_runtime: parsedMinRuntime && parsedMinRuntime >= 1 ? parsedMinRuntime : undefined,
+      max_runtime: parsedMaxRuntime && parsedMaxRuntime >= 1 ? parsedMaxRuntime : undefined,
       sort_by: sortBy,
       offset,
       limit: PAGE_SIZE,
@@ -138,7 +148,7 @@ export default function AdvancedSearch() {
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
-  }, [selectedGenre, selectedDecade, selectedLanguage, sortBy, debouncedDirector, debouncedKeyword, debouncedCast, debouncedMinRating, debouncedMaxRating, offset]);
+  }, [selectedGenre, selectedDecade, selectedLanguage, sortBy, debouncedDirector, debouncedKeyword, debouncedCast, debouncedMinRating, debouncedMaxRating, debouncedMinRuntime, debouncedMaxRuntime, offset]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
@@ -153,6 +163,8 @@ export default function AdvancedSearch() {
   if (debouncedKeyword) activeFilters.push({ key: "keyword", label: `Keyword: ${debouncedKeyword}` });
   if (debouncedCast) activeFilters.push({ key: "cast", label: `Cast: ${debouncedCast}` });
   if (selectedLanguage) activeFilters.push({ key: "language", label: `Language: ${languageName(selectedLanguage)}` });
+  if (debouncedMinRuntime) activeFilters.push({ key: "min_runtime", label: `Min Runtime: ${debouncedMinRuntime}min` });
+  if (debouncedMaxRuntime) activeFilters.push({ key: "max_runtime", label: `Max Runtime: ${debouncedMaxRuntime}min` });
 
   const clearAll = () => {
     setDirectorInput("");
@@ -160,6 +172,8 @@ export default function AdvancedSearch() {
     setCastInput("");
     setMinRatingInput("");
     setMaxRatingInput("");
+    setMinRuntimeInput("");
+    setMaxRuntimeInput("");
     setParams(new URLSearchParams());
   };
 
@@ -169,6 +183,8 @@ export default function AdvancedSearch() {
     if (key === "cast") setCastInput("");
     if (key === "min_rating") setMinRatingInput("");
     if (key === "max_rating") setMaxRatingInput("");
+    if (key === "min_runtime") setMinRuntimeInput("");
+    if (key === "max_runtime") setMaxRuntimeInput("");
     updateParams({ [key]: null, offset: null });
   };
 
@@ -330,6 +346,34 @@ export default function AdvancedSearch() {
                     <span className="material-symbols-outlined text-outline text-sm">expand_more</span>
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block font-label text-xs uppercase tracking-widest text-on-surface-variant font-bold">
+                  Min Runtime
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 90"
+                  value={minRuntimeInput}
+                  onChange={(e) => setMinRuntimeInput(e.target.value)}
+                  className="w-28 bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint font-body text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block font-label text-xs uppercase tracking-widest text-on-surface-variant font-bold">
+                  Max Runtime
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 150"
+                  value={maxRuntimeInput}
+                  onChange={(e) => setMaxRuntimeInput(e.target.value)}
+                  className="w-28 bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint font-body text-sm"
+                />
               </div>
 
               {activeFilters.length > 0 && (

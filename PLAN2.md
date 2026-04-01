@@ -651,7 +651,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Seed: populate from movies_clean.parquet
   - Endpoint: add `language` param to existing `/api/v1/movies/discover`
 
-### 8.4 Filter by Runtime (Pipeline Enhancement)
+### 8.4 Filter by Runtime (Pipeline Enhancement) ✅
 **Scope:** Single user
 **One-line:** Filter movies by length — "quick watch" (<90min) vs "epic" (>180min).
 - **Data backing:** `runtime` available in raw TMDb CSV but NOT currently imported
@@ -870,7 +870,7 @@ These features require importing additional columns from the TMDb CSV that we al
 |---|---------|--------|----------|
 | 32 | 10.1-10.4 Data Enrichment (runtime, lang, tagline, budget) | Low-Med | Pipeline |
 | 33 | 8.3 Language Filter | Low-Med | Search |
-| 34 | 8.4 Runtime Filter | Low-Med | Search |
+| 34 | 8.4 Runtime Filter ✅ | Low-Med | Search |
 | 35 | 2.2 Personalized Home Feed | Medium | Personalization |
 | 36 | 2.3 "More Like This" from Seed | Medium | Personalization |
 | 37 | 2.5 "Not Interested" Dismissals | Medium | Personalization |

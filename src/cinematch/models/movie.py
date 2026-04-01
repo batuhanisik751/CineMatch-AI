@@ -34,6 +34,7 @@ class Movie(Base):
     popularity: Mapped[float] = mapped_column(Float, nullable=False, server_default="0.0")
     poster_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     original_language: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    runtime: Mapped[int | None] = mapped_column(Integer, nullable=True)
     embedding = mapped_column(Vector(384), nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 

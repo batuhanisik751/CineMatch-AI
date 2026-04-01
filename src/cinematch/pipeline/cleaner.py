@@ -65,6 +65,9 @@ def load_tmdb(tmdb_path: Path) -> pd.DataFrame:
     # Language: plain ISO 639-1 code, fill missing
     df["original_language"] = df["original_language"].fillna("")
 
+    # Runtime: integer minutes, keep NaN for missing
+    df["runtime"] = pd.to_numeric(df["runtime"], errors="coerce").astype("Int64")
+
     # Select and rename columns
     result = df[
         [
@@ -81,6 +84,7 @@ def load_tmdb(tmdb_path: Path) -> pd.DataFrame:
             "popularity",
             "poster_path",
             "original_language",
+            "runtime",
         ]
     ].copy()
     result = result.rename(columns={"id": "tmdb_id"})
@@ -248,6 +252,7 @@ def clean_and_join(
             "popularity",
             "poster_path",
             "original_language",
+            "runtime",
         ]
     ]
     movies_out.to_parquet(processed_dir / "movies_clean.parquet", index=False)

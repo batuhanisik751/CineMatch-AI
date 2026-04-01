@@ -23,6 +23,11 @@ interface Props {
 export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleBookmark, onAddToList, isDismissed, onDismiss, userRating, becauseYouLiked, featureExplanations, scoreBreakdown }: Props) {
   const year = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
   const poster = posterUrl(movie.poster_path);
+  const runtimeLabel = movie.runtime
+    ? movie.runtime >= 60
+      ? `${Math.floor(movie.runtime / 60)}h ${movie.runtime % 60}m`
+      : `${movie.runtime}m`
+    : null;
 
   return (
     <Link
@@ -129,8 +134,10 @@ export default function MovieCard({ movie, matchPercent, isBookmarked, onToggleB
       </div>
       <div className="p-6 flex flex-col gap-4">
         <div>
-          {year && (
-            <p className="text-xs font-label text-on-surface-variant mb-1">{year}</p>
+          {(year || runtimeLabel) && (
+            <p className="text-xs font-label text-on-surface-variant mb-1">
+              {year}{year && runtimeLabel ? " \u00B7 " : ""}{runtimeLabel}
+            </p>
           )}
           <h3 className="text-xl font-headline font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">
             {movie.title}

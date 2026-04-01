@@ -190,6 +190,16 @@ export default function MovieDetail() {
                   <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Language</p>
                   <p className="text-on-surface font-bold">{movie.original_language ? languageName(movie.original_language) : "N/A"}</p>
                 </div>
+                <div>
+                  <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Runtime</p>
+                  <p className="text-on-surface font-bold">
+                    {movie.runtime
+                      ? movie.runtime >= 60
+                        ? `${Math.floor(movie.runtime / 60)}h ${movie.runtime % 60}m`
+                        : `${movie.runtime}m`
+                      : "N/A"}
+                  </p>
+                </div>
               </div>
               {/* Cast */}
               {movie.cast_names.length > 0 && (

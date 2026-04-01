@@ -52,6 +52,7 @@ def _make_movie(id: int = 1, title: str = "The Matrix") -> MagicMock:
     m.popularity = 50.0
     m.poster_path = "/poster.jpg"
     m.original_language = "en"
+    m.runtime = 136
     m.embedding = None
     m.created_at = datetime(2024, 1, 1, tzinfo=UTC)
     return m

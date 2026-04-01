@@ -153,6 +153,8 @@ async def discover_movies(
     year_min: int | None = Query(default=None, ge=1888, le=2030),
     year_max: int | None = Query(default=None, ge=1888, le=2030),
     language: str | None = Query(default=None, max_length=10),
+    min_runtime: int | None = Query(default=None, ge=1, description="Minimum runtime in minutes"),
+    max_runtime: int | None = Query(default=None, ge=1, description="Maximum runtime in minutes"),
     sort_by: SortOption = Query(default=SortOption.popularity),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
@@ -168,6 +170,8 @@ async def discover_movies(
         year_min=year_min,
         year_max=year_max,
         language=language,
+        min_runtime=min_runtime,
+        max_runtime=max_runtime,
         sort_by=sort_by.value,
         sort_order="asc" if sort_by == SortOption.title else "desc",
         offset=offset,
@@ -722,6 +726,8 @@ async def advanced_search(
     keyword: str | None = Query(default=None, max_length=255),
     cast: str | None = Query(default=None, max_length=255),
     language: str | None = Query(default=None, max_length=10),
+    min_runtime: int | None = Query(default=None, ge=1, description="Minimum runtime in minutes"),
+    max_runtime: int | None = Query(default=None, ge=1, description="Maximum runtime in minutes"),
     sort_by: SortOption = Query(default=SortOption.popularity),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
@@ -731,7 +737,7 @@ async def advanced_search(
 ):
     cache_key = (
         f"adv_search:{genre}:{decade}:{min_rating}:{max_rating}"
-        f":{director}:{keyword}:{cast}:{language}:{sort_by.value}:{offset}:{limit}"
+        f":{director}:{keyword}:{cast}:{language}:{min_runtime}:{max_runtime}:{sort_by.value}:{offset}:{limit}"
     )
     if cache_service is not None:
         cached = await cache_service.get(cache_key)
@@ -748,6 +754,8 @@ async def advanced_search(
         keyword=keyword,
         cast_name=cast,
         language=language,
+        min_runtime=min_runtime,
+        max_runtime=max_runtime,
         sort_by=sort_by.value,
         offset=offset,
         limit=limit,

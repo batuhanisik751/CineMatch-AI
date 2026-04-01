@@ -215,6 +215,63 @@ async def test_list_movies_sort_by_title(service, mock_db):
     assert len(movies) == 1
 
 
+async def test_list_movies_runtime_min_filter(service, mock_db):
+    """Filters by minimum runtime."""
+    movie = _mock_movie()
+
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 1
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie]
+
+    mock_db.execute = AsyncMock(side_effect=[count_result, results_result])
+
+    movies, total = await service.list_movies(mock_db, min_runtime=90)
+
+    assert total == 1
+    assert movies == [movie]
+    assert mock_db.execute.call_count == 2
+
+
+async def test_list_movies_runtime_max_filter(service, mock_db):
+    """Filters by maximum runtime."""
+    movie = _mock_movie()
+
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 1
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie]
+
+    mock_db.execute = AsyncMock(side_effect=[count_result, results_result])
+
+    movies, total = await service.list_movies(mock_db, max_runtime=150)
+
+    assert total == 1
+    assert movies == [movie]
+    assert mock_db.execute.call_count == 2
+
+
+async def test_list_movies_runtime_range_filter(service, mock_db):
+    """Filters by runtime range (min and max)."""
+    movie = _mock_movie()
+
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 1
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie]
+
+    mock_db.execute = AsyncMock(side_effect=[count_result, results_result])
+
+    movies, total = await service.list_movies(mock_db, min_runtime=90, max_runtime=150)
+
+    assert total == 1
+    assert movies == [movie]
+    assert mock_db.execute.call_count == 2
+
+
 # --- get_genre_counts tests ---
 
 

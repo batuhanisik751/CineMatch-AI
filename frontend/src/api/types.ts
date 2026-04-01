@@ -6,6 +6,7 @@ export interface MovieSummary {
   release_date: string | null;
   poster_path: string | null;
   original_language: string | null;
+  runtime: number | null;
 }
 
 export interface MovieResponse {
@@ -24,6 +25,7 @@ export interface MovieResponse {
   popularity: number;
   poster_path: string | null;
   original_language: string | null;
+  runtime: number | null;
 }
 
 export interface SimilarMovie {

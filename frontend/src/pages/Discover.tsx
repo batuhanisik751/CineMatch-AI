@@ -40,6 +40,10 @@ export default function Discover() {
   const [yearMax, setYearMax] = useState(params.get("year_max") || "");
   const [debouncedYearMin, setDebouncedYearMin] = useState(params.get("year_min") || "");
   const [debouncedYearMax, setDebouncedYearMax] = useState(params.get("year_max") || "");
+  const [minRuntimeInput, setMinRuntimeInput] = useState(params.get("min_runtime") || "");
+  const [maxRuntimeInput, setMaxRuntimeInput] = useState(params.get("max_runtime") || "");
+  const [debouncedMinRuntime, setDebouncedMinRuntime] = useState(params.get("min_runtime") || "");
+  const [debouncedMaxRuntime, setDebouncedMaxRuntime] = useState(params.get("max_runtime") || "");
   const [movies, setMovies] = useState<MovieSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -61,6 +65,7 @@ export default function Discover() {
   };
 
   const yearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const runtimeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
@@ -79,6 +84,20 @@ export default function Discover() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yearMin, yearMax]);
+
+  // Debounce runtime inputs — only apply after 600ms of no typing
+  useEffect(() => {
+    if (runtimeTimerRef.current) clearTimeout(runtimeTimerRef.current);
+    runtimeTimerRef.current = setTimeout(() => {
+      setDebouncedMinRuntime(minRuntimeInput);
+      setDebouncedMaxRuntime(maxRuntimeInput);
+      updateParams({ min_runtime: minRuntimeInput || null, max_runtime: maxRuntimeInput || null });
+    }, 600);
+    return () => {
+      if (runtimeTimerRef.current) clearTimeout(runtimeTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minRuntimeInput, maxRuntimeInput]);
 
   // Load genres and languages once
   useEffect(() => {
@@ -120,12 +139,16 @@ export default function Discover() {
       // Browse mode: use discover API with filters
       const parsedMin = debouncedYearMin ? Number(debouncedYearMin) : undefined;
       const parsedMax = debouncedYearMax ? Number(debouncedYearMax) : undefined;
+      const parsedMinRuntime = debouncedMinRuntime ? Number(debouncedMinRuntime) : undefined;
+      const parsedMaxRuntime = debouncedMaxRuntime ? Number(debouncedMaxRuntime) : undefined;
 
       discoverMovies({
         genre: selectedGenre ?? undefined,
         year_min: parsedMin && parsedMin >= 1888 ? parsedMin : undefined,
         year_max: parsedMax && parsedMax >= 1888 ? parsedMax : undefined,
         language: selectedLanguage ?? undefined,
+        min_runtime: parsedMinRuntime && parsedMinRuntime >= 1 ? parsedMinRuntime : undefined,
+        max_runtime: parsedMaxRuntime && parsedMaxRuntime >= 1 ? parsedMaxRuntime : undefined,
         sort_by: sortBy,
         offset,
         limit: PAGE_SIZE,
@@ -141,7 +164,7 @@ export default function Discover() {
         .catch((e) => setError(e.detail || e.message))
         .finally(() => setLoading(false));
     }
-  }, [searchQuery, searchMode, selectedGenre, selectedLanguage, sortBy, debouncedYearMin, debouncedYearMax, offset]);
+  }, [searchQuery, searchMode, selectedGenre, selectedLanguage, sortBy, debouncedYearMin, debouncedYearMax, debouncedMinRuntime, debouncedMaxRuntime, offset]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
@@ -323,6 +346,72 @@ export default function Discover() {
                     onChange={(e) => { setYearMax(e.target.value); updateParams({ offset: null }); }}
                     className="w-28 bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint font-body text-sm"
                   />
+                </div>
+              </div>
+
+              {/* Runtime filter — presets + custom range */}
+              <div className="space-y-3">
+                <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant block">
+                  Runtime
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "Any Length", min: null, max: null },
+                    { label: "Quick Watch (<90min)", min: null, max: "90" },
+                    { label: "Standard (90\u2013150min)", min: "90", max: "150" },
+                    { label: "Epic (>150min)", min: "150", max: null },
+                  ].map((preset) => {
+                    const isActive =
+                      (params.get("min_runtime") || null) === preset.min &&
+                      (params.get("max_runtime") || null) === preset.max;
+                    return (
+                      <button
+                        key={preset.label}
+                        onClick={() => {
+                          setMinRuntimeInput(preset.min || "");
+                          setMaxRuntimeInput(preset.max || "");
+                          setDebouncedMinRuntime(preset.min || "");
+                          setDebouncedMaxRuntime(preset.max || "");
+                          updateParams({ min_runtime: preset.min, max_runtime: preset.max, offset: null });
+                        }}
+                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
+                          isActive
+                            ? "bg-primary-container text-on-primary-container shadow-md"
+                            : "bg-surface-container-highest text-on-surface-variant hover:bg-surface-container-high"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-4 items-end">
+                  <div className="space-y-2">
+                    <label className="block font-label text-xs uppercase tracking-widest text-on-surface-variant font-bold">
+                      Min minutes
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 60"
+                      value={minRuntimeInput}
+                      onChange={(e) => { setMinRuntimeInput(e.target.value); updateParams({ offset: null }); }}
+                      className="w-28 bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint font-body text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block font-label text-xs uppercase tracking-widest text-on-surface-variant font-bold">
+                      Max minutes
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 150"
+                      value={maxRuntimeInput}
+                      onChange={(e) => { setMaxRuntimeInput(e.target.value); updateParams({ offset: null }); }}
+                      className="w-28 bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint font-body text-sm"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

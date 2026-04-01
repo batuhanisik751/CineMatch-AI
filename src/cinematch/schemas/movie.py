@@ -18,6 +18,7 @@ class MovieSummary(BaseModel):
     release_date: date | None
     poster_path: str | None
     original_language: str | None = None
+    runtime: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -40,6 +41,7 @@ class MovieResponse(BaseModel):
     popularity: float
     poster_path: str | None
     original_language: str | None = None
+    runtime: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

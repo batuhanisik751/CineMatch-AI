@@ -117,12 +117,14 @@ class MovieService:
         year_min: int | None = None,
         year_max: int | None = None,
         language: str | None = None,
+        min_runtime: int | None = None,
+        max_runtime: int | None = None,
         sort_by: str = "popularity",
         sort_order: str = "desc",
         offset: int = 0,
         limit: int = 20,
     ) -> tuple[list[Movie], int]:
-        """List movies with optional genre/year/language filters, sorting, and pagination."""
+        """List movies with optional filters, sorting, and pagination."""
         filters = []
         if genre is not None:
             filters.append(Movie.genres.op("@>")(cast([genre], JSONB_TYPE)))
@@ -132,6 +134,10 @@ class MovieService:
             filters.append(extract("year", Movie.release_date) <= year_max)
         if language is not None:
             filters.append(Movie.original_language == language)
+        if min_runtime is not None:
+            filters.append(Movie.runtime >= min_runtime)
+        if max_runtime is not None:
+            filters.append(Movie.runtime <= max_runtime)
 
         count_stmt = select(func.count()).select_from(Movie)
         for f in filters:
@@ -704,6 +710,8 @@ class MovieService:
         keyword: str | None = None,
         cast_name: str | None = None,
         language: str | None = None,
+        min_runtime: int | None = None,
+        max_runtime: int | None = None,
         sort_by: str = "popularity",
         sort_order: str = "desc",
         offset: int = 0,
@@ -731,6 +739,10 @@ class MovieService:
             )
         if language is not None:
             filters.append(Movie.original_language == language)
+        if min_runtime is not None:
+            filters.append(Movie.runtime >= min_runtime)
+        if max_runtime is not None:
+            filters.append(Movie.runtime <= max_runtime)
 
         count_stmt = select(func.count()).select_from(Movie)
         for f in filters:

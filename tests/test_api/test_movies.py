@@ -187,6 +187,29 @@ async def test_discover_with_language(client, mock_movie_service):
     assert call_kwargs["language"] == "ko"
 
 
+async def test_discover_with_runtime_range(client, mock_movie_service):
+    resp = await client.get(
+        "/api/v1/movies/discover", params={"min_runtime": 90, "max_runtime": 150}
+    )
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.list_movies.call_args.kwargs
+    assert call_kwargs["min_runtime"] == 90
+    assert call_kwargs["max_runtime"] == 150
+
+
+async def test_discover_with_min_runtime_only(client, mock_movie_service):
+    resp = await client.get("/api/v1/movies/discover", params={"min_runtime": 120})
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.list_movies.call_args.kwargs
+    assert call_kwargs["min_runtime"] == 120
+    assert call_kwargs["max_runtime"] is None
+
+
+async def test_discover_invalid_runtime(client):
+    resp = await client.get("/api/v1/movies/discover", params={"min_runtime": 0})
+    assert resp.status_code == 422
+
+
 # --- Semantic search endpoint tests ---
 
 

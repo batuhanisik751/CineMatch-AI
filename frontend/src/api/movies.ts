@@ -59,6 +59,8 @@ export function discoverMovies(params: {
   year_min?: number;
   year_max?: number;
   language?: string;
+  min_runtime?: number;
+  max_runtime?: number;
   sort_by?: string;
   offset?: number;
   limit?: number;
@@ -68,6 +70,8 @@ export function discoverMovies(params: {
   if (params.year_min != null) qs.set("year_min", String(params.year_min));
   if (params.year_max != null) qs.set("year_max", String(params.year_max));
   if (params.language) qs.set("language", params.language);
+  if (params.min_runtime != null) qs.set("min_runtime", String(params.min_runtime));
+  if (params.max_runtime != null) qs.set("max_runtime", String(params.max_runtime));
   if (params.sort_by) qs.set("sort_by", params.sort_by);
   if (params.offset != null) qs.set("offset", String(params.offset));
   if (params.limit != null) qs.set("limit", String(params.limit));
@@ -206,6 +210,8 @@ export function advancedSearchMovies(params: {
   keyword?: string;
   cast?: string;
   language?: string;
+  min_runtime?: number;
+  max_runtime?: number;
   sort_by?: string;
   offset?: number;
   limit?: number;
@@ -219,6 +225,8 @@ export function advancedSearchMovies(params: {
   if (params.keyword) qs.set("keyword", params.keyword);
   if (params.cast) qs.set("cast", params.cast);
   if (params.language) qs.set("language", params.language);
+  if (params.min_runtime != null) qs.set("min_runtime", String(params.min_runtime));
+  if (params.max_runtime != null) qs.set("max_runtime", String(params.max_runtime));
   if (params.sort_by) qs.set("sort_by", params.sort_by);
   if (params.offset != null) qs.set("offset", String(params.offset));
   if (params.limit != null) qs.set("limit", String(params.limit));
