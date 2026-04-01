@@ -298,3 +298,29 @@ class MovieRatingStatsResponse(BaseModel):
     total_ratings: int
     distribution: list[RatingHistogramBucket]
     user_rating: int | None
+
+
+class MovieConnection(BaseModel):
+    type: str
+    value: str
+    details: str
+
+
+class MovieConnectionsResponse(BaseModel):
+    movie1: MovieSummary
+    movie2: MovieSummary
+    connections: list[MovieConnection]
+    connection_count: int
+
+
+class PathStep(BaseModel):
+    movie: MovieSummary
+    linked_by: str | None
+
+
+class MoviePathResponse(BaseModel):
+    movie1: MovieSummary
+    movie2: MovieSummary
+    path: list[PathStep]
+    degrees: int
+    found: bool

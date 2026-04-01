@@ -747,3 +747,29 @@ export interface ChallengesProgressResponse {
   completed_count: number;
   total_count: number;
 }
+
+export interface MovieConnectionItem {
+  type: string;
+  value: string;
+  details: string;
+}
+
+export interface MovieConnectionsResponse {
+  movie1: MovieSummary;
+  movie2: MovieSummary;
+  connections: MovieConnectionItem[];
+  connection_count: number;
+}
+
+export interface PathStep {
+  movie: MovieSummary;
+  linked_by: string | null;
+}
+
+export interface MoviePathResponse {
+  movie1: MovieSummary;
+  movie2: MovieSummary;
+  path: PathStep[];
+  degrees: number;
+  found: boolean;
+}

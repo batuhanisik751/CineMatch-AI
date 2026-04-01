@@ -23,6 +23,7 @@ import TopNav from "../components/TopNav";
 import { useRated } from "../hooks/useRated";
 import { useUserId } from "../hooks/useUserId";
 import { useWatchlist } from "../hooks/useWatchlist";
+import MovieConnections from "../components/MovieConnections";
 
 function posterUrl(path: string | null, size = "w500") {
   return path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
@@ -367,6 +368,9 @@ export default function MovieDetail() {
             </div>
           </section>
         )}
+
+        {/* Six Degrees — Movie Connections */}
+        {movie && <MovieConnections currentMovieId={movie.id} />}
       </main>
       <BottomNav />
 

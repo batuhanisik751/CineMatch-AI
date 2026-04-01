@@ -25,6 +25,8 @@ import type {
   ThematicCollectionsResponse,
   TopChartsResponse,
   TrendingResponse,
+  MovieConnectionsResponse,
+  MoviePathResponse,
 } from "./types";
 
 export function searchMovies(q: string, limit = 20) {
@@ -237,5 +239,17 @@ export function getThematicCollections(type?: string) {
 export function getThematicCollectionDetail(id: string, limit = 20) {
   return apiFetch<ThematicCollectionDetailResponse>(
     `/api/v1/movies/thematic-collections/${encodeURIComponent(id)}?limit=${limit}`,
+  );
+}
+
+export function getMovieConnections(id1: number, id2: number) {
+  return apiFetch<MovieConnectionsResponse>(
+    `/api/v1/movies/${id1}/connection/${id2}`,
+  );
+}
+
+export function getMoviePath(id1: number, id2: number, maxDepth = 6) {
+  return apiFetch<MoviePathResponse>(
+    `/api/v1/movies/${id1}/path/${id2}?max_depth=${maxDepth}`,
   );
 }

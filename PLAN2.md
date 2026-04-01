@@ -563,7 +563,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Compare recommended movie's metadata with user's top-rated movies' metadata
   - Pure server-side string generation, no LLM needed
 
-### 7.3 Movie Connections / "Six Degrees"
+### 7.3 Movie Connections / "Six Degrees" ✅
 **Scope:** Single user
 **One-line:** Show how two movies are connected through shared cast, directors, genres, or keywords.
 - **Data backing:** `movies.director`, `movies.cast_names`, `movies.genres`, `movies.keywords`
@@ -885,7 +885,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 47 | 6.1 Achievement Badges ✅ | Medium | Gamification |
 | 48 | 6.2 Rating Challenges | Medium | Gamification |
 | 49 | 6.3 Movie Bingo ✅ | Medium | Gamification |
-| 50 | 7.3 Movie Connections / Six Degrees | Medium | Movie Detail |
+| 50 | 7.3 Movie Connections / Six Degrees ✅ | Medium | Movie Detail |
 | 51 | 7.4 Movie DNA Breakdown | Low-Med | Movie Detail |
 | 52 | 1.10 Multi-Criteria Discovery | Medium | Discovery |
 | 53 | 1.11 Complete the Collection | Medium | Discovery |

@@ -980,3 +980,149 @@ class MovieService:
 
         result = await db.execute(stmt)
         return [row[0] for row in result.all()]
+
+    async def find_direct_connections(
+        self,
+        movie_id1: int,
+        movie_id2: int,
+        db: AsyncSession,
+    ) -> tuple[Movie | None, Movie | None, list[dict]]:
+        """Find shared attributes between two movies."""
+        movie1 = await self.get_by_id(movie_id1, db)
+        movie2 = await self.get_by_id(movie_id2, db)
+        if movie1 is None or movie2 is None:
+            return movie1, movie2, []
+
+        connections: list[dict] = []
+
+        # Shared actors
+        shared_actors = set(movie1.cast_names or []) & set(movie2.cast_names or [])
+        for actor in sorted(shared_actors):
+            connections.append(
+                {"type": "actor", "value": actor, "details": "appears in both movies"}
+            )
+
+        # Same director
+        if movie1.director and movie2.director and movie1.director == movie2.director:
+            connections.append(
+                {"type": "director", "value": movie1.director, "details": "directed both movies"}
+            )
+
+        # Shared genres
+        shared_genres = set(movie1.genres or []) & set(movie2.genres or [])
+        for genre in sorted(shared_genres):
+            connections.append({"type": "genre", "value": genre, "details": "shared genre"})
+
+        # Shared keywords
+        shared_keywords = set(movie1.keywords or []) & set(movie2.keywords or [])
+        for kw in sorted(shared_keywords):
+            connections.append({"type": "keyword", "value": kw, "details": "shared keyword"})
+
+        return movie1, movie2, connections
+
+    async def _movies_by_person(
+        self,
+        person_name: str,
+        db: AsyncSession,
+        limit: int = 50,
+    ) -> list[Movie]:
+        """Find movies featuring a person as actor or director."""
+        stmt = (
+            select(Movie)
+            .where(
+                (Movie.cast_names.op("@>")(cast([person_name], JSONB_TYPE)))
+                | (Movie.director == person_name)
+            )
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def find_shortest_path(
+        self,
+        movie_id1: int,
+        movie_id2: int,
+        db: AsyncSession,
+        max_depth: int = 6,
+    ) -> tuple[Movie | None, Movie | None, list[dict], bool]:
+        """BFS shortest path between two movies through shared cast/directors."""
+        movie1 = await self.get_by_id(movie_id1, db)
+        movie2 = await self.get_by_id(movie_id2, db)
+        if movie1 is None or movie2 is None:
+            return movie1, movie2, [], False
+
+        if movie1.id == movie2.id:
+            return movie1, movie2, [{"movie": movie1, "linked_by": None}], True
+
+        # Check direct connection first
+        people1 = set(movie1.cast_names or [])
+        if movie1.director:
+            people1.add(movie1.director)
+        people2 = set(movie2.cast_names or [])
+        if movie2.director:
+            people2.add(movie2.director)
+
+        direct_link = people1 & people2
+        if direct_link:
+            person = sorted(direct_link)[0]
+            return (
+                movie1,
+                movie2,
+                [
+                    {"movie": movie1, "linked_by": None},
+                    {
+                        "movie": movie2,
+                        "linked_by": (
+                            f"actor: {person}"
+                            if person != movie1.director
+                            else f"director: {person}"
+                        ),
+                    },
+                ],
+                True,
+            )
+
+        # BFS
+        person_cache: dict[str, list[Movie]] = {}
+        # visited: movie_id -> (parent_movie_id, linking_person)
+        visited: dict[int, tuple[int | None, str | None]] = {movie1.id: (None, None)}
+        frontier: list[Movie] = [movie1]
+        target_id = movie2.id
+
+        for _depth in range(max_depth):
+            next_frontier: list[Movie] = []
+            for movie in frontier:
+                people = list(movie.cast_names or [])
+                if movie.director:
+                    people.append(movie.director)
+
+                for person in people:
+                    if person not in person_cache:
+                        person_cache[person] = await self._movies_by_person(person, db)
+
+                    for neighbor in person_cache[person]:
+                        if neighbor.id in visited:
+                            continue
+                        visited[neighbor.id] = (movie.id, person)
+                        if neighbor.id == target_id:
+                            # Reconstruct path
+                            path: list[dict] = []
+                            current_id: int | None = target_id
+                            movie_map = {
+                                m.id: m for movies in person_cache.values() for m in movies
+                            }
+                            movie_map[movie1.id] = movie1
+                            movie_map[movie2.id] = movie2
+                            while current_id is not None:
+                                parent_id, link_person = visited[current_id]
+                                label = f"actor: {link_person}" if link_person else None
+                                path.append({"movie": movie_map[current_id], "linked_by": label})
+                                current_id = parent_id
+                            path.reverse()
+                            return movie1, movie2, path, True
+                        next_frontier.append(neighbor)
+            frontier = next_frontier
+            if not frontier:
+                break
+
+        return movie1, movie2, [], False

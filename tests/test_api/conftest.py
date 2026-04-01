@@ -128,6 +128,23 @@ def mock_movie_service(sample_movie):
     )
     svc.surprise_movies.return_value = [sample_movie]
     svc.advanced_search.return_value = ([sample_movie], 1)
+    svc.find_direct_connections.return_value = (
+        sample_movie,
+        sample_movie,
+        [
+            {"type": "actor", "value": "Keanu Reeves", "details": "appears in both movies"},
+            {"type": "genre", "value": "Action", "details": "shared genre"},
+        ],
+    )
+    svc.find_shortest_path.return_value = (
+        sample_movie,
+        sample_movie,
+        [
+            {"movie": sample_movie, "linked_by": None},
+            {"movie": sample_movie, "linked_by": "actor: Keanu Reeves"},
+        ],
+        True,
+    )
     svc.controversial.return_value = [(sample_movie, 7.3, 2.15, 150, {r: 15 for r in range(1, 11)})]
     svc.collection_completions.return_value = [
         {

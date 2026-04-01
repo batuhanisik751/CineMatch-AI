@@ -46,11 +46,15 @@ from cinematch.schemas.movie import (
     KeywordSearchResponse,
     KeywordStats,
     KeywordSummary,
+    MovieConnection,
+    MovieConnectionsResponse,
     MovieListResponse,
+    MoviePathResponse,
     MovieRatingStatsResponse,
     MovieResponse,
     MovieSearchResponse,
     MovieSummary,
+    PathStep,
     PopularActorsResponse,
     PopularDirectorsResponse,
     PopularKeywordsResponse,
@@ -839,6 +843,92 @@ async def get_thematic_collection(
             logger.warning("Failed to cache thematic collection detail", exc_info=True)
 
     return result
+
+
+@router.get("/{movie_id}/connection/{other_id}", response_model=MovieConnectionsResponse)
+async def get_movie_connections(
+    movie_id: int,
+    other_id: int,
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """Find shared attributes between two movies."""
+    lo, hi = min(movie_id, other_id), max(movie_id, other_id)
+    cache_key = f"connections:{lo}:{hi}"
+
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return MovieConnectionsResponse.model_validate_json(cached)
+
+    movie1, movie2, connections = await movie_service.find_direct_connections(
+        movie_id, other_id, db
+    )
+    if movie1 is None or movie2 is None:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    response = MovieConnectionsResponse(
+        movie1=MovieSummary.model_validate(movie1),
+        movie2=MovieSummary.model_validate(movie2),
+        connections=[MovieConnection(**c) for c in connections],
+        connection_count=len(connections),
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache movie connections", exc_info=True)
+
+    return response
+
+
+@router.get("/{movie_id}/path/{other_id}", response_model=MoviePathResponse)
+async def get_movie_path(
+    movie_id: int,
+    other_id: int,
+    max_depth: int = Query(default=6, ge=1, le=6),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """Find shortest path between two movies through shared cast/directors."""
+    lo, hi = min(movie_id, other_id), max(movie_id, other_id)
+    cache_key = f"path:{lo}:{hi}:{max_depth}"
+
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return MoviePathResponse.model_validate_json(cached)
+
+    movie1, movie2, path, found = await movie_service.find_shortest_path(
+        movie_id, other_id, db, max_depth=max_depth
+    )
+    if movie1 is None or movie2 is None:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    response = MoviePathResponse(
+        movie1=MovieSummary.model_validate(movie1),
+        movie2=MovieSummary.model_validate(movie2),
+        path=[
+            PathStep(
+                movie=MovieSummary.model_validate(s["movie"]),
+                linked_by=s["linked_by"],
+            )
+            for s in path
+        ],
+        degrees=max(0, len(path) - 1),
+        found=found,
+    )
+
+    if cache_service is not None and found:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache movie path", exc_info=True)
+
+    return response
 
 
 @router.get("/{movie_id}", response_model=MovieResponse)

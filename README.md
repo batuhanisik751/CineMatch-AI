@@ -126,6 +126,8 @@ Features: movie discovery with genre/year/sort filters, title search with typo t
 | GET | `/api/v1/movies/thematic-collections?collection_type=genre_decade` | Browse auto-generated thematic collections (types: `genre_decade`, `director`, `year`; omit param for all) |
 | GET | `/api/v1/movies/thematic-collections/{collection_id}?limit=20` | Ranked movies within a specific collection (e.g., `genre_decade:Sci-Fi:2010`, `director:Christopher Nolan`, `year:2023`) |
 | GET | `/api/v1/movies/{id}/similar?top_k=20` | Content-similar movies |
+| GET | `/api/v1/movies/{id}/connection/{other_id}` | Six Degrees — shared actors, director, genres, and keywords between two movies |
+| GET | `/api/v1/movies/{id}/path/{other_id}?max_depth=6` | Shortest path between two movies through shared cast/directors (BFS, max 6 degrees) |
 | GET | `/api/v1/movies/{id}/rating-stats?user_id=42` | Per-movie rating distribution (avg, median, histogram 1-10, user's rating highlighted) |
 | GET | `/api/v1/users/{id}` | User details |
 | GET | `/api/v1/users/{id}/stats` | User profile analytics (rating histogram, top directors/actors, timeline) |
