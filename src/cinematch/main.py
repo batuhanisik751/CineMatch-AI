@@ -36,6 +36,7 @@ from cinematch.services.movie_service import MovieService
 from cinematch.services.onboarding_service import OnboardingService
 from cinematch.services.rating_comparison_service import RatingComparisonService
 from cinematch.services.rating_service import RatingService
+from cinematch.services.rewatch_service import RewatchService
 from cinematch.services.streak_service import StreakService
 from cinematch.services.taste_evolution_service import TasteEvolutionService
 from cinematch.services.taste_profile_service import TasteProfileService
@@ -146,6 +147,7 @@ async def lifespan(app: FastAPI):
     app.state.achievement_service = AchievementService()
     app.state.challenge_service = ChallengeService()
     app.state.bingo_service = BingoService()
+    app.state.rewatch_service = RewatchService()
     app.state.onboarding_service = OnboardingService()
     app.state.taste_profile_service = TasteProfileService(
         user_stats_service=app.state.user_stats_service,

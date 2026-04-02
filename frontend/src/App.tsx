@@ -25,6 +25,7 @@ import Onboarding from "./pages/Onboarding";
 import PlatformStats from "./pages/PlatformStats";
 import Profile from "./pages/Profile";
 import Recommendations from "./pages/Recommendations";
+import Rewatch from "./pages/Rewatch";
 import Search from "./pages/Search";
 import TopCharts from "./pages/TopCharts";
 import TasteEvolution from "./pages/TasteEvolution";
@@ -65,6 +66,7 @@ export default function App() {
       <Route path="/movies/:id" element={<MovieDetail />} />
       <Route path="/recommendations" element={<Recommendations />} />
       <Route path="/recommendations/from-seed/:movieId" element={<FromSeedRecommendations />} />
+      <Route path="/rewatch" element={<Rewatch />} />
       <Route path="/watchlist/recommendations" element={<WatchlistRecommendations />} />
       <Route path="/watchlist" element={<Watchlist />} />
       <Route path="/lists" element={<Lists />} />

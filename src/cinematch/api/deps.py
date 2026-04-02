@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from cinematch.services.onboarding_service import OnboardingService
     from cinematch.services.rating_comparison_service import RatingComparisonService
     from cinematch.services.rating_service import RatingService
+    from cinematch.services.rewatch_service import RewatchService
     from cinematch.services.streak_service import StreakService
     from cinematch.services.taste_evolution_service import TasteEvolutionService
     from cinematch.services.taste_profile_service import TasteProfileService
@@ -118,6 +119,10 @@ def get_challenge_service(request: Request) -> ChallengeService:
 
 def get_bingo_service(request: Request) -> BingoService:
     return request.app.state.bingo_service
+
+
+def get_rewatch_service(request: Request) -> RewatchService:
+    return request.app.state.rewatch_service
 
 
 def get_onboarding_service(request: Request) -> OnboardingService:

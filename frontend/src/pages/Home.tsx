@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { discoverMovies, getHiddenGems, semanticSearchMovies } from "../api/movies";
 import { getOnboardingStatus } from "../api/onboarding";
 import { getMoodRecommendations, getSurpriseMovies } from "../api/recommendations";
-import type { FeedResponse, MovieSummary } from "../api/types";
-import { getUserFeed } from "../api/users";
+import type { FeedResponse, MovieSummary, RewatchItem } from "../api/types";
+import { getUserFeed, getUserRewatch } from "../api/users";
 import AddToListModal from "../components/AddToListModal";
 import AutocompleteSearch from "../components/AutocompleteSearch";
 import BottomNav from "../components/BottomNav";
@@ -44,6 +44,9 @@ export default function Home() {
 
   const [feed, setFeed] = useState<FeedResponse | null>(null);
   const [feedLoading, setFeedLoading] = useState(false);
+
+  const [rewatchItems, setRewatchItems] = useState<RewatchItem[]>([]);
+  const [rewatchLoading, setRewatchLoading] = useState(false);
 
   const [onboardingNeeded, setOnboardingNeeded] = useState(false);
   const [onboardingRated, setOnboardingRated] = useState(0);
@@ -111,6 +114,21 @@ export default function Home() {
       })
       .catch(() => setFeed(null))
       .finally(() => setFeedLoading(false));
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    setRewatchLoading(true);
+    getUserRewatch(userId, 8)
+      .then((data) => {
+        setRewatchItems(data.suggestions);
+        const ids = data.suggestions.map((s) => s.movie.id);
+        refreshForMovieIds(ids);
+        refreshDismissedForMovieIds(ids);
+        refreshRatingsForMovieIds(ids);
+      })
+      .catch(() => setRewatchItems([]))
+      .finally(() => setRewatchLoading(false));
   }, [userId]);
 
   const feedSectionIcon: Record<string, string> = {
@@ -507,6 +525,88 @@ export default function Home() {
               )}
             </div>
           </div>
+        </section>
+
+        {/* Revisit Your Favorites */}
+        <section className="max-w-7xl mx-auto px-6 pb-32">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-2xl text-primary">
+                history
+              </span>
+              <div>
+                <h2 className="font-headline font-bold text-2xl text-on-surface">
+                  Revisit Your Favorites
+                </h2>
+                <p className="text-sm text-on-surface-variant mt-0.5">
+                  Movies you loved long ago worth watching again
+                </p>
+              </div>
+            </div>
+            {rewatchItems.length > 0 && (
+              <Link
+                to="/rewatch"
+                className="text-primary text-sm font-medium hover:underline flex items-center gap-1"
+              >
+                See all
+                <span className="material-symbols-outlined text-sm">
+                  arrow_forward
+                </span>
+              </Link>
+            )}
+          </div>
+
+          {rewatchLoading && (
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {[1, 2, 3, 4, 5, 6].map((j) => (
+                <div
+                  key={j}
+                  className="flex-shrink-0 w-44 aspect-[2/3] bg-surface-container-low rounded-xl animate-pulse"
+                />
+              ))}
+            </div>
+          )}
+
+          {!rewatchLoading && rewatchItems.length === 0 && (
+            <div className="glass-panel rounded-2xl border border-outline-variant/10 p-10 text-center">
+              <span className="material-symbols-outlined text-5xl text-outline mb-3 block">
+                history
+              </span>
+              <p className="text-on-surface-variant text-base mb-2">
+                No old favorites to revisit yet
+              </p>
+              <p className="text-on-surface-variant/60 text-sm">
+                Rate some movies and check back later — we'll remind you of the ones you loved!
+              </p>
+            </div>
+          )}
+
+          {!rewatchLoading && rewatchItems.length > 0 && (
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+              {rewatchItems.map((item) => (
+                <div key={item.movie.id} className="flex-shrink-0 w-44">
+                  <MovieCard
+                    movie={item.movie}
+                    isBookmarked={isInWatchlist(item.movie.id)}
+                    onToggleBookmark={toggle}
+                    onAddToList={(id) => setAddToListMovieId(id)}
+                    isDismissed={isDismissed(item.movie.id)}
+                    onDismiss={toggleDismiss}
+                    userRating={getRating(item.movie.id)}
+                  />
+                  <p className="text-[11px] text-on-surface-variant/60 mt-1.5 px-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[12px]">
+                      schedule
+                    </span>
+                    Rated {item.user_rating}/10,{" "}
+                    {Math.floor(item.days_since_rated / 365) > 0
+                      ? `${Math.floor(item.days_since_rated / 365)}y ago`
+                      : "recently"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </main>
       <AddToListModal movieId={addToListMovieId} onClose={() => setAddToListMovieId(null)} />

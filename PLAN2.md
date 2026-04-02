@@ -678,7 +678,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 
 ## Category 9: Onboarding & Utility
 
-### 9.1 Quick Rate Onboarding
+### 9.1 Quick Rate Onboarding ✅
 **Scope:** Single user
 **One-line:** New user flow where they rate 10-20 popular, genre-diverse movies to bootstrap their taste profile.
 - **Data backing:** `movies.vote_count` + `movies.genres` to select popular, diverse films; `ratings` to capture input
@@ -691,7 +691,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - After completion, trigger recommendation cache build for the user
   - Store ratings via existing `POST /api/v1/users/{id}/ratings`
 
-### 9.2 Rewatch Recommender
+### 9.2 Rewatch Recommender ✅
 **Scope:** Single user
 **One-line:** Suggest movies the user rated highly long ago that are worth revisiting.
 - **Data backing:** `ratings.rating` + `ratings.timestamp` — find high ratings with old timestamps
@@ -862,7 +862,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 27 | 4.4 Rating Comparison | Low | Social |
 | 28 | 2.4 Diversity Controls | Low-Med | Personalization |
 | 29 | 8.5 Search by Cast Combo | Low | Search |
-| 30 | 9.2 Rewatch Recommender | Low | Onboarding |
+| 30 | 9.2 Rewatch Recommender ✅ | Low | Onboarding |
 | 31 | 9.7 Predicted Match Percentage | Low-Med | Onboarding |
 
 ### Tier 3: Bigger Builds, Strong Differentiators

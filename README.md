@@ -173,6 +173,7 @@ Features: movie discovery with genre/year/language/runtime/sort filters, **Autoc
 | GET | `/api/v1/lists/popular?offset=0&limit=20` | Browse popular public lists sorted by item count |
 | GET | `/api/v1/onboarding/movies?user_id=1&count=20` | Genre-diverse popular movies for onboarding — one top movie per genre by vote_count, excludes already-rated, shuffled |
 | GET | `/api/v1/onboarding/status?user_id=1` | Onboarding completion status — completed when rating_count >= threshold (default 10) |
+| GET | `/api/v1/users/{id}/rewatch?limit=10&min_rating=8` | Rewatch suggestions — highly-rated movies worth revisiting, with "classic" indicator for community favorites |
 | GET | `/api/v1/stats/global` | Platform-wide statistics (total movies/users/ratings, avg rating, most rated movie, highest rated movie, most active user, ratings this week) |
 
 ## LLM Integration (Mistral via Ollama)
@@ -221,6 +222,7 @@ If Ollama is not running, the app still works — recommendations use the algori
 29. **Movie Popularity Timeline:** On each movie's detail page, a "Popularity Timeline" area chart shows when a movie gets rated most — revealing spikes around theatrical releases, award seasons, and streaming premieres. A month/week toggle lets users zoom in or out. The chart uses a gradient fill area (Recharts AreaChart) with tooltips showing rating count and average rating per period. Empty timelines are hidden gracefully. Backed by `GET /api/v1/movies/{id}/activity?granularity=month|week` which runs a single `DATE_TRUNC` SQL aggregation over `ratings.timestamp`.
 28. **Movie DNA Breakdown:** On each movie's detail page, a "Movie DNA" panel visualizes what makes a movie unique. A colored horizontal bar shows genre composition (proportional segments with hover tooltips), keyword tags are sized by frequency across the movie and its 10 nearest embedding neighbors, a decade badge shows the era, and italic "Vibe" tags surface keywords that appear in ≥2 neighbors but not in the movie itself — surfacing the ambient mood without being in the credits. Backed by `GET /api/v1/movies/{id}/dna` which fetches neighbors via ContentRecommender, computes normalized genre/keyword weights, and caches the result for 6 hours.
 30. **Quick Rate Onboarding:** New-user flow at `/onboarding` where users rate 10-20 popular, genre-diverse movies to bootstrap their taste profile. The backend selects one top movie per genre (by vote_count) using a SQL window function, excludes already-rated movies, and fills remaining slots from overall top movies — shuffled for variety. A progress bar tracks "X of Y rated" against a configurable threshold (default 10, via `CINEMATCH_ONBOARDING_THRESHOLD`). Ratings are submitted immediately via the existing rating endpoint for persistence. The Home page auto-redirects brand-new users (0 ratings) to onboarding, and shows a "Complete your taste profile" banner for users who started but haven't finished. Backed by `GET /api/v1/onboarding/movies` and `GET /api/v1/onboarding/status`.
+31. **Rewatch Recommender:** "Revisit Your Favorites" — surfaces movies the user rated highly (default >= 8) that are worth rewatching. Movies with high community vote count and average are flagged as "Classics". Always-visible section at the bottom of the Home page with loading skeleton and empty state, plus a dedicated `/rewatch` page with grid layout showing user rating badges, classic badges, and "rated X years ago" timestamps. Backed by `GET /api/v1/users/{id}/rewatch?limit=10&min_rating=8` with 10-min Redis caching.
 26. **Watch History Awareness:** Every MovieCard across all pages shows a "Rated X/10" badge (in tertiary-container colors, distinct from the match-percent badge) when the user has already rated that movie — powered by a shared `useRated` hook that batch-fetches ratings via `GET /users/{id}/ratings/check`. All five discovery endpoints (trending, hidden gems, top charts, search, discover) accept optional `user_id` + `exclude_rated=true` params; filtering is applied post-cache in Python so the global Redis cache is preserved and only per-user results are trimmed.
 
 ## Data Pipeline
@@ -268,6 +270,7 @@ Redis caches API responses with automatic invalidation:
 | `feed:{user_id}:{sections}` | 10 min | On new rating or dismissal from this user |
 | `taste_profile:{user_id}` | 10 min | On new rating or dismissal from this user |
 | `watchlist_recs:{user_id}:{limit}` | 10 min | On watchlist add/remove, new rating, or dismissal |
+| `rewatch:{user_id}:{limit}:{min_rating}` | 10 min | On new rating from this user |
 | `streaks:{user_id}` | 5 min | On new rating from this user |
 | `achievements:{user_id}` | 1 hour | On new rating from this user |
 | `challenges:current:{week}` | 24 hours | Never (deterministic per week) |
@@ -291,7 +294,7 @@ src/cinematch/
 │       ├── movies.py             # GET /{id}, /search, /semantic-search, /discover, /genres, /decades, /directors, /actors, /keywords, /advanced-search, /thematic-collections, /{id}/similar, /{id}/rating-stats
 │       ├── ratings.py            # POST/GET /users/{id}/ratings
 │       ├── recommendations.py    # GET /users/{id}/recommendations, /from-seed/{movie_id}, POST /recommendations/mood
-│       ├── users.py              # GET /users/{id}, /users/{id}/stats, /users/{id}/surprise, /users/{id}/completions, /users/{id}/feed, /users/{id}/taste-profile, /users/{id}/rating-comparison, /users/{id}/streaks, /users/{id}/taste-evolution, /users/{id}/affinities, /users/{id}/achievements, /users/{id}/challenges/progress
+│       ├── users.py              # GET /users/{id}, /users/{id}/stats, /users/{id}/surprise, /users/{id}/completions, /users/{id}/feed, /users/{id}/taste-profile, /users/{id}/rating-comparison, /users/{id}/streaks, /users/{id}/taste-evolution, /users/{id}/affinities, /users/{id}/achievements, /users/{id}/challenges/progress, /users/{id}/rewatch
 │       ├── challenges.py         # GET /challenges/current (weekly rotating challenges)
 │       ├── watchlist.py          # POST/DELETE/GET /users/{id}/watchlist, GET /users/{id}/watchlist/recommendations
 │       ├── dismissals.py         # POST/DELETE/GET /users/{id}/dismissals ("Not Interested")
@@ -308,6 +311,7 @@ src/cinematch/
 │   ├── feed_service.py           # Personalized home feed orchestrator (5 named sections)
 │   ├── user_stats_service.py     # User profile analytics (genre, rating, director/actor stats)
 │   ├── taste_profile_service.py  # Natural-language taste profile generation (template-based + optional LLM)
+│   ├── rewatch_service.py         # Rewatch suggestions (highly-rated movies worth revisiting)
 │   ├── streak_service.py         # Rating streaks & milestones (consecutive-day tracking)
 │   ├── achievement_service.py    # Achievement badges (12 badges computed from rating history)
 │   ├── challenge_service.py      # Weekly rating challenges (deterministic rotation + progress tracking)

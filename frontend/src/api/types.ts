@@ -577,6 +577,20 @@ export interface StreakResponse {
   milestones: Milestone[];
 }
 
+export interface RewatchItem {
+  movie: MovieSummary;
+  user_rating: number;
+  rated_at: string;
+  days_since_rated: number;
+  is_classic: boolean;
+}
+
+export interface RewatchResponse {
+  user_id: number;
+  suggestions: RewatchItem[];
+  total: number;
+}
+
 export interface TasteEvolutionPeriod {
   period: string;
   genres: Record<string, number>;
