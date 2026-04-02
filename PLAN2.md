@@ -891,7 +891,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 52 | 1.10 Multi-Criteria Discovery | Medium | Discovery |
 | 53 | 1.11 Complete the Collection | Medium | Discovery |
 | 54 | 9.1 Quick Rate Onboarding ✅ | Medium | Onboarding |
-| 55 | 9.5 Import/Export Ratings | Medium | Onboarding |
+| 55 | 9.5 Import/Export Ratings ✅ | Medium | Onboarding |
 | 56 | 9.6 Tastemaker Score | Medium | Onboarding |
 
 ---

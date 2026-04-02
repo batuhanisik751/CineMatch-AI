@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -40,6 +42,37 @@ class RatingBulkCheckResponse(BaseModel):
     """Map of movie_id -> rating for bulk check."""
 
     ratings: dict[int, int]
+
+
+class ImportSource(StrEnum):
+    """Supported CSV import sources."""
+
+    LETTERBOXD = "letterboxd"
+    IMDB = "imdb"
+    AUTO = "auto"
+
+
+class ImportResultItem(BaseModel):
+    """Result for a single row in a CSV import."""
+
+    title: str
+    year: int | None = None
+    original_rating: float
+    scaled_rating: int
+    movie_id: int | None = None
+    status: Literal["imported", "updated", "not_found"]
+
+
+class ImportResponse(BaseModel):
+    """Response for a CSV import operation."""
+
+    user_id: int
+    source: str
+    total_rows: int
+    imported: int
+    updated: int
+    not_found: int
+    results: list[ImportResultItem]
 
 
 class DiaryDayMovie(BaseModel):

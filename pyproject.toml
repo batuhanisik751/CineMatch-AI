@@ -27,6 +27,7 @@ dependencies = [
     "httpx>=0.27",
     "joblib>=1.3",
     "tqdm>=4.66",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

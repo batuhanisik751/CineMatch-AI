@@ -17,11 +17,12 @@ import {
   YAxis,
 } from "recharts";
 import { getDismissals, undismissMovie } from "../api/dismissals";
-import { getUserRatings } from "../api/ratings";
+import { exportRatings, getUserRatings } from "../api/ratings";
 import type { AchievementResponse, AffinitiesResponse, AffinityEntry, DismissalItemResponse, RatingComparisonResponse, RatingResponse, StreakResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
 import { getRatingComparison, getTasteProfile, getUser, getUserAchievements, getUserAffinities, getUserStats, getUserStreaks } from "../api/users";
 import BottomNav from "../components/BottomNav";
 import ErrorPanel from "../components/ErrorPanel";
+import ImportRatingsModal from "../components/ImportRatingsModal";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
 
@@ -43,6 +44,8 @@ export default function Profile() {
   const [streaks, setStreaks] = useState<StreakResponse | null>(null);
   const [achievements, setAchievements] = useState<AchievementResponse | null>(null);
   const [expandedAffinity, setExpandedAffinity] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const limit = 20;
 
   const fetchUser = async () => {
@@ -98,6 +101,21 @@ export default function Profile() {
     fetchUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await exportRatings(userId);
+    } catch {
+      setError("Failed to export ratings.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleImportSuccess = () => {
+    fetchUser();
+  };
 
   const changePage = async (newOffset: number) => {
     if (!user) return;
@@ -173,9 +191,16 @@ export default function Profile() {
           )}
           {!user && !loading && (
             <div className="lg:col-span-2 flex items-center justify-center p-12 rounded-xl bg-surface-container-low border border-outline-variant/10">
-              <div className="text-center space-y-3">
+              <div className="text-center space-y-4">
                 <span className="material-symbols-outlined text-5xl text-outline/40">movie_filter</span>
                 <p className="text-on-surface-variant">You haven't rated any movies yet. Browse and rate movies to build your profile!</p>
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold bg-primary/15 text-primary hover:bg-primary/25 transition-all"
+                >
+                  <span className="material-symbols-outlined text-base">upload_file</span>
+                  Import from Letterboxd / IMDb
+                </button>
               </div>
             </div>
           )}
@@ -694,6 +719,23 @@ export default function Profile() {
                 <h2 className="font-headline text-3xl font-black italic tracking-tighter text-on-surface mb-2">Rating History</h2>
                 <p className="text-on-surface-variant font-body">Complete archive of theatrical reviews and scores.</p>
               </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-primary/15 text-primary hover:bg-primary/25 transition-all"
+                >
+                  <span className="material-symbols-outlined text-base">upload_file</span>
+                  Import
+                </button>
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-surface-container-low text-on-surface-variant hover:bg-surface-container transition-all disabled:opacity-40"
+                >
+                  <span className="material-symbols-outlined text-base">download</span>
+                  {exporting ? "Exporting..." : "Export"}
+                </button>
+              </div>
             </div>
             <div className="overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest">
               <table className="w-full text-left border-collapse">
@@ -778,6 +820,12 @@ export default function Profile() {
         </div>
       </footer>
       <BottomNav />
+      <ImportRatingsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        userId={userId}
+        onSuccess={handleImportSuccess}
+      />
     </>
   );
 }

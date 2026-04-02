@@ -890,6 +890,25 @@ export interface ALSPrediction {
   preferred_movie_id: number | null;
 }
 
+export interface ImportResultItem {
+  title: string;
+  year: number | null;
+  original_rating: number;
+  scaled_rating: number;
+  movie_id: number | null;
+  status: "imported" | "updated" | "not_found";
+}
+
+export interface ImportResponse {
+  user_id: number;
+  source: string;
+  total_rows: number;
+  imported: number;
+  updated: number;
+  not_found: number;
+  results: ImportResultItem[];
+}
+
 export interface MovieComparisonResponse {
   movie1: MovieResponse;
   movie2: MovieResponse;

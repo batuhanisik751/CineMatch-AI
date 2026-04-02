@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     # Onboarding
     onboarding_threshold: int = 10
 
+    # Import/Export
+    import_max_rows: int = 10_000
+    import_max_file_size_mb: int = 5
+
     # API
     api_host: str = "0.0.0.0"
     api_port: int = 8000

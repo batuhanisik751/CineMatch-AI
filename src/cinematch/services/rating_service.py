@@ -97,6 +97,76 @@ class RatingService:
         result = await db.execute(select(Rating.movie_id).where(Rating.user_id == user_id))
         return {r[0] for r in result.fetchall()}
 
+    async def import_ratings(
+        self,
+        user_id: int,
+        rows: list[dict],
+        db: AsyncSession,
+    ) -> dict[str, int]:
+        """Bulk import ratings. rows must have 'movie_id' and 'rating' keys.
+
+        Returns {"imported": N, "updated": N}.
+        """
+        if not rows:
+            return {"imported": 0, "updated": 0}
+
+        # Ensure user exists
+        user_result = await db.execute(select(User).where(User.id == user_id))
+        if user_result.scalar_one_or_none() is None:
+            db.add(User(id=user_id, movielens_id=user_id))
+            await db.flush()
+
+        movie_ids = [r["movie_id"] for r in rows]
+        existing = await self.bulk_check(user_id, movie_ids, db)
+
+        now = datetime.now(UTC)
+        values = [
+            {
+                "user_id": user_id,
+                "movie_id": r["movie_id"],
+                "rating": r["rating"],
+                "timestamp": now,
+            }
+            for r in rows
+        ]
+
+        stmt = (
+            insert(Rating)
+            .values(values)
+            .on_conflict_do_update(
+                constraint="uq_user_movie",
+                set_={"rating": insert(Rating).excluded.rating, "timestamp": now},
+            )
+        )
+        await db.execute(stmt)
+        await db.commit()
+
+        updated = sum(1 for r in rows if r["movie_id"] in existing)
+        imported = len(rows) - updated
+        return {"imported": imported, "updated": updated}
+
+    async def export_ratings(
+        self,
+        user_id: int,
+        db: AsyncSession,
+    ) -> list[tuple]:
+        """Export all ratings for a user with movie metadata."""
+        stmt = (
+            select(
+                Rating.movie_id,
+                Movie.title,
+                Movie.imdb_id,
+                Movie.tmdb_id,
+                Rating.rating,
+                Rating.timestamp,
+            )
+            .join(Movie, Rating.movie_id == Movie.id)
+            .where(Rating.user_id == user_id)
+            .order_by(Rating.timestamp.desc())
+        )
+        result = await db.execute(stmt)
+        return list(result.all())
+
     async def get_movie_rating_stats(
         self,
         movie_id: int,
