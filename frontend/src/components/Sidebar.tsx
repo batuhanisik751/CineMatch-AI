@@ -6,6 +6,7 @@ const items = [
   { to: "/trending", icon: "trending_up", label: "Trending" },
   { to: "/top-charts", icon: "leaderboard", label: "Top Charts" },
   { to: "/hidden-gems", icon: "diamond", label: "Hidden Gems" },
+  { to: "/seasonal", icon: "calendar_month", label: "Seasonal" },
   { to: "/controversial", icon: "whatshot", label: "Controversial" },
   { to: "/moods", icon: "mood", label: "Moods" },
   { to: "/decades", icon: "history", label: "Decades" },

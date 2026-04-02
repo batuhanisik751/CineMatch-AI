@@ -69,6 +69,8 @@ from cinematch.schemas.movie import (
     PopularKeywordsResponse,
     RatingComparison,
     RatingHistogramBucket,
+    SeasonalMovieResult,
+    SeasonalResponse,
     SemanticSearchResponse,
     SemanticSearchResult,
     SimilarMovie,
@@ -315,6 +317,62 @@ async def hidden_gems(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
         except Exception:
             logger.warning("Failed to cache hidden gems", exc_info=True)
+
+    if user_id is not None and exclude_rated:
+        rated_ids = await rating_service.get_rated_movie_ids(user_id, db)
+        response.results = [r for r in response.results if r.movie.id not in rated_ids]
+
+    return response
+
+
+@router.get("/seasonal", response_model=SeasonalResponse)
+async def seasonal_movies(
+    month: int | None = Query(default=None, ge=1, le=12),
+    limit: int = Query(default=20, ge=1, le=100),
+    user_id: int | None = Query(default=None, ge=1),
+    exclude_rated: bool = Query(default=False),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    rating_service: RatingService = Depends(get_rating_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    from datetime import UTC, datetime
+
+    resolved_month = month if month is not None else datetime.now(UTC).month
+    cache_key = f"seasonal:{resolved_month}:{limit}"
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            response = SeasonalResponse.model_validate_json(cached)
+            if user_id is not None and exclude_rated:
+                rated_ids = await rating_service.get_rated_movie_ids(user_id, db)
+                response.results = [r for r in response.results if r.movie.id not in rated_ids]
+            return response
+
+    movies, ctx = await movie_service.seasonal(db, month=resolved_month, limit=limit)
+
+    response = SeasonalResponse(
+        results=[
+            SeasonalMovieResult(
+                movie=MovieSummary.model_validate(movie),
+                vote_average=movie.vote_average,
+                popularity=movie.popularity,
+            )
+            for movie in movies
+        ],
+        season_name=ctx.season_name,
+        theme_label=ctx.theme_label,
+        month=resolved_month,
+        genres=ctx.genres,
+        keywords=ctx.keywords,
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache seasonal movies", exc_info=True)
 
     if user_id is not None and exclude_rated:
         rated_ids = await rating_service.get_rated_movie_ids(user_id, db)

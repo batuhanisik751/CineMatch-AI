@@ -12,8 +12,11 @@ async def test_single_prediction_returns_200(client, mock_hybrid_recommender):
     """GET /api/v1/users/{id}/predicted-rating/{movie_id} returns valid response."""
     mock_hybrid_recommender.predict_match.return_value = [
         PredictedMatchResult(
-            movie_id=1, match_percent=87,
-            content_score=0.8, collab_score=0.6, alpha=0.5,
+            movie_id=1,
+            match_percent=87,
+            content_score=0.8,
+            collab_score=0.6,
+            alpha=0.5,
         ),
     ]
 
@@ -33,16 +36,25 @@ async def test_batch_prediction_returns_200(client, mock_hybrid_recommender):
     """POST /api/v1/users/{id}/predicted-ratings returns correct number of items."""
     mock_hybrid_recommender.predict_match.return_value = [
         PredictedMatchResult(
-            movie_id=1, match_percent=87,
-            content_score=0.8, collab_score=0.6, alpha=0.5,
+            movie_id=1,
+            match_percent=87,
+            content_score=0.8,
+            collab_score=0.6,
+            alpha=0.5,
         ),
         PredictedMatchResult(
-            movie_id=2, match_percent=72,
-            content_score=0.6, collab_score=0.5, alpha=0.5,
+            movie_id=2,
+            match_percent=72,
+            content_score=0.6,
+            collab_score=0.5,
+            alpha=0.5,
         ),
         PredictedMatchResult(
-            movie_id=3, match_percent=55,
-            content_score=0.4, collab_score=0.3, alpha=0.5,
+            movie_id=3,
+            match_percent=55,
+            content_score=0.4,
+            collab_score=0.3,
+            alpha=0.5,
         ),
     ]
 

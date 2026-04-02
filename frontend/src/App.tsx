@@ -28,6 +28,7 @@ import PlatformStats from "./pages/PlatformStats";
 import Profile from "./pages/Profile";
 import Recommendations from "./pages/Recommendations";
 import Rewatch from "./pages/Rewatch";
+import Seasonal from "./pages/Seasonal";
 import Search from "./pages/Search";
 import TopCharts from "./pages/TopCharts";
 import TasteEvolution from "./pages/TasteEvolution";
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/trending" element={<Trending />} />
       <Route path="/top-charts" element={<TopCharts />} />
       <Route path="/hidden-gems" element={<HiddenGems />} />
+      <Route path="/seasonal" element={<Seasonal />} />
       <Route path="/controversial" element={<Controversial />} />
       <Route path="/moods" element={<Moods />} />
       <Route path="/decades" element={<Decades key={navCountRef.current} />} />

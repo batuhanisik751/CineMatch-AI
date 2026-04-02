@@ -76,9 +76,7 @@ async def test_predict_match_cold_start_user(
 @pytest.mark.asyncio
 async def test_predict_match_no_ratings(hybrid_recommender, mock_db_session):
     """User with no ratings returns empty list."""
-    mock_db_session.execute = AsyncMock(
-        side_effect=_db_execute_factory(top_rated=[], rated_ids=[])
-    )
+    mock_db_session.execute = AsyncMock(side_effect=_db_execute_factory(top_rated=[], rated_ids=[]))
 
     results = await hybrid_recommender.predict_match(1, [102], mock_db_session)
 
@@ -116,9 +114,7 @@ async def test_predict_match_batch_consistency(hybrid_recommender, mock_db_sessi
     """Multi-movie call produces same results as individual calls."""
     mock_db_session.execute = AsyncMock(side_effect=_db_execute_factory())
 
-    batch_results = await hybrid_recommender.predict_match(
-        1, [102, 103, 104], mock_db_session
-    )
+    batch_results = await hybrid_recommender.predict_match(1, [102, 103, 104], mock_db_session)
 
     individual_results = []
     for mid in [102, 103, 104]:

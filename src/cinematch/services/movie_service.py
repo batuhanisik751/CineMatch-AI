@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, cast, desc, extract, func, outerjoin, select, text
+from sqlalchemy import Integer, cast, desc, extract, func, or_, outerjoin, select, text
 from sqlalchemy.dialects.postgresql import JSONB as JSONB_TYPE
 
 from cinematch.models.movie import Movie
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from cinematch.core.seasonal import SeasonalContext
     from cinematch.services.content_recommender import ContentRecommender
 
 
@@ -276,6 +277,32 @@ class MovieService:
 
         result = await db.execute(stmt)
         return list(result.scalars().all())
+
+    async def seasonal(
+        self,
+        db: AsyncSession,
+        *,
+        month: int | None = None,
+        limit: int = 20,
+    ) -> tuple[list[Movie], SeasonalContext]:
+        """Return movies matching the seasonal theme for the given month."""
+        from cinematch.core.seasonal import get_seasonal_context
+
+        ctx = get_seasonal_context(month)
+
+        keyword_filters = [Movie.keywords.op("@>")(cast([kw], JSONB_TYPE)) for kw in ctx.keywords]
+        genre_filters = [Movie.genres.op("@>")(cast([g], JSONB_TYPE)) for g in ctx.genres]
+
+        stmt = select(Movie).where(or_(*keyword_filters, *genre_filters))
+
+        if ctx.min_popularity is not None:
+            stmt = stmt.where(Movie.popularity >= ctx.min_popularity)
+
+        sort_col = getattr(Movie, ctx.sort_field, Movie.popularity)
+        stmt = stmt.order_by(desc(sort_col), desc(Movie.vote_count)).limit(limit)
+
+        result = await db.execute(stmt)
+        return list(result.scalars().all()), ctx
 
     async def top_by_genre(
         self,

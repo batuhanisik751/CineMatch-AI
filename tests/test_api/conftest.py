@@ -108,6 +108,15 @@ def mock_movie_service(sample_movie):
     svc.semantic_search.return_value = []
     svc.trending.return_value = [(sample_movie, 42)]
     svc.hidden_gems.return_value = [sample_movie]
+    svc.seasonal.return_value = (
+        [sample_movie],
+        MagicMock(
+            season_name="Spooky Season",
+            theme_label="Halloween Frights",
+            genres=["Horror", "Thriller"],
+            keywords=["horror", "halloween", "scary", "ghost", "monster", "zombie"],
+        ),
+    )
     svc.top_by_genre.return_value = [(sample_movie, 8.5, 150)]
     svc.get_decade_stats.return_value = [(2000, 150, 6.8), (1990, 200, 7.1)]
     svc.top_by_decade.return_value = ([(sample_movie, 8.5, 150)], 1)

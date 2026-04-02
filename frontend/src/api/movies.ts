@@ -21,6 +21,7 @@ import type {
   PopularActorsResponse,
   PopularDirectorsResponse,
   PopularKeywordsResponse,
+  SeasonalResponse,
   SemanticSearchResponse,
   SimilarMoviesResponse,
   ThematicCollectionDetailResponse,
@@ -117,6 +118,13 @@ export function getHiddenGems(params: {
   if (params.genre) qs.set("genre", params.genre);
   if (params.limit != null) qs.set("limit", String(params.limit));
   return apiFetch<HiddenGemsResponse>(`/api/v1/movies/hidden-gems?${qs.toString()}`);
+}
+
+export function getSeasonalMovies(limit = 20, month?: number) {
+  const qs = new URLSearchParams();
+  qs.set("limit", String(limit));
+  if (month !== undefined) qs.set("month", String(month));
+  return apiFetch<SeasonalResponse>(`/api/v1/movies/seasonal?${qs.toString()}`);
 }
 
 export function getDecades() {

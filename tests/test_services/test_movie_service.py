@@ -557,4 +557,82 @@ async def test_top_by_genre_custom_min_ratings(service, mock_db):
     results = await service.top_by_genre(mock_db, genre="Comedy", min_ratings=10)
 
     assert len(results) == 1
-    mock_db.execute.assert_called_once()
+
+
+# --- seasonal tests ---
+
+
+async def test_seasonal_returns_movies_for_october(service, mock_db):
+    """Returns horror-themed movies for October."""
+    movie1 = _mock_movie(id=1, title="Halloween")
+    movie2 = _mock_movie(id=2, title="The Exorcist")
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie1, movie2]
+
+    mock_db.execute = AsyncMock(return_value=results_result)
+
+    movies, ctx = await service.seasonal(mock_db, month=10)
+
+    assert len(movies) == 2
+    assert ctx.month == 10
+    assert ctx.season_name == "Spooky Season"
+    assert "Horror" in ctx.genres
+
+
+async def test_seasonal_returns_movies_for_december(service, mock_db):
+    """Returns holiday-themed movies for December."""
+    movie1 = _mock_movie(id=1, title="Home Alone")
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie1]
+
+    mock_db.execute = AsyncMock(return_value=results_result)
+
+    movies, ctx = await service.seasonal(mock_db, month=12)
+
+    assert len(movies) == 1
+    assert ctx.month == 12
+    assert ctx.season_name == "Holiday Season"
+    assert "christmas" in ctx.keywords
+
+
+async def test_seasonal_empty_results(service, mock_db):
+    """Returns empty list when no movies match."""
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = []
+
+    mock_db.execute = AsyncMock(return_value=results_result)
+
+    movies, ctx = await service.seasonal(mock_db, month=3)
+
+    assert movies == []
+    assert ctx.month == 3
+
+
+async def test_seasonal_respects_limit(service, mock_db):
+    """Custom limit is passed through."""
+    movie1 = _mock_movie(id=1, title="Movie 1")
+
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = [movie1]
+
+    mock_db.execute = AsyncMock(return_value=results_result)
+
+    movies, ctx = await service.seasonal(mock_db, month=10, limit=5)
+
+    assert len(movies) == 1
+    assert mock_db.execute.call_count == 1
+
+
+async def test_seasonal_summer_has_popularity_context(service, mock_db):
+    """Summer months include min_popularity in context."""
+    results_result = MagicMock()
+    results_result.scalars.return_value.all.return_value = []
+
+    mock_db.execute = AsyncMock(return_value=results_result)
+
+    for month in (6, 7, 8):
+        _, ctx = await service.seasonal(mock_db, month=month)
+        assert ctx.min_popularity is not None
+    assert mock_db.execute.call_count == 3

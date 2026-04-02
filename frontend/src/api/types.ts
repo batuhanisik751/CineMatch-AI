@@ -106,6 +106,22 @@ export interface HiddenGemsResponse {
   limit: number;
 }
 
+export interface SeasonalMovieResult {
+  movie: MovieSummary;
+  vote_average: number;
+  popularity: number;
+}
+
+export interface SeasonalResponse {
+  results: SeasonalMovieResult[];
+  season_name: string;
+  theme_label: string;
+  month: number;
+  genres: string[];
+  keywords: string[];
+  limit: number;
+}
+
 export interface TopChartResult {
   movie: MovieSummary;
   avg_rating: number;

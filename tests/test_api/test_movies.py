@@ -1064,3 +1064,94 @@ async def test_movie_activity_not_found(client, mock_movie_service):
     mock_movie_service.get_by_id.return_value = None
     resp = await client.get("/api/v1/movies/999/activity")
     assert resp.status_code == 404
+
+
+# --- seasonal endpoint tests ---
+
+
+async def test_seasonal_default_params(client, sample_movie):
+    resp = await client.get("/api/v1/movies/seasonal")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "season_name" in data
+    assert "theme_label" in data
+    assert "month" in data
+    assert data["limit"] == 20
+    assert len(data["results"]) == 1
+    assert data["results"][0]["movie"]["title"] == sample_movie.title
+
+
+async def test_seasonal_custom_month(client, mock_movie_service):
+    resp = await client.get("/api/v1/movies/seasonal", params={"month": 10, "limit": 5})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["limit"] == 5
+    mock_movie_service.seasonal.assert_called_once()
+    call_kwargs = mock_movie_service.seasonal.call_args.kwargs
+    assert call_kwargs["month"] == 10
+    assert call_kwargs["limit"] == 5
+
+
+async def test_seasonal_cache_miss_and_set(client, mock_movie_service, mock_cache_service):
+    resp = await client.get("/api/v1/movies/seasonal", params={"month": 10})
+    assert resp.status_code == 200
+    mock_movie_service.seasonal.assert_called_once()
+    mock_cache_service.set.assert_called_once()
+    call_args = mock_cache_service.set.call_args
+    assert call_args[0][0] == "seasonal:10:20"
+    assert call_args[1]["ttl"] == 21600
+
+
+async def test_seasonal_cache_hit(client, mock_movie_service, mock_cache_service):
+    cached_response = (
+        '{"results":[{"movie":{"id":1,"title":"The Matrix","genres":["Action","Sci-Fi"],'
+        '"vote_average":8.2,"release_date":"1999-03-31","poster_path":"/poster.jpg"},'
+        '"vote_average":8.2,"popularity":50.0}],'
+        '"season_name":"Spooky Season","theme_label":"Halloween Frights",'
+        '"month":10,"genres":["Horror","Thriller"],'
+        '"keywords":["horror","halloween"],"limit":20}'
+    )
+    mock_cache_service.get.return_value = cached_response
+
+    resp = await client.get("/api/v1/movies/seasonal", params={"month": 10})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["season_name"] == "Spooky Season"
+    mock_movie_service.seasonal.assert_not_called()
+
+
+async def test_seasonal_invalid_month(client):
+    resp = await client.get("/api/v1/movies/seasonal", params={"month": 0})
+    assert resp.status_code == 422
+
+    resp = await client.get("/api/v1/movies/seasonal", params={"month": 13})
+    assert resp.status_code == 422
+
+
+async def test_seasonal_exclude_rated(
+    client, mock_movie_service, mock_rating_service, sample_movie
+):
+    from tests.test_api.conftest import _make_movie
+
+    movie2 = _make_movie(id=2, title="Scream")
+    from unittest.mock import MagicMock
+
+    mock_movie_service.seasonal.return_value = (
+        [sample_movie, movie2],
+        MagicMock(
+            season_name="Spooky Season",
+            theme_label="Halloween Frights",
+            genres=["Horror"],
+            keywords=["horror"],
+        ),
+    )
+    mock_rating_service.get_rated_movie_ids.return_value = {sample_movie.id}
+
+    resp = await client.get(
+        "/api/v1/movies/seasonal",
+        params={"month": 10, "user_id": 1, "exclude_rated": True},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["results"]) == 1
+    assert data["results"][0]["movie"]["title"] == "Scream"

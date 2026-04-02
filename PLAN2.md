@@ -743,7 +743,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Endpoint: `GET /api/v1/users/{id}/ratings/export` — download CSV
   - Rescale ratings to 1-10 if source uses different scale (Letterboxd 0.5-5.0, IMDb 1-10)
 
-### 9.7 Predicted Match Percentage
+### 9.7 Predicted Match Percentage ✅
 **Scope:** Single user
 **One-line:** Show a "94% match" score on every movie card based on the user's taste profile.
 - **Data backing:** ALS model (collab score) + embedding similarity (content score) — hybrid prediction
@@ -756,7 +756,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Display as percentage badge on every movie card throughout the app
   - Cache per user-movie pair in Redis (15min TTL, invalidate on new rating)
 
-### 9.8 Seasonal / Contextual Recommendations
+### 9.8 Seasonal / Contextual Recommendations ✅
 **Scope:** Single user
 **One-line:** Time-aware recommendations — horror in October, holiday films in December, summer blockbusters in June.
 - **Data backing:** `movies.keywords`, `movies.genres`, `movies.release_date`, current date
@@ -832,7 +832,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 14 | 2.8 Genre Affinity Radar | Low | Personalization |
 | 15 | 9.3 Blind Spot Detector ✅ | Low | Onboarding |
 | 16 | 9.4 Compare Two Movies ✅ | Low | Onboarding |
-| 17 | 9.8 Seasonal Recommendations | Low | Onboarding |
+| 17 | 9.8 Seasonal Recommendations ✅ | Low | Onboarding |
 
 ### Tier 2: Medium Effort, High Value
 | # | Feature | Effort | Category |

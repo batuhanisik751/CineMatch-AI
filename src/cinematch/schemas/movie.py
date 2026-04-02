@@ -131,6 +131,22 @@ class HiddenGemsResponse(BaseModel):
     limit: int
 
 
+class SeasonalMovieResult(BaseModel):
+    movie: MovieSummary
+    vote_average: float
+    popularity: float
+
+
+class SeasonalResponse(BaseModel):
+    results: list[SeasonalMovieResult]
+    season_name: str
+    theme_label: str
+    month: int
+    genres: list[str]
+    keywords: list[str]
+    limit: int
+
+
 class TopChartResult(BaseModel):
     movie: MovieSummary
     avg_rating: float
