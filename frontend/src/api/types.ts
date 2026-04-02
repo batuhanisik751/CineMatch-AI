@@ -470,6 +470,18 @@ export interface CompletionsResponse {
   total_missing: number;
 }
 
+export interface DirectorGapsResponse {
+  user_id: number;
+  groups: CollectionGroup[];
+  total_missing: number;
+}
+
+export interface ActorGapsResponse {
+  user_id: number;
+  groups: CollectionGroup[];
+  total_missing: number;
+}
+
 export interface FeedSection {
   key: string;
   title: string;

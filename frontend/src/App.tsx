@@ -9,6 +9,7 @@ import AdvancedSearch from "./pages/AdvancedSearch";
 import Collections from "./pages/Collections";
 import Compare from "./pages/Compare";
 import Controversial from "./pages/Controversial";
+import DirectorGaps from "./pages/DirectorGaps";
 import Curated from "./pages/Curated";
 import Decades from "./pages/Decades";
 import Diary from "./pages/Diary";
@@ -64,6 +65,7 @@ export default function App() {
       <Route path="/actors" element={<Actors key={navCountRef.current} />} />
       <Route path="/keywords" element={<Keywords key={navCountRef.current} />} />
       <Route path="/collections" element={<Collections key={navCountRef.current} />} />
+      <Route path="/director-gaps" element={<DirectorGaps key={navCountRef.current} />} />
       <Route path="/curated" element={<Curated key={navCountRef.current} />} />
       <Route path="/compare" element={<Compare />} />
       <Route path="/advanced-search" element={<AdvancedSearch />} />

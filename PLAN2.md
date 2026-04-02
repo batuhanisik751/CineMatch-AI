@@ -663,7 +663,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Endpoint: add `min_runtime`, `max_runtime` params to discover
   - Preset buttons: "Quick Watch (<90min)", "Standard (90-150min)", "Epic (>150min)"
 
-### 8.5 Search by Cast Combination ✅
+### 8.5 Search by Cast Combination
 **Scope:** Single user
 **One-line:** Find movies where two specific actors both appear.
 - **Data backing:** `movies.cast_names` (JSONB array)
@@ -802,7 +802,7 @@ These features require importing additional columns from the TMDb CSV that we al
 - **Value:** Richer movie cards; taglines are great for quick context ("In space, no one can hear you scream")
 - **Implementation:** Same pattern — cleaner.py + migration + seed
 
-### 10.4 Import Revenue/Budget (for ROI Analysis)
+### 10.4 Import Revenue/Budget (for ROI Analysis) ✅
 **One-line:** Add budget and revenue to enable box office insights and "sleeper hit" discovery.
 - **Data backing:** `budget`, `revenue` columns in `TMDB_all_movies.csv`
 - **Complexity:** Low
@@ -840,7 +840,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 18 | 1.7 "Also Liked" Collaborative | Low-Med | Discovery |
 | 19 | 1.8 Serendipity / Surprise Me | Low | Discovery |
 | 20 | 1.9 Keyword Tag Cloud | Low-Med | Discovery |
-| 21 | 5.3 Director/Actor Gaps | Low | Lists |
+| 21 | 5.3 Director/Actor Gaps ✅ | Low | Lists |
 | 22 | 5.4 Watchlist Recommendations | Low-Med | Lists |
 | 23 | 3.3 Rating Distribution Insights | Low | Analytics |
 | 24 | 3.5 Director/Actor Affinity | Low | Analytics |

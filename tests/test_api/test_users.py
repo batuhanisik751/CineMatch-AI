@@ -149,3 +149,84 @@ async def test_completions_custom_limit(client, mock_movie_service):
     assert resp.status_code == 200
     call_kwargs = mock_movie_service.collection_completions.call_args
     assert call_kwargs.kwargs["limit"] == 25
+
+
+# --- Director Gaps ---
+
+
+async def test_director_gaps_success(client, mock_movie_service):
+    """Director gaps endpoint returns director groups."""
+    resp = await client.get("/api/v1/users/1/director-gaps?limit=20")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user_id"] == 1
+    assert len(data["groups"]) == 1
+    group = data["groups"][0]
+    assert group["creator_type"] == "director"
+    assert group["creator_name"] == "Lana Wachowski"
+    assert group["rated_count"] == 3
+    assert group["avg_rating"] == 8.0
+    assert group["total_by_creator"] == 5
+    assert len(group["missing"]) == 1
+    assert group["missing"][0]["title"] == "The Matrix"
+    assert data["total_missing"] == 1
+    mock_movie_service.director_gaps.assert_called_once()
+
+
+async def test_director_gaps_empty(client, mock_movie_service):
+    """User with no qualifying directors gets empty groups."""
+    mock_movie_service.director_gaps.return_value = []
+    resp = await client.get("/api/v1/users/999/director-gaps")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["groups"] == []
+    assert data["total_missing"] == 0
+
+
+async def test_director_gaps_custom_params(client, mock_movie_service):
+    """Limit and top_n parameters are passed through to service."""
+    resp = await client.get("/api/v1/users/1/director-gaps?limit=10&top_n=3")
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.director_gaps.call_args
+    assert call_kwargs.kwargs["limit"] == 10
+    assert call_kwargs.kwargs["top_n"] == 3
+
+
+# --- Actor Gaps ---
+
+
+async def test_actor_gaps_success(client, mock_movie_service):
+    """Actor gaps endpoint returns actor groups."""
+    resp = await client.get("/api/v1/users/1/actor-gaps?limit=20")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user_id"] == 1
+    assert len(data["groups"]) == 1
+    group = data["groups"][0]
+    assert group["creator_type"] == "actor"
+    assert group["creator_name"] == "Keanu Reeves"
+    assert group["rated_count"] == 4
+    assert group["avg_rating"] == 7.5
+    assert group["total_by_creator"] == 8
+    assert len(group["missing"]) == 1
+    assert data["total_missing"] == 1
+    mock_movie_service.actor_gaps.assert_called_once()
+
+
+async def test_actor_gaps_empty(client, mock_movie_service):
+    """User with no qualifying actors gets empty groups."""
+    mock_movie_service.actor_gaps.return_value = []
+    resp = await client.get("/api/v1/users/999/actor-gaps")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["groups"] == []
+    assert data["total_missing"] == 0
+
+
+async def test_actor_gaps_custom_params(client, mock_movie_service):
+    """Limit and top_n parameters are passed through to service."""
+    resp = await client.get("/api/v1/users/1/actor-gaps?limit=15&top_n=7")
+    assert resp.status_code == 200
+    call_kwargs = mock_movie_service.actor_gaps.call_args
+    assert call_kwargs.kwargs["limit"] == 15
+    assert call_kwargs.kwargs["top_n"] == 7

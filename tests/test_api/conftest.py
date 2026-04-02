@@ -178,6 +178,26 @@ def mock_movie_service(sample_movie):
             "missing": [sample_movie],
         }
     ]
+    svc.director_gaps.return_value = [
+        {
+            "creator_type": "director",
+            "creator_name": "Lana Wachowski",
+            "rated_count": 3,
+            "avg_rating": 8.0,
+            "total_by_creator": 5,
+            "missing": [sample_movie],
+        }
+    ]
+    svc.actor_gaps.return_value = [
+        {
+            "creator_type": "actor",
+            "creator_name": "Keanu Reeves",
+            "rated_count": 4,
+            "avg_rating": 7.5,
+            "total_by_creator": 8,
+            "missing": [sample_movie],
+        }
+    ]
     svc.search_actors.return_value = [("Keanu Reeves", 8, 7.15)]
     svc.popular_actors.return_value = [
         ("Keanu Reeves", 8, 7.15),

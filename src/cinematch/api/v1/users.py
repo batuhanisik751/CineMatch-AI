@@ -37,9 +37,11 @@ from cinematch.schemas.streak import StreakResponse
 from cinematch.schemas.taste_evolution import TasteEvolutionResponse
 from cinematch.schemas.taste_profile import TasteProfileResponse
 from cinematch.schemas.user import (
+    ActorGapsResponse,
     AffinitiesResponse,
     CollectionGroup,
     CompletionsResponse,
+    DirectorGapsResponse,
     FeedResponse,
     SurpriseResponse,
     UserResponse,
@@ -167,6 +169,90 @@ async def get_completions(
         ],
         total_missing=total_missing,
     )
+
+
+@router.get("/{user_id}/director-gaps", response_model=DirectorGapsResponse)
+async def get_director_gaps(
+    user_id: int,
+    limit: int = Query(default=20, ge=1, le=50),
+    top_n: int = Query(default=5, ge=1, le=20),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Movies you haven't seen by directors you love."""
+    cache_key = f"director_gaps:{user_id}:{top_n}:{limit}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return DirectorGapsResponse.model_validate_json(cached)
+
+    groups = await movie_service.director_gaps(db, user_id=user_id, top_n=top_n, limit=limit)
+    total_missing = sum(len(g["missing"]) for g in groups)
+    response = DirectorGapsResponse(
+        user_id=user_id,
+        groups=[
+            CollectionGroup(
+                creator_type=g["creator_type"],
+                creator_name=g["creator_name"],
+                rated_count=g["rated_count"],
+                avg_rating=g["avg_rating"],
+                total_by_creator=g["total_by_creator"],
+                missing=[MovieSummary.model_validate(m) for m in g["missing"]],
+            )
+            for g in groups
+        ],
+        total_missing=total_missing,
+    )
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            pass
+    return response
+
+
+@router.get("/{user_id}/actor-gaps", response_model=ActorGapsResponse)
+async def get_actor_gaps(
+    user_id: int,
+    limit: int = Query(default=20, ge=1, le=50),
+    top_n: int = Query(default=5, ge=1, le=20),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Movies you haven't seen by actors you love."""
+    cache_key = f"actor_gaps:{user_id}:{top_n}:{limit}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return ActorGapsResponse.model_validate_json(cached)
+
+    groups = await movie_service.actor_gaps(db, user_id=user_id, top_n=top_n, limit=limit)
+    total_missing = sum(len(g["missing"]) for g in groups)
+    response = ActorGapsResponse(
+        user_id=user_id,
+        groups=[
+            CollectionGroup(
+                creator_type=g["creator_type"],
+                creator_name=g["creator_name"],
+                rated_count=g["rated_count"],
+                avg_rating=g["avg_rating"],
+                total_by_creator=g["total_by_creator"],
+                missing=[MovieSummary.model_validate(m) for m in g["missing"]],
+            )
+            for g in groups
+        ],
+        total_missing=total_missing,
+    )
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            pass
+    return response
 
 
 @router.get("/{user_id}/feed", response_model=FeedResponse)

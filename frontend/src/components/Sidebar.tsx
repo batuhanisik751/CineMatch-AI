@@ -14,6 +14,7 @@ const items = [
   { to: "/actors", icon: "theater_comedy", label: "Actors" },
   { to: "/keywords", icon: "sell", label: "Keywords" },
   { to: "/collections", icon: "collections_bookmark", label: "Collections" },
+  { to: "/director-gaps", icon: "person_search", label: "Director Gaps" },
   { to: "/curated", icon: "auto_awesome_mosaic", label: "Curated" },
   { to: "/advanced-search", icon: "tune", label: "Advanced" },
   { to: "/recommendations", icon: "auto_awesome", label: "Recommendations" },

@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { AchievementResponse, AffinitiesResponse, BlindSpotResponse, CompletionsResponse, DiaryResponse, FeedResponse, RatingComparisonResponse, RewatchResponse, StreakResponse, TasteEvolutionResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "./types";
+import type { AchievementResponse, ActorGapsResponse, AffinitiesResponse, BlindSpotResponse, CompletionsResponse, DiaryResponse, DirectorGapsResponse, FeedResponse, RatingComparisonResponse, RewatchResponse, StreakResponse, TasteEvolutionResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "./types";
 
 export function getUser(id: number) {
   return apiFetch<UserResponse>(`/api/v1/users/${id}`);
@@ -70,5 +70,17 @@ export function getUserBlindSpots(userId: number, limit = 20, genre?: string) {
 export function getUserAchievements(userId: number) {
   return apiFetch<AchievementResponse>(
     `/api/v1/users/${userId}/achievements`
+  );
+}
+
+export function getDirectorGaps(userId: number, limit = 20, topN = 5) {
+  return apiFetch<DirectorGapsResponse>(
+    `/api/v1/users/${userId}/director-gaps?limit=${limit}&top_n=${topN}`
+  );
+}
+
+export function getActorGaps(userId: number, limit = 20, topN = 5) {
+  return apiFetch<ActorGapsResponse>(
+    `/api/v1/users/${userId}/actor-gaps?limit=${limit}&top_n=${topN}`
   );
 }

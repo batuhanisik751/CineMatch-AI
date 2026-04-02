@@ -138,6 +138,8 @@ Features: movie discovery with genre/year/language/runtime/sort filters, **Autoc
 | GET | `/api/v1/users/{id}/affinities?limit=15` | Director & actor affinity rankings weighted by enthusiasm (avg_rating × log(count+1)), with rated films list |
 | GET | `/api/v1/users/{id}/surprise?limit=5` | Serendipity mode — random well-rated movies outside user's top genres |
 | GET | `/api/v1/users/{id}/completions?limit=10` | "Complete the Collection" — unrated films by directors/actors the user has rated 3+ films for |
+| GET | `/api/v1/users/{id}/director-gaps?limit=20&top_n=5` | "Directors You Love" — unseen films from the user's top N directors by avg rating (min 3 films rated) |
+| GET | `/api/v1/users/{id}/actor-gaps?limit=20&top_n=5` | "Actors You Love" — unseen films from the user's top N actors by avg rating (min 3 films rated) |
 | GET | `/api/v1/users/{id}/feed?sections=5` | Personalized home feed — dynamic named sections tailored to user taste (cold-start users get generic sections) |
 | GET | `/api/v1/users/{id}/taste-profile` | Natural-language taste profile — template-based insights (top genre, critic style, director affinity, decade preference) with optional LLM-enhanced summary |
 | GET | `/api/v1/users/{id}/affinities?limit=15` | Director & actor affinity rankings — weighted score (avg_rating × log(count+1)), with rated films per person |
@@ -213,6 +215,7 @@ If Ollama is not running, the app still works — recommendations use the algori
 11. **Mood-Based Discovery:** Users pick a mood preset (e.g., "Feel-Good", "Mind-Bending", "Edge of Your Seat", "Tearjerker", "Nostalgic") or type a custom vibe. The mood text is embedded, then blended with the user's taste vector (weighted average of their top-rated movies' embeddings): `query = alpha * taste + (1-alpha) * mood`. The blended vector is L2-normalized and searched via FAISS. Cold-start users get pure mood results. Alpha defaults to 0.3 (mood-weighted with light personalization). A dedicated **Moods page** (`/moods`) lets users select multiple moods simultaneously, displaying themed carousel rows for each — plus custom vibe input with dismiss controls per carousel.
 12. **Serendipity / Surprise Me:** Computes the user's top 2 genres from their rating history, then randomly selects well-rated movies (vote_average > 7) from genres outside that comfort zone, excluding already-rated movies. Cold-start users with no ratings get any well-rated movie as a surprise.
 13. **Complete the Collection:** Finds directors and actors where the user has rated 3+ films, queries for their unrated movies, and groups them by creator — sorted by the user's average rating per creator so the most-loved creators appear first.
+36. **Director & Actor Gaps:** "Movies You Haven't Seen by Directors You Love" — a curated discovery page at `/director-gaps` that surfaces the user's top 5 directors and top 5 actors by average rating (minimum 3 films rated), then lists their unwatched films sorted by community vote average. Two dedicated endpoints (`/director-gaps` and `/actor-gaps`) with configurable `top_n` and `limit` params, 10-minute Redis caching, and a frontend page with parallel data fetching, progress bars per creator, and MovieCard grids.
 14. **"More Like This" from Seed:** Users pick any movie as a seed. The system finds the top 100 content-similar movies, scores them with ALS collab data (if the user has ratings), blends via `alpha * content + (1-alpha) * collab`, filters out already-rated movies and the seed itself, applies franchise/sequel penalty, and diversifies with MMR. Cold-start users get pure content-based results. Every result includes "Because you liked {seed}" influence tracking and feature explanations.
 15. **Strategies:** The API supports three modes — `hybrid` (default), `content` (content-only), and `collab` (collaborative-only). Cold-start users (not in ALS training data) get a 400 error on `collab` with guidance to use `hybrid` or `content` instead. The `hybrid` strategy handles cold-start automatically by falling back to content-only.
 16. **"Not Interested" Dismissals:** Users can dismiss movies from any page via the `visibility_off` button on movie cards. Dismissed movies are stored in a `dismissals` table and filtered from all recommendation paths — hybrid, content-only, from-seed, mood-based, and home feed sections. Cache is invalidated on dismiss/undismiss. The Profile page shows a collapsible "Not Interested" section with undo capability.
@@ -283,6 +286,8 @@ Redis caches API responses with automatic invalidation:
 | `match:{user_id}:{movie_id}` | 15 min | On new rating or dismissal from this user |
 | `rewatch:{user_id}:{limit}:{min_rating}` | 10 min | On new rating from this user |
 | `blind-spots:{user_id}:{limit}:{genre}` | 1 hour | On new rating from this user |
+| `director_gaps:{user_id}:{top_n}:{limit}` | 10 min | On new rating from this user |
+| `actor_gaps:{user_id}:{top_n}:{limit}` | 10 min | On new rating from this user |
 | `streaks:{user_id}` | 5 min | On new rating from this user |
 | `achievements:{user_id}` | 1 hour | On new rating from this user |
 | `challenges:current:{week}` | 24 hours | Never (deterministic per week) |
@@ -307,7 +312,7 @@ src/cinematch/
 │       ├── ratings.py            # POST/GET /users/{id}/ratings, POST /ratings/import, GET /ratings/export
 │       ├── predictions.py        # GET /users/{id}/predicted-rating/{movie_id}, POST /users/{id}/predicted-ratings
 │       ├── recommendations.py    # GET /users/{id}/recommendations, /from-seed/{movie_id}, POST /recommendations/mood
-│       ├── users.py              # GET /users/{id}, /users/{id}/stats, /users/{id}/surprise, /users/{id}/completions, /users/{id}/feed, /users/{id}/taste-profile, /users/{id}/rating-comparison, /users/{id}/streaks, /users/{id}/taste-evolution, /users/{id}/affinities, /users/{id}/achievements, /users/{id}/challenges/progress, /users/{id}/rewatch, /users/{id}/blind-spots
+│       ├── users.py              # GET /users/{id}, /users/{id}/stats, /users/{id}/surprise, /users/{id}/completions, /users/{id}/director-gaps, /users/{id}/actor-gaps, /users/{id}/feed, /users/{id}/taste-profile, /users/{id}/rating-comparison, /users/{id}/streaks, /users/{id}/taste-evolution, /users/{id}/affinities, /users/{id}/achievements, /users/{id}/challenges/progress, /users/{id}/rewatch, /users/{id}/blind-spots
 │       ├── challenges.py         # GET /challenges/current (weekly rotating challenges)
 │       ├── watchlist.py          # POST/DELETE/GET /users/{id}/watchlist, GET /users/{id}/watchlist/recommendations
 │       ├── dismissals.py         # POST/DELETE/GET /users/{id}/dismissals ("Not Interested")

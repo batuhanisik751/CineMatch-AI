@@ -89,6 +89,22 @@ class CompletionsResponse(BaseModel):
     total_missing: int
 
 
+class DirectorGapsResponse(BaseModel):
+    """Top directors the user loves, with unseen films."""
+
+    user_id: int
+    groups: list[CollectionGroup]
+    total_missing: int
+
+
+class ActorGapsResponse(BaseModel):
+    """Top actors the user loves, with unseen films."""
+
+    user_id: int
+    groups: list[CollectionGroup]
+    total_missing: int
+
+
 class FeedSection(BaseModel):
     """One carousel section in the personalized feed."""
 
