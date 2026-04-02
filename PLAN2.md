@@ -703,7 +703,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Optional: boost movies with high community rewatch signal (high rating count + high avg = "classic" indicator)
   - Frontend: "Revisit your favorites" section on profile or home
 
-### 9.3 Blind Spot Detector
+### 9.3 Blind Spot Detector ✅
 **Scope:** Single user
 **One-line:** Popular, highly-regarded movies the user has never rated — their cinematic blind spots.
 - **Data backing:** `movies.vote_count`, `movies.vote_average`, `ratings` (to find unrated)
@@ -843,7 +843,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 12 | 8.1 Autocomplete Search ✅ | Low | Search |
 | 13 | 3.8 Global Platform Stats | Low | Analytics |
 | 14 | 2.8 Genre Affinity Radar | Low | Personalization |
-| 15 | 9.3 Blind Spot Detector | Low | Onboarding |
+| 15 | 9.3 Blind Spot Detector ✅ | Low | Onboarding |
 | 16 | 9.4 Compare Two Movies | Low | Onboarding |
 | 17 | 9.8 Seasonal Recommendations | Low | Onboarding |
 

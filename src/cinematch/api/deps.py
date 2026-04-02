@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from cinematch.core.cache import CacheService
     from cinematch.services.achievement_service import AchievementService
     from cinematch.services.bingo_service import BingoService
+    from cinematch.services.blind_spot_service import BlindSpotService
     from cinematch.services.challenge_service import ChallengeService
     from cinematch.services.content_recommender import ContentRecommender
     from cinematch.services.dismissal_service import DismissalService
@@ -127,3 +128,7 @@ def get_rewatch_service(request: Request) -> RewatchService:
 
 def get_onboarding_service(request: Request) -> OnboardingService:
     return request.app.state.onboarding_service
+
+
+def get_blind_spot_service(request: Request) -> BlindSpotService:
+    return request.app.state.blind_spot_service

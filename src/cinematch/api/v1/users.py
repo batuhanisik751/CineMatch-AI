@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cinematch.api.deps import (
     get_achievement_service,
     get_bingo_service,
+    get_blind_spot_service,
     get_cache_service,
     get_challenge_service,
     get_db,
@@ -26,6 +27,7 @@ from cinematch.models.rating import Rating
 from cinematch.models.user import User
 from cinematch.schemas.achievement import AchievementResponse
 from cinematch.schemas.bingo import BingoCardResponse
+from cinematch.schemas.blind_spot import BlindSpotResponse
 from cinematch.schemas.challenge import ChallengesProgressResponse
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.rating import DiaryResponse
@@ -45,6 +47,7 @@ from cinematch.schemas.user import (
 )
 from cinematch.services.achievement_service import AchievementService
 from cinematch.services.bingo_service import BingoService
+from cinematch.services.blind_spot_service import BlindSpotService
 from cinematch.services.challenge_service import ChallengeService
 from cinematch.services.feed_service import FeedService
 from cinematch.services.movie_service import MovieService
@@ -430,6 +433,39 @@ async def get_rewatch_suggestions(
     if cache is not None:
         try:
             await cache.set(cache_key, response.model_dump_json(), ttl=600)
+        except Exception:
+            pass
+
+    return response
+
+
+@router.get("/{user_id}/blind-spots", response_model=BlindSpotResponse)
+async def get_blind_spots(
+    user_id: int,
+    limit: int = Query(default=20, ge=1, le=50),
+    genre: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    blind_spot_service: BlindSpotService = Depends(get_blind_spot_service),
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Popular, highly-regarded movies the user has never rated."""
+    cache_key = f"blind-spots:{user_id}:{limit}:{genre or 'all'}"
+    if cache is not None:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return BlindSpotResponse.model_validate_json(cached)
+
+    result = await blind_spot_service.get_blind_spots(
+        user_id,
+        db,
+        limit=limit,
+        genre=genre,
+    )
+    response = BlindSpotResponse(**result)
+
+    if cache is not None:
+        try:
+            await cache.set(cache_key, response.model_dump_json(), ttl=3600)
         except Exception:
             pass
 

@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Achievements from "./pages/Achievements";
 import Bingo from "./pages/Bingo";
+import BlindSpots from "./pages/BlindSpots";
 import Actors from "./pages/Actors";
 import Challenges from "./pages/Challenges";
 import AdvancedSearch from "./pages/AdvancedSearch";
@@ -67,6 +68,7 @@ export default function App() {
       <Route path="/recommendations" element={<Recommendations />} />
       <Route path="/recommendations/from-seed/:movieId" element={<FromSeedRecommendations />} />
       <Route path="/rewatch" element={<Rewatch />} />
+      <Route path="/blind-spots" element={<BlindSpots />} />
       <Route path="/watchlist/recommendations" element={<WatchlistRecommendations />} />
       <Route path="/watchlist" element={<Watchlist />} />
       <Route path="/lists" element={<Lists />} />

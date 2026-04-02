@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { AchievementResponse, AffinitiesResponse, CompletionsResponse, DiaryResponse, FeedResponse, RatingComparisonResponse, RewatchResponse, StreakResponse, TasteEvolutionResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "./types";
+import type { AchievementResponse, AffinitiesResponse, BlindSpotResponse, CompletionsResponse, DiaryResponse, FeedResponse, RatingComparisonResponse, RewatchResponse, StreakResponse, TasteEvolutionResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "./types";
 
 export function getUser(id: number) {
   return apiFetch<UserResponse>(`/api/v1/users/${id}`);
@@ -56,6 +56,14 @@ export function getUserTasteEvolution(userId: number, granularity = "quarter") {
 export function getUserRewatch(userId: number, limit = 10) {
   return apiFetch<RewatchResponse>(
     `/api/v1/users/${userId}/rewatch?limit=${limit}`
+  );
+}
+
+export function getUserBlindSpots(userId: number, limit = 20, genre?: string) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (genre) params.set("genre", genre);
+  return apiFetch<BlindSpotResponse>(
+    `/api/v1/users/${userId}/blind-spots?${params}`
   );
 }
 

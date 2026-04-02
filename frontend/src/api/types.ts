@@ -591,6 +591,19 @@ export interface RewatchResponse {
   total: number;
 }
 
+export interface BlindSpotItem {
+  movie: MovieSummary;
+  vote_count: number;
+  popularity_score: number;
+}
+
+export interface BlindSpotResponse {
+  user_id: number;
+  genre: string | null;
+  movies: BlindSpotItem[];
+  total: number;
+}
+
 export interface TasteEvolutionPeriod {
   period: string;
   genres: Record<string, number>;

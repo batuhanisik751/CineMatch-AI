@@ -12,6 +12,7 @@ from httpx import ASGITransport, AsyncClient
 from cinematch.api.deps import (
     get_achievement_service,
     get_bingo_service,
+    get_blind_spot_service,
     get_cache_service,
     get_challenge_service,
     get_content_recommender,
@@ -804,6 +805,18 @@ def mock_onboarding_service(sample_movie):
 
 
 @pytest.fixture()
+def mock_blind_spot_service():
+    svc = AsyncMock()
+    svc.get_blind_spots.return_value = {
+        "user_id": 1,
+        "genre": None,
+        "movies": [],
+        "total": 0,
+    }
+    return svc
+
+
+@pytest.fixture()
 def mock_db():
     return AsyncMock()
 
@@ -831,6 +844,7 @@ def app(
     mock_challenge_service,
     mock_rewatch_service,
     mock_onboarding_service,
+    mock_blind_spot_service,
     mock_db,
 ):
     test_app = create_app()
@@ -859,6 +873,7 @@ def app(
     test_app.dependency_overrides[get_challenge_service] = lambda: mock_challenge_service
     test_app.dependency_overrides[get_rewatch_service] = lambda: mock_rewatch_service
     test_app.dependency_overrides[get_onboarding_service] = lambda: mock_onboarding_service
+    test_app.dependency_overrides[get_blind_spot_service] = lambda: mock_blind_spot_service
 
     return test_app
 
