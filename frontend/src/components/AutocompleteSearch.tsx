@@ -76,7 +76,7 @@ export default function AutocompleteSearch({
     if (onNavigateToSearch) {
       onNavigateToSearch(query.trim());
     } else {
-      navigate(`/discover?q=${encodeURIComponent(query.trim())}`);
+      navigate(`/discover/browse?q=${encodeURIComponent(query.trim())}`);
     }
   };
 

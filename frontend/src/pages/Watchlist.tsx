@@ -89,7 +89,7 @@ export default function Watchlist() {
                 Your watchlist is empty
               </p>
               <Link
-                to="/discover"
+                to="/discover/browse"
                 className="inline-block bg-primary-container/20 border border-primary-container/40 text-primary px-6 py-3 rounded-md font-bold hover:bg-primary-container hover:text-on-primary-container transition-all"
               >
                 Discover Movies

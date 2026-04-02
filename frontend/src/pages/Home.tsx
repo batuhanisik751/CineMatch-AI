@@ -150,7 +150,7 @@ export default function Home() {
 
   const handleRecs = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate(`/recommendations?user=${userId}&strategy=${strategy}`);
+    navigate(`/for-you/recommendations?user=${userId}&strategy=${strategy}`);
   };
 
   const fetchMoodMovies = (moodQuery: string, label: string) => {
@@ -277,7 +277,7 @@ export default function Home() {
               placeholder="Search for titles, directors, or genres..."
               className="w-full max-w-2xl mx-auto mt-12"
               inputClassName="w-full h-16 pl-16 pr-6 bg-surface-container-lowest border-none rounded-xl text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint shadow-2xl transition-all duration-300 font-body text-lg"
-              onNavigateToSearch={(q) => navigate(`/discover?q=${encodeURIComponent(q)}`)}
+              onNavigateToSearch={(q) => navigate(`/discover/browse?q=${encodeURIComponent(q)}`)}
             />
             <MoodPills
               onSelect={handleMoodSelect}
@@ -486,7 +486,7 @@ export default function Home() {
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-headline font-bold text-xl text-on-surface">Popular Now</h3>
-                        <Link to="/discover?sort_by=popularity" className="text-primary text-sm font-medium hover:underline">
+                        <Link to="/discover/browse?sort_by=popularity" className="text-primary text-sm font-medium hover:underline">
                           See all &rarr;
                         </Link>
                       </div>
@@ -503,7 +503,7 @@ export default function Home() {
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-headline font-bold text-xl text-on-surface">Top Rated</h3>
-                        <Link to="/discover?sort_by=vote_average" className="text-primary text-sm font-medium hover:underline">
+                        <Link to="/discover/browse?sort_by=vote_average" className="text-primary text-sm font-medium hover:underline">
                           See all &rarr;
                         </Link>
                       </div>
@@ -520,7 +520,7 @@ export default function Home() {
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-headline font-bold text-xl text-on-surface">Hidden Gems</h3>
-                        <Link to="/hidden-gems" className="text-primary text-sm font-medium hover:underline">
+                        <Link to="/discover/hidden-gems" className="text-primary text-sm font-medium hover:underline">
                           See all &rarr;
                         </Link>
                       </div>
@@ -557,7 +557,7 @@ export default function Home() {
             </div>
             {rewatchItems.length > 0 && (
               <Link
-                to="/rewatch"
+                to="/for-you/rewatch"
                 className="text-primary text-sm font-medium hover:underline flex items-center gap-1"
               >
                 See all

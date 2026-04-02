@@ -3,11 +3,8 @@ import { Link, useLocation } from "react-router-dom";
 const items = [
   { to: "/", icon: "home", label: "Home" },
   { to: "/discover", icon: "explore", label: "Discover" },
-  { to: "/trending", icon: "trending_up", label: "Trending" },
-  { to: "/top-charts", icon: "leaderboard", label: "Charts" },
-  { to: "/hidden-gems", icon: "diamond", label: "Gems" },
-  { to: "/moods", icon: "mood", label: "Moods" },
-  { to: "/recommendations", icon: "auto_awesome", label: "Match" },
+  { to: "/search", icon: "search", label: "Search" },
+  { to: "/for-you", icon: "auto_awesome", label: "For You" },
   { to: "/watchlist", icon: "bookmark", label: "Watchlist" },
   { to: "/lists", icon: "playlist_add", label: "Lists" },
   { to: "/profile", icon: "person", label: "Profile" },

@@ -107,10 +107,11 @@ export default function PopularityTimeline({ movieId }: { movieId: number }) {
                 color: "#e2e8f0",
                 fontSize: 13,
               }}
-              formatter={(value: number, name: string) => {
-                if (name === "rating_count") return [value.toLocaleString(), "Ratings"];
-                if (name === "avg_rating") return [value.toFixed(1), "Avg Rating"];
-                return [value, name];
+              formatter={(value, name) => {
+                const v = Number(value ?? 0);
+                if (name === "rating_count") return [v.toLocaleString(), "Ratings"];
+                if (name === "avg_rating") return [v.toFixed(1), "Avg Rating"];
+                return [v, String(name ?? "")];
               }}
               labelStyle={{ color: "#94a3b8", fontWeight: 600, marginBottom: 4 }}
             />
