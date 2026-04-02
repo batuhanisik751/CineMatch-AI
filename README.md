@@ -120,6 +120,7 @@ Features: movie discovery with genre/year/language/runtime/sort filters, **Autoc
 | GET | `/api/v1/movies/actors/search?q=hanks&limit=20` | Search actors by name |
 | GET | `/api/v1/movies/actors/popular?limit=30` | Popular actors (3+ films, sorted by popularity) |
 | GET | `/api/v1/movies/actors/filmography?name=Tom+Hanks&user_id=1` | Actor filmography with user rating overlay |
+| GET | `/api/v1/movies/by-cast?actors=Leonardo+DiCaprio,Tom+Hardy&sort_by=popularity&sort_order=desc&offset=0&limit=20` | Cast combination search — find movies where 2-5 specified actors appear together (GIN-indexed JSONB containment) |
 | GET | `/api/v1/movies/keywords/popular?limit=50` | Popular keyword tags with movie counts |
 | GET | `/api/v1/movies/keywords/search?q=time&limit=20` | Search keywords by partial match |
 | GET | `/api/v1/movies/keywords/movies?keyword=time+travel&offset=0&limit=20` | Movies by keyword with stats (total, avg rating, top genres) |

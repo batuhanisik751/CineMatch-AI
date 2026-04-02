@@ -4,6 +4,7 @@ import type {
   ActorFilmographyResponse,
   ActorSearchResponse,
   AdvancedSearchResponse,
+  CastCombinationResponse,
   ControversialResponse,
   MovieRatingStatsResponse,
   DecadeMoviesResponse,
@@ -183,6 +184,25 @@ export function getActorFilmography(name: string, userId?: number) {
   if (userId != null) qs.set("user_id", String(userId));
   return apiFetch<ActorFilmographyResponse>(
     `/api/v1/movies/actors/filmography?${qs.toString()}`
+  );
+}
+
+export function getMoviesByCast(
+  actors: string[],
+  sortBy = "popularity",
+  sortOrder = "desc",
+  offset = 0,
+  limit = 20,
+) {
+  const qs = new URLSearchParams({
+    actors: actors.join(","),
+    sort_by: sortBy,
+    sort_order: sortOrder,
+    offset: String(offset),
+    limit: String(limit),
+  });
+  return apiFetch<CastCombinationResponse>(
+    `/api/v1/movies/by-cast?${qs.toString()}`
   );
 }
 

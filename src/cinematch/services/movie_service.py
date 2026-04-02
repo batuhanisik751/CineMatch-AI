@@ -614,6 +614,44 @@ class MovieService:
 
         return films, stats
 
+    async def movies_by_cast_combination(
+        self,
+        db: AsyncSession,
+        *,
+        actors: list[str],
+        sort_by: str = "popularity",
+        sort_order: str = "desc",
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[list[Movie], int]:
+        """Find movies where all specified actors appear together."""
+        filters = []
+        for name in actors:
+            filters.append(Movie.cast_names.op("@>")(func.jsonb_build_array(name).cast(JSONB_TYPE)))
+
+        count_stmt = select(func.count()).select_from(Movie)
+        for f in filters:
+            count_stmt = count_stmt.where(f)
+        count_result = await db.execute(count_stmt)
+        total = count_result.scalar_one()
+
+        sort_column_map = {
+            "popularity": Movie.popularity,
+            "vote_average": Movie.vote_average,
+            "release_date": Movie.release_date,
+            "title": Movie.title,
+        }
+        col = sort_column_map.get(sort_by, Movie.popularity)
+        order = col.asc() if sort_order == "asc" else col.desc()
+
+        stmt = select(Movie)
+        for f in filters:
+            stmt = stmt.where(f)
+        stmt = stmt.order_by(order).offset(offset).limit(limit)
+
+        result = await db.execute(stmt)
+        return list(result.scalars().all()), total
+
     async def popular_keywords(
         self,
         db: AsyncSession,

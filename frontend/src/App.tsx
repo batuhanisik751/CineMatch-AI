@@ -4,6 +4,7 @@ import Achievements from "./pages/Achievements";
 import Bingo from "./pages/Bingo";
 import BlindSpots from "./pages/BlindSpots";
 import Actors from "./pages/Actors";
+import CastCombo from "./pages/CastCombo";
 import Challenges from "./pages/Challenges";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import Collections from "./pages/Collections";
@@ -63,6 +64,7 @@ export default function App() {
       <Route path="/decades" element={<Decades key={navCountRef.current} />} />
       <Route path="/directors" element={<Directors key={navCountRef.current} />} />
       <Route path="/actors" element={<Actors key={navCountRef.current} />} />
+      <Route path="/cast-combo" element={<CastCombo key={navCountRef.current} />} />
       <Route path="/keywords" element={<Keywords key={navCountRef.current} />} />
       <Route path="/collections" element={<Collections key={navCountRef.current} />} />
       <Route path="/director-gaps" element={<DirectorGaps key={navCountRef.current} />} />

@@ -455,6 +455,14 @@ export interface AdvancedSearchResponse {
   limit: number;
 }
 
+export interface CastCombinationResponse {
+  actors: string[];
+  results: AdvancedSearchResult[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
 export interface CollectionGroup {
   creator_type: string;
   creator_name: string;

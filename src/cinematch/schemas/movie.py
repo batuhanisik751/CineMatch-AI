@@ -308,6 +308,14 @@ class AdvancedSearchResponse(BaseModel):
     limit: int
 
 
+class CastCombinationResponse(BaseModel):
+    actors: list[str]
+    results: list[AdvancedSearchResult]
+    total: int
+    offset: int
+    limit: int
+
+
 class RatingHistogramBucket(BaseModel):
     rating: int
     count: int

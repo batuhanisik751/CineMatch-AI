@@ -12,6 +12,7 @@ const items = [
   { to: "/decades", icon: "history", label: "Decades" },
   { to: "/directors", icon: "movie_filter", label: "Directors" },
   { to: "/actors", icon: "theater_comedy", label: "Actors" },
+  { to: "/cast-combo", icon: "group", label: "Cast Combo" },
   { to: "/keywords", icon: "sell", label: "Keywords" },
   { to: "/collections", icon: "collections_bookmark", label: "Collections" },
   { to: "/director-gaps", icon: "person_search", label: "Director Gaps" },

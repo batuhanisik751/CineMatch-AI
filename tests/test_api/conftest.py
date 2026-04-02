@@ -150,6 +150,7 @@ def mock_movie_service(sample_movie):
         (sample_movie.id, sample_movie.title, sample_movie.release_date, sample_movie.poster_path),
     ]
     svc.advanced_search.return_value = ([sample_movie], 1)
+    svc.movies_by_cast_combination.return_value = ([sample_movie], 1)
     svc.find_direct_connections.return_value = (
         sample_movie,
         sample_movie,

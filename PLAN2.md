@@ -663,7 +663,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Endpoint: add `min_runtime`, `max_runtime` params to discover
   - Preset buttons: "Quick Watch (<90min)", "Standard (90-150min)", "Epic (>150min)"
 
-### 8.5 Search by Cast Combination
+### 8.5 Search by Cast Combination ✅
 **Scope:** Single user
 **One-line:** Find movies where two specific actors both appear.
 - **Data backing:** `movies.cast_names` (JSONB array)

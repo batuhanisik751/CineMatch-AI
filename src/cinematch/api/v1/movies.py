@@ -30,6 +30,7 @@ from cinematch.schemas.movie import (
     ALSPrediction,
     AutocompleteResponse,
     AutocompleteSuggestion,
+    CastCombinationResponse,
     ControversialMovieResult,
     ControversialResponse,
     DecadeMovieResult,
@@ -689,6 +690,68 @@ async def actor_filmography(
             await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
         except Exception:
             logger.warning("Failed to cache actor filmography", exc_info=True)
+
+    return response
+
+
+@router.get("/by-cast", response_model=CastCombinationResponse)
+async def movies_by_cast(
+    actors: str = Query(min_length=3, description="Comma-separated actor names, 2-5 required"),
+    sort_by: str = Query(
+        default="popularity",
+        pattern=r"^(popularity|vote_average|release_date|title)$",
+    ),
+    sort_order: str = Query(default="desc", pattern=r"^(asc|desc)$"),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    actor_list = list(dict.fromkeys(name.strip() for name in actors.split(",") if name.strip()))
+
+    if len(actor_list) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 actor names are required")
+    if len(actor_list) > 5:
+        raise HTTPException(status_code=400, detail="At most 5 actor names are allowed")
+
+    sorted_actors = ",".join(sorted(a.lower() for a in actor_list))
+    cache_key = f"by_cast:{sorted_actors}:{sort_by}:{sort_order}:{offset}:{limit}"
+
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return CastCombinationResponse.model_validate_json(cached)
+
+    movies, total = await movie_service.movies_by_cast_combination(
+        db,
+        actors=actor_list,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        offset=offset,
+        limit=limit,
+    )
+
+    response = CastCombinationResponse(
+        actors=actor_list,
+        results=[
+            AdvancedSearchResult(
+                movie=MovieSummary.model_validate(m),
+                vote_average=m.vote_average,
+                director=m.director,
+            )
+            for m in movies
+        ],
+        total=total,
+        offset=offset,
+        limit=limit,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=3600)
+        except Exception:
+            logger.warning("Failed to cache cast combination results", exc_info=True)
 
     return response
 
