@@ -186,3 +186,23 @@ class RatingService:
             "timeline": timeline,
             "total_ratings": total,
         }
+
+    async def get_rating_stats_pair(
+        self,
+        movie_id1: int,
+        movie_id2: int,
+        db: AsyncSession,
+    ) -> dict[int, tuple[float, int]]:
+        """Get avg rating and count for two movies in one query."""
+        result = await db.execute(
+            text(
+                "SELECT movie_id, AVG(rating), COUNT(*) "
+                "FROM ratings WHERE movie_id IN (:m1, :m2) "
+                "GROUP BY movie_id"
+            ),
+            {"m1": movie_id1, "m2": movie_id2},
+        )
+        stats: dict[int, tuple[float, int]] = {}
+        for row in result.all():
+            stats[int(row[0])] = (round(float(row[1]), 2), int(row[2]))
+        return stats

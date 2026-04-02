@@ -7,6 +7,7 @@ import Actors from "./pages/Actors";
 import Challenges from "./pages/Challenges";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import Collections from "./pages/Collections";
+import Compare from "./pages/Compare";
 import Controversial from "./pages/Controversial";
 import Curated from "./pages/Curated";
 import Decades from "./pages/Decades";
@@ -62,6 +63,7 @@ export default function App() {
       <Route path="/keywords" element={<Keywords key={navCountRef.current} />} />
       <Route path="/collections" element={<Collections key={navCountRef.current} />} />
       <Route path="/curated" element={<Curated key={navCountRef.current} />} />
+      <Route path="/compare" element={<Compare />} />
       <Route path="/advanced-search" element={<AdvancedSearch />} />
       <Route path="/search" element={<Search />} />
       <Route path="/movies/:id" element={<MovieDetail />} />

@@ -1262,3 +1262,22 @@ class MovieService:
             "director": movie.director,
             "vote_average": movie.vote_average,
         }
+
+    async def embedding_cosine_similarity(
+        self,
+        movie_id1: int,
+        movie_id2: int,
+        db: AsyncSession,
+    ) -> float | None:
+        """Compute cosine similarity between two movies' stored embeddings."""
+        result = await db.execute(
+            text(
+                "SELECT 1 - (m1.embedding <=> m2.embedding) AS cosine_sim "
+                "FROM movies m1, movies m2 "
+                "WHERE m1.id = :id1 AND m2.id = :id2 "
+                "AND m1.embedding IS NOT NULL AND m2.embedding IS NOT NULL"
+            ),
+            {"id1": movie_id1, "id2": movie_id2},
+        )
+        row = result.first()
+        return round(float(row[0]), 4) if row else None

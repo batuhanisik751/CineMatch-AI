@@ -15,6 +15,7 @@ from cinematch.api.deps import (
     get_blind_spot_service,
     get_cache_service,
     get_challenge_service,
+    get_collab_recommender,
     get_content_recommender,
     get_db,
     get_dismissal_service,
@@ -180,6 +181,7 @@ def mock_movie_service(sample_movie):
             "user_rated_count": 0,
         },
     )
+    svc.embedding_cosine_similarity.return_value = 0.85
     svc.get_movie_dna.return_value = {
         "movie_id": sample_movie.id,
         "title": sample_movie.title,
@@ -216,6 +218,7 @@ def mock_rating_service(sample_rating):
         "distribution": [{"rating": i, "count": 10} for i in range(1, 11)],
         "user_rating": None,
     }
+    svc.get_rating_stats_pair.return_value = {1: (7.5, 100)}
     svc.get_movie_activity.return_value = {
         "movie_id": 1,
         "granularity": "month",
@@ -232,6 +235,13 @@ def mock_rating_service(sample_rating):
 def mock_content_recommender():
     rec = AsyncMock()
     rec.get_similar_movies.return_value = [(2, 0.92), (3, 0.85)]
+    return rec
+
+
+@pytest.fixture()
+def mock_collab_recommender():
+    rec = MagicMock()
+    rec.score_items.return_value = {1: 0.72, 2: 0.65}
     return rec
 
 
@@ -826,6 +836,7 @@ def app(
     mock_movie_service,
     mock_rating_service,
     mock_content_recommender,
+    mock_collab_recommender,
     mock_hybrid_recommender,
     mock_llm_service,
     mock_embedding_service,
@@ -853,6 +864,7 @@ def app(
     test_app.dependency_overrides[get_movie_service] = lambda: mock_movie_service
     test_app.dependency_overrides[get_rating_service] = lambda: mock_rating_service
     test_app.dependency_overrides[get_content_recommender] = lambda: mock_content_recommender
+    test_app.dependency_overrides[get_collab_recommender] = lambda: mock_collab_recommender
     test_app.dependency_overrides[get_hybrid_recommender] = lambda: mock_hybrid_recommender
     test_app.dependency_overrides[get_llm_service] = lambda: mock_llm_service
     test_app.dependency_overrides[get_embedding_service] = lambda: mock_embedding_service

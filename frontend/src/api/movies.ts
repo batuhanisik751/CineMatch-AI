@@ -27,6 +27,7 @@ import type {
   ThematicCollectionsResponse,
   TopChartsResponse,
   TrendingResponse,
+  MovieComparisonResponse,
   MovieConnectionsResponse,
   MovieActivityResponse,
   MovieDNAResponse,
@@ -290,5 +291,13 @@ export function getMovieDNA(movieId: number) {
 export function getMovieActivity(movieId: number, granularity = "month") {
   return apiFetch<MovieActivityResponse>(
     `/api/v1/movies/${movieId}/activity?granularity=${granularity}`,
+  );
+}
+
+export function compareMovies(id1: number, id2: number, userId?: number) {
+  const qs = new URLSearchParams({ ids: `${id1},${id2}` });
+  if (userId != null) qs.set("user_id", String(userId));
+  return apiFetch<MovieComparisonResponse>(
+    `/api/v1/movies/compare?${qs.toString()}`,
   );
 }

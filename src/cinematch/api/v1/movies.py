@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import (
     get_cache_service,
+    get_collab_recommender,
     get_content_recommender,
     get_db,
     get_embedding_service,
@@ -26,6 +27,7 @@ from cinematch.schemas.movie import (
     ActorSummary,
     AdvancedSearchResponse,
     AdvancedSearchResult,
+    ALSPrediction,
     AutocompleteResponse,
     AutocompleteSuggestion,
     ControversialMovieResult,
@@ -51,6 +53,7 @@ from cinematch.schemas.movie import (
     LanguageCount,
     LanguagesResponse,
     MovieActivityResponse,
+    MovieComparisonResponse,
     MovieConnection,
     MovieConnectionsResponse,
     MovieDNAResponse,
@@ -64,6 +67,7 @@ from cinematch.schemas.movie import (
     PopularActorsResponse,
     PopularDirectorsResponse,
     PopularKeywordsResponse,
+    RatingComparison,
     RatingHistogramBucket,
     SemanticSearchResponse,
     SemanticSearchResult,
@@ -79,6 +83,7 @@ from cinematch.schemas.thematic_collection import (
     ThematicCollectionDetailResponse,
     ThematicCollectionsResponse,
 )
+from cinematch.services.collab_recommender import CollabRecommender
 from cinematch.services.content_recommender import ContentRecommender
 from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.movie_service import MovieService
@@ -887,6 +892,100 @@ async def get_thematic_collection(
             logger.warning("Failed to cache thematic collection detail", exc_info=True)
 
     return result
+
+
+@router.get("/compare", response_model=MovieComparisonResponse)
+async def compare_movies(
+    ids: str = Query(..., description="Two movie IDs separated by comma, e.g. '42,108'"),
+    user_id: int | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    movie_service: MovieService = Depends(get_movie_service),
+    rating_service: RatingService = Depends(get_rating_service),
+    collab_recommender: CollabRecommender | None = Depends(get_collab_recommender),
+    cache_service: CacheService | None = Depends(get_cache_service),
+):
+    """Compare two movies side-by-side with computed overlaps and similarity."""
+    parts = ids.split(",")
+    if len(parts) != 2:
+        raise HTTPException(status_code=400, detail="Exactly two movie IDs required")
+    try:
+        id1, id2 = int(parts[0].strip()), int(parts[1].strip())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid movie IDs")
+    if id1 == id2:
+        raise HTTPException(status_code=400, detail="Must compare two different movies")
+
+    lo, hi = min(id1, id2), max(id1, id2)
+    cache_key = f"comparison:{lo}:{hi}"
+    if user_id is not None:
+        cache_key += f":u{user_id}"
+
+    if cache_service is not None:
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return MovieComparisonResponse.model_validate_json(cached)
+
+    movie1 = await movie_service.get_by_id(id1, db)
+    movie2 = await movie_service.get_by_id(id2, db)
+    if movie1 is None or movie2 is None:
+        missing = id1 if movie1 is None else id2
+        raise HTTPException(status_code=404, detail=f"Movie {missing} not found")
+
+    shared_genres = sorted(set(movie1.genres or []) & set(movie2.genres or []))
+    shared_actors = sorted(set(movie1.cast_names or []) & set(movie2.cast_names or []))
+    shared_keywords = sorted(set(movie1.keywords or []) & set(movie2.keywords or []))
+    same_director = bool(movie1.director and movie2.director and movie1.director == movie2.director)
+
+    embedding_similarity = await movie_service.embedding_cosine_similarity(id1, id2, db)
+
+    rating_stats = await rating_service.get_rating_stats_pair(id1, id2, db)
+    m1_avg, m1_count = rating_stats.get(id1, (0.0, 0))
+    m2_avg, m2_count = rating_stats.get(id2, (0.0, 0))
+
+    als_prediction = None
+    if user_id is not None and collab_recommender is not None:
+        scores = collab_recommender.score_items(user_id, [id1, id2])
+        if scores:
+            s1 = scores.get(id1)
+            s2 = scores.get(id2)
+            preferred = None
+            if s1 is not None and s2 is not None:
+                preferred = id1 if s1 >= s2 else id2
+            elif s1 is not None:
+                preferred = id1
+            elif s2 is not None:
+                preferred = id2
+            als_prediction = ALSPrediction(
+                user_id=user_id,
+                movie1_score=round(s1, 4) if s1 is not None else None,
+                movie2_score=round(s2, 4) if s2 is not None else None,
+                preferred_movie_id=preferred,
+            )
+
+    response = MovieComparisonResponse(
+        movie1=MovieResponse.model_validate(movie1),
+        movie2=MovieResponse.model_validate(movie2),
+        shared_genres=shared_genres,
+        shared_actors=shared_actors,
+        shared_keywords=shared_keywords,
+        same_director=same_director,
+        embedding_similarity=embedding_similarity,
+        rating_comparison=RatingComparison(
+            movie1_avg=m1_avg,
+            movie1_count=m1_count,
+            movie2_avg=m2_avg,
+            movie2_count=m2_count,
+        ),
+        als_prediction=als_prediction,
+    )
+
+    if cache_service is not None:
+        try:
+            await cache_service.set(cache_key, response.model_dump_json(), ttl=21600)
+        except Exception:
+            logger.warning("Failed to cache movie comparison", exc_info=True)
+
+    return response
 
 
 @router.get("/{movie_id}/connection/{other_id}", response_model=MovieConnectionsResponse)

@@ -386,3 +386,29 @@ class AutocompleteSuggestion(BaseModel):
 class AutocompleteResponse(BaseModel):
     results: list[AutocompleteSuggestion]
     query: str
+
+
+class RatingComparison(BaseModel):
+    movie1_avg: float
+    movie1_count: int
+    movie2_avg: float
+    movie2_count: int
+
+
+class ALSPrediction(BaseModel):
+    user_id: int
+    movie1_score: float | None
+    movie2_score: float | None
+    preferred_movie_id: int | None
+
+
+class MovieComparisonResponse(BaseModel):
+    movie1: MovieResponse
+    movie2: MovieResponse
+    shared_genres: list[str]
+    shared_actors: list[str]
+    shared_keywords: list[str]
+    same_director: bool
+    embedding_similarity: float | None
+    rating_comparison: RatingComparison
+    als_prediction: ALSPrediction | None

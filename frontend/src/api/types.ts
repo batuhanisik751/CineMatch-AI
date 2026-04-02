@@ -875,3 +875,29 @@ export interface AutocompleteResponse {
   results: AutocompleteSuggestion[];
   query: string;
 }
+
+export interface RatingComparison {
+  movie1_avg: number;
+  movie1_count: number;
+  movie2_avg: number;
+  movie2_count: number;
+}
+
+export interface ALSPrediction {
+  user_id: number;
+  movie1_score: number | null;
+  movie2_score: number | null;
+  preferred_movie_id: number | null;
+}
+
+export interface MovieComparisonResponse {
+  movie1: MovieResponse;
+  movie2: MovieResponse;
+  shared_genres: string[];
+  shared_actors: string[];
+  shared_keywords: string[];
+  same_director: boolean;
+  embedding_similarity: number | null;
+  rating_comparison: RatingComparison;
+  als_prediction: ALSPrediction | null;
+}

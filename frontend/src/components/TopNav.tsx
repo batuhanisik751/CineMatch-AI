@@ -38,6 +38,7 @@ export default function TopNav() {
         {navLink("/decades", "Decades")}
         {navLink("/directors", "Directors")}
         {navLink("/actors", "Actors")}
+        {navLink("/compare", "Compare")}
         {navLink("/recommendations", "Recommendations")}
         {navLink("/watchlist", "Watchlist")}
         {navLink("/profile", "Profile")}

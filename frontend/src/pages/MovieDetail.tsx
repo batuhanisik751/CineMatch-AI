@@ -260,6 +260,19 @@ export default function MovieDetail() {
                   </span>
                 </button>
               </div>
+              {/* Compare */}
+              <Link
+                to={`/compare?m1=${movie.id}`}
+                className="glass-card p-8 rounded-2xl flex items-center justify-between group"
+              >
+                <div>
+                  <h3 className="text-xl font-headline font-bold text-on-surface">Compare</h3>
+                  <p className="text-sm text-on-surface-variant">Compare with another movie</p>
+                </div>
+                <span className="material-symbols-outlined text-3xl text-primary group-hover:scale-110 transition-transform">
+                  compare_arrows
+                </span>
+              </Link>
               <div className="glass-card p-8 rounded-2xl space-y-6">
                 <h3 className="text-xl font-headline font-bold text-on-surface">Rate this Movie</h3>
                 <form onSubmit={handleRate} className="space-y-4">

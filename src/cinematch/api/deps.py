@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from cinematch.services.bingo_service import BingoService
     from cinematch.services.blind_spot_service import BlindSpotService
     from cinematch.services.challenge_service import ChallengeService
+    from cinematch.services.collab_recommender import CollabRecommender
     from cinematch.services.content_recommender import ContentRecommender
     from cinematch.services.dismissal_service import DismissalService
     from cinematch.services.embedding_service import EmbeddingService
@@ -132,3 +133,7 @@ def get_onboarding_service(request: Request) -> OnboardingService:
 
 def get_blind_spot_service(request: Request) -> BlindSpotService:
     return request.app.state.blind_spot_service
+
+
+def get_collab_recommender(request: Request) -> CollabRecommender | None:
+    return getattr(request.app.state, "collab_recommender", None)

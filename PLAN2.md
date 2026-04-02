@@ -715,7 +715,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Optional genre filter: "Blind spots in Horror"
   - Frontend: checklist-style display with "Have you seen this?" prompts
 
-### 9.4 Compare Two Movies Side-by-Side
+### 9.4 Compare Two Movies Side-by-Side ✅
 **Scope:** Single user
 **One-line:** Visual comparison of any two movies across all metadata dimensions.
 - **Data backing:** All movie columns (genres, director, cast, votes, release_date, keywords, embedding similarity)
@@ -844,7 +844,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 13 | 3.8 Global Platform Stats | Low | Analytics |
 | 14 | 2.8 Genre Affinity Radar | Low | Personalization |
 | 15 | 9.3 Blind Spot Detector ✅ | Low | Onboarding |
-| 16 | 9.4 Compare Two Movies | Low | Onboarding |
+| 16 | 9.4 Compare Two Movies ✅ | Low | Onboarding |
 | 17 | 9.8 Seasonal Recommendations | Low | Onboarding |
 
 ### Tier 2: Medium Effort, High Value
