@@ -19,6 +19,9 @@ class MovieSummary(BaseModel):
     poster_path: str | None
     original_language: str | None = None
     runtime: int | None = None
+    tagline: str | None = None
+    budget: int | None = None
+    revenue: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -42,6 +45,9 @@ class MovieResponse(BaseModel):
     poster_path: str | None
     original_language: str | None = None
     runtime: int | None = None
+    tagline: str | None = None
+    budget: int | None = None
+    revenue: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -68,6 +68,15 @@ def load_tmdb(tmdb_path: Path) -> pd.DataFrame:
     # Runtime: integer minutes, keep NaN for missing
     df["runtime"] = pd.to_numeric(df["runtime"], errors="coerce").astype("Int64")
 
+    # Tagline: plain text, fill missing
+    df["tagline"] = df["tagline"].fillna("")
+
+    # Budget and revenue: integers, convert 0 to NaN (0 means "unknown" in TMDB)
+    df["budget"] = pd.to_numeric(df["budget"], errors="coerce").astype("Int64")
+    df["budget"] = df["budget"].where(df["budget"] > 0, pd.NA)
+    df["revenue"] = pd.to_numeric(df["revenue"], errors="coerce").astype("Int64")
+    df["revenue"] = df["revenue"].where(df["revenue"] > 0, pd.NA)
+
     # Select and rename columns
     result = df[
         [
@@ -85,6 +94,9 @@ def load_tmdb(tmdb_path: Path) -> pd.DataFrame:
             "poster_path",
             "original_language",
             "runtime",
+            "tagline",
+            "budget",
+            "revenue",
         ]
     ].copy()
     result = result.rename(columns={"id": "tmdb_id"})
@@ -253,6 +265,9 @@ def clean_and_join(
             "poster_path",
             "original_language",
             "runtime",
+            "tagline",
+            "budget",
+            "revenue",
         ]
     ]
     movies_out.to_parquet(processed_dir / "movies_clean.parquet", index=False)

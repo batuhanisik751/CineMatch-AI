@@ -32,6 +32,13 @@ function posterUrl(path: string | null, size = "w500") {
   return path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
 }
 
+function formatCurrency(value: number): string {
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
+  return `$${value}`;
+}
+
 export default function MovieDetail() {
   const { id } = useParams<{ id: string }>();
   const [movie, setMovie] = useState<MovieResponse | null>(null);
@@ -155,6 +162,11 @@ export default function MovieDetail() {
                 </div>
                 {year && <><div className="w-px h-4 bg-outline-variant/30" /><span className="text-sm">{year}</span></>}
               </div>
+              {movie.tagline && (
+                <p className="text-base italic text-on-surface-variant/70 max-w-2xl font-body">
+                  "{movie.tagline}"
+                </p>
+              )}
               {movie.overview && (
                 <p className="text-lg md:text-xl text-on-surface/80 max-w-2xl leading-relaxed font-body">
                   {movie.overview}
@@ -200,6 +212,26 @@ export default function MovieDetail() {
                       : "N/A"}
                   </p>
                 </div>
+                {movie.budget != null && movie.budget > 0 && (
+                  <div>
+                    <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Budget</p>
+                    <p className="text-on-surface font-bold">{formatCurrency(movie.budget)}</p>
+                  </div>
+                )}
+                {movie.revenue != null && movie.revenue > 0 && (
+                  <div>
+                    <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">Revenue</p>
+                    <p className="text-on-surface font-bold">{formatCurrency(movie.revenue)}</p>
+                  </div>
+                )}
+                {movie.budget != null && movie.budget > 0 && movie.revenue != null && movie.revenue > 0 && (
+                  <div>
+                    <p className="text-on-surface-variant text-xs uppercase tracking-widest mb-1 font-label">ROI</p>
+                    <p className={`font-bold ${((movie.revenue - movie.budget) / movie.budget) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {(((movie.revenue - movie.budget) / movie.budget) * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                )}
               </div>
               {/* Cast */}
               {movie.cast_names.length > 0 && (

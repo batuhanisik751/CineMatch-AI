@@ -7,6 +7,9 @@ export interface MovieSummary {
   poster_path: string | null;
   original_language: string | null;
   runtime: number | null;
+  tagline: string | null;
+  budget: number | null;
+  revenue: number | null;
 }
 
 export interface MovieResponse {
@@ -26,6 +29,9 @@ export interface MovieResponse {
   poster_path: string | null;
   original_language: string | null;
   runtime: number | null;
+  tagline: string | null;
+  budget: number | null;
+  revenue: number | null;
 }
 
 export interface SimilarMovie {

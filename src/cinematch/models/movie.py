@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Date, Float, Index, Integer, String, Text
+from sqlalchemy import BigInteger, Date, Float, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -35,6 +35,9 @@ class Movie(Base):
     poster_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     original_language: Mapped[str | None] = mapped_column(String(10), nullable=True)
     runtime: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tagline: Mapped[str | None] = mapped_column(Text, nullable=True)
+    budget: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    revenue: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     embedding = mapped_column(Vector(384), nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 

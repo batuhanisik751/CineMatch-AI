@@ -43,6 +43,9 @@ async def test_compare_includes_shared_attributes(client, mock_movie_service):
     movie1.poster_path = "/poster.jpg"
     movie1.original_language = "en"
     movie1.runtime = 136
+    movie1.tagline = "Welcome to the Real World."
+    movie1.budget = 63000000
+    movie1.revenue = 463517383
 
     movie2 = MagicMock()
     movie2.id = 2
@@ -61,6 +64,9 @@ async def test_compare_includes_shared_attributes(client, mock_movie_service):
     movie2.poster_path = "/poster2.jpg"
     movie2.original_language = "en"
     movie2.runtime = 138
+    movie2.tagline = "Free your mind."
+    movie2.budget = 150000000
+    movie2.revenue = 742128461
 
     async def side_effect(mid, db):
         if mid == 1:

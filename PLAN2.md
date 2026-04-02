@@ -5,15 +5,15 @@
 A prioritized catalog of features that CineMatch-AI can implement using **only existing data sources** (MovieLens ml-32m ratings/tags, TMDb metadata, sentence-transformer embeddings, FAISS index, ALS collaborative filtering model). No paid APIs, no new external data sources required.
 
 **Data inventory summary:**
-- 29K movies with: title, overview, genres (JSONB), keywords (JSONB), cast_names (top 5, JSONB), director, release_date, vote_average, vote_count, popularity, poster_path, 384-dim embedding
+- 29K movies with: title, overview, tagline, genres (JSONB), keywords (JSONB), cast_names (top 5, JSONB), director, release_date, vote_average, vote_count, popularity, poster_path, original_language, runtime, 384-dim embedding
 - 162K users with 24.7M ratings (1-10 scale, timestamped)
 - Watchlist table (user_id, movie_id, added_at)
 - ALS model: 128-dim user factors (162K) + item factors (29K)
 - FAISS IndexFlatIP: 29K movie embeddings for fast similarity search
 - Existing services: hybrid/content/collab recommender, mood search, semantic search, LLM explanations
 
-**Columns available in raw TMDb CSV but NOT yet imported:** `runtime`, `budget`, `revenue`, `spoken_languages`, `production_companies`, `production_countries`, `tagline`, `status`
-**Columns recently imported:** `original_language`
+**Columns available in raw TMDb CSV but NOT yet imported:** `budget`, `revenue`, `spoken_languages`, `production_companies`, `production_countries`, `status`
+**Columns recently imported:** `original_language`, `runtime`, `tagline`
 
 ---
 
@@ -778,7 +778,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
 
 These features require importing additional columns from the TMDb CSV that we already download but don't currently use. No new external data sources needed.
 
-### 10.1 Import Runtime Field
+### 10.1 Import Runtime Field ✅
 **Scope:** Single user
 **One-line:** Add movie runtime (minutes) from TMDb CSV to enable duration-based features.
 - **Data backing:** `runtime` column in `TMDB_all_movies.csv`
@@ -786,7 +786,7 @@ These features require importing additional columns from the TMDb CSV that we al
 - **Value:** Unlocks: runtime filter, "estimated watch time" in Wrapped, movie duration display, "quick watch" discovery
 - **Implementation:** Add to cleaner.py column selection, migration for movies table, seed update
 
-### 10.2 Import Original Language
+### 10.2 Import Original Language ✅
 **Scope:** Single user
 **One-line:** Add original_language from TMDb CSV to enable language-based filtering and stats.
 - **Data backing:** `original_language` column in `TMDB_all_movies.csv`
@@ -794,7 +794,7 @@ These features require importing additional columns from the TMDb CSV that we al
 - **Value:** Unlocks: language filter, "international cinema" discovery, language diversity stats
 - **Implementation:** Same pattern as runtime — cleaner.py + migration + seed
 
-### 10.3 Import Tagline
+### 10.3 Import Tagline ✅
 **Scope:** Single user
 **One-line:** Add movie taglines from TMDb CSV for richer movie cards and search.
 - **Data backing:** `tagline` column in `TMDB_all_movies.csv`
