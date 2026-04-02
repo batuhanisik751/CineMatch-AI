@@ -909,6 +909,19 @@ export interface ImportResponse {
   results: ImportResultItem[];
 }
 
+export interface PredictedMatchItem {
+  movie_id: number;
+  match_percent: number;
+  content_score: number;
+  collab_score: number;
+  alpha: number;
+}
+
+export interface PredictedMatchResponse {
+  user_id: number;
+  predictions: PredictedMatchItem[];
+}
+
 export interface MovieComparisonResponse {
   movie1: MovieResponse;
   movie2: MovieResponse;

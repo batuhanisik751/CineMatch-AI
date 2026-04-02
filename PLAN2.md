@@ -730,7 +730,7 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
     - If user_id provided: predicted preference via ALS scores
   - Frontend: side-by-side card layout with highlighted overlaps
 
-### 9.5 Import/Export Ratings (CSV)
+### 9.5 Import/Export Ratings (CSV) ✅
 **Scope:** Single user
 **One-line:** Import ratings from Letterboxd/IMDb CSV exports; export CineMatch ratings as CSV.
 - **Data backing:** `movies.imdb_id`, `movies.tmdb_id` for mapping; `ratings` table for storage
@@ -742,19 +742,6 @@ A prioritized catalog of features that CineMatch-AI can implement using **only e
   - Map external IDs to internal movie_id via `movies.imdb_id` / `movies.tmdb_id`
   - Endpoint: `GET /api/v1/users/{id}/ratings/export` — download CSV
   - Rescale ratings to 1-10 if source uses different scale (Letterboxd 0.5-5.0, IMDb 1-10)
-
-### 9.6 Tastemaker Score
-**Scope:** Single user
-**One-line:** Identify users whose high ratings predict what others will later enjoy — community taste leaders.
-- **Data backing:** `ratings.rating` + `ratings.timestamp` — find early raters of later-popular films
-- **Complexity:** Medium
-- **Value:** Gamification + social proof; encourages thoughtful early rating behavior
-- **Implementation sketch:**
-  - Endpoint: `GET /api/v1/users/{id}/tastemaker-score`
-  - For each movie the user rated >= 8 early (within first 10% of ratings chronologically): check if the community later converged to a high avg
-  - Score = fraction of early-high-rated movies that became community favorites
-  - Leaderboard: `GET /api/v1/leaderboard/tastemakers?limit=20`
-  - Cache heavily (computation is expensive, recalculate weekly)
 
 ### 9.7 Predicted Match Percentage
 **Scope:** Single user
@@ -863,7 +850,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 28 | 2.4 Diversity Controls | Low-Med | Personalization |
 | 29 | 8.5 Search by Cast Combo | Low | Search |
 | 30 | 9.2 Rewatch Recommender ✅ | Low | Onboarding |
-| 31 | 9.7 Predicted Match Percentage | Low-Med | Onboarding |
+| 31 | 9.7 Predicted Match Percentage ✅ | Low-Med | Onboarding |
 
 ### Tier 3: Bigger Builds, Strong Differentiators
 | # | Feature | Effort | Category |
@@ -892,7 +879,6 @@ These features require importing additional columns from the TMDb CSV that we al
 | 53 | 1.11 Complete the Collection | Medium | Discovery |
 | 54 | 9.1 Quick Rate Onboarding ✅ | Medium | Onboarding |
 | 55 | 9.5 Import/Export Ratings ✅ | Medium | Onboarding |
-| 56 | 9.6 Tastemaker Score | Medium | Onboarding |
 
 ---
 

@@ -40,6 +40,17 @@ class ScoreBreakdown:
 
 
 @dataclass
+class PredictedMatchResult:
+    """Result of a predicted match percentage for a single movie."""
+
+    movie_id: int
+    match_percent: int  # 0-100
+    content_score: float
+    collab_score: float
+    alpha: float
+
+
+@dataclass
 class RecommendationResult:
     """Rich recommendation result with explanation metadata."""
 
@@ -904,6 +915,91 @@ class HybridRecommender:
         if not union:
             return 0.0
         return len(a & b) / len(union)
+
+    # ------------------------------------------------------------------
+    # Predicted match percentage
+    # ------------------------------------------------------------------
+
+    async def predict_match(
+        self,
+        user_id: int,
+        movie_ids: list[int],
+        db: AsyncSession,
+    ) -> list[PredictedMatchResult]:
+        """Compute a predicted match percentage for arbitrary movies.
+
+        Uses a taste centroid (weighted mean embedding of user's top-rated
+        movies) for content scoring, combined with ALS collaborative scores.
+        Returns absolute, stable scores independent of batch composition.
+        """
+        user_top = await self._get_user_top_rated_diverse(user_id, db, limit=10)
+        if not user_top:
+            return []
+
+        # Content: taste centroid similarity
+        taste_vec = self._compute_taste_centroid(user_top)
+        content_scores: dict[int, float] = {}
+        if taste_vec is not None:
+            for mid in movie_ids:
+                faiss_idx = self._content._id_to_faiss_idx.get(mid)
+                if faiss_idx is None:
+                    content_scores[mid] = 0.0
+                    continue
+                movie_vec = self._content._faiss_index.reconstruct(int(faiss_idx))
+                sim = float(np.dot(taste_vec, movie_vec))
+                content_scores[mid] = (sim + 1.0) / 2.0  # map [-1,1] to [0,1]
+
+        # Collaborative: sigmoid-normalized ALS scores
+        is_known = self._collab.is_known_user(user_id)
+        alpha = self._alpha if is_known else 1.0
+        collab_scores: dict[int, float] = {}
+        if is_known:
+            raw_collab = self._collab.score_items(user_id, movie_ids)
+            for mid, score in raw_collab.items():
+                collab_scores[mid] = 1.0 / (1.0 + np.exp(-score))  # sigmoid
+
+        # Blend and scale to percentage
+        results: list[PredictedMatchResult] = []
+        for mid in movie_ids:
+            c = content_scores.get(mid, 0.0)
+            f = collab_scores.get(mid, 0.0)
+            hybrid = alpha * c + (1.0 - alpha) * f
+            pct = max(0, min(100, round(hybrid * 100)))
+            results.append(
+                PredictedMatchResult(
+                    movie_id=mid,
+                    match_percent=pct,
+                    content_score=round(c, 4),
+                    collab_score=round(f, 4),
+                    alpha=alpha,
+                )
+            )
+        return results
+
+    def _compute_taste_centroid(
+        self,
+        user_top: list[tuple[int, float]],
+    ) -> np.ndarray | None:
+        """Build a weighted average embedding from user's top-rated movies."""
+        weighted_vecs: list[np.ndarray] = []
+        total_weight = 0.0
+        for movie_id, rating in user_top:
+            faiss_idx = self._content._id_to_faiss_idx.get(movie_id)
+            if faiss_idx is None:
+                continue
+            vec = self._content._faiss_index.reconstruct(int(faiss_idx))
+            weight = rating / 10.0
+            weighted_vecs.append(vec * weight)
+            total_weight += weight
+
+        if not weighted_vecs:
+            return None
+
+        centroid = np.sum(weighted_vecs, axis=0) / total_weight
+        norm = np.linalg.norm(centroid)
+        if norm > 0:
+            centroid = centroid / norm
+        return centroid
 
     @staticmethod
     def _min_max_normalize(scores: dict[int, float]) -> dict[int, float]:

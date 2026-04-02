@@ -19,6 +19,7 @@ import AddToListModal from "../components/AddToListModal";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
+import { useMatchPredictions } from "../hooks/useMatchPredictions";
 import { useRated } from "../hooks/useRated";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -46,6 +47,7 @@ export default function Controversial() {
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } =
     useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   const fetchData = () => {
@@ -58,6 +60,7 @@ export default function Controversial() {
         refreshForMovieIds(ids);
         refreshDismissedForMovieIds(ids);
         refreshRatingsForMovieIds(ids);
+        fetchMatchPercents(ids);
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -131,6 +134,7 @@ export default function Controversial() {
                         isDismissed={isDismissed(item.movie.id)}
                         onDismiss={toggleDismiss}
                         userRating={getRating(item.movie.id)}
+                        matchPercent={getMatchPercent(item.movie.id)}
                       />
                     </div>
 

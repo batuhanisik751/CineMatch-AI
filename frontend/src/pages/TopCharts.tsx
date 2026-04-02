@@ -10,6 +10,7 @@ import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
 import { useRated } from "../hooks/useRated";
+import { useMatchPredictions } from "../hooks/useMatchPredictions";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function TopCharts() {
@@ -22,6 +23,7 @@ export default function TopCharts() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export default function TopCharts() {
     getTopCharts(g, 40)
       .then((data) => {
         setResults(data.results);
-        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); }
+        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); fetchMatchPercents(_ids); }
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -117,6 +119,7 @@ export default function TopCharts() {
                       isBookmarked={isInWatchlist(item.movie.id)}
                       onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
                       userRating={getRating(item.movie.id)}
+                      matchPercent={getMatchPercent(item.movie.id)}
                     />
                     <div className="mt-2 flex items-center gap-3 text-xs text-on-surface-variant font-medium">
                       <span>

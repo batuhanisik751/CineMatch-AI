@@ -11,6 +11,7 @@ import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
 import { useRated } from "../hooks/useRated";
+import { useMatchPredictions } from "../hooks/useMatchPredictions";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Search() {
@@ -23,6 +24,7 @@ export default function Search() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export default function Search() {
       .then((data) => {
         setResults(data.results);
         setTotal(data.total);
-        { const _ids = data.results.map((m) => m.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); }
+        { const _ids = data.results.map((m) => m.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); fetchMatchPercents(_ids); }
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -67,7 +69,7 @@ export default function Search() {
           {!loading && !error && (
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {results.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} isBookmarked={isInWatchlist(movie.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(movie.id)} onDismiss={toggleDismiss} userRating={getRating(movie.id)} />
+                <MovieCard key={movie.id} movie={movie} isBookmarked={isInWatchlist(movie.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(movie.id)} onDismiss={toggleDismiss} userRating={getRating(movie.id)} matchPercent={getMatchPercent(movie.id)} />
               ))}
             </section>
           )}

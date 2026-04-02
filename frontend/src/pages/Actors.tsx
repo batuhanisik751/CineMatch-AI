@@ -18,12 +18,14 @@ import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
 import { useDismissed } from "../hooks/useDismissed";
+import { useMatchPredictions } from "../hooks/useMatchPredictions";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Actors() {
   const { userId } = useUserId();
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
+  const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   // Level 1 state (browse/search)
@@ -87,7 +89,7 @@ export default function Actors() {
       .then((data) => {
         setFilmography(data.filmography);
         setStats(data.stats);
-        { const _ids = data.filmography.map((f) => f.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); }
+        { const _ids = data.filmography.map((f) => f.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); fetchMatchPercents(_ids); }
       })
       .catch((e) => setError(e.detail || e.message || "Failed to load filmography"))
       .finally(() => setLoading(false));
@@ -275,6 +277,7 @@ export default function Actors() {
                           movie={item.movie}
                           isBookmarked={isInWatchlist(item.movie.id)}
                           onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
+                          matchPercent={getMatchPercent(item.movie.id)}
                         />
                         <div className="mt-2 flex items-center gap-3 text-xs font-medium">
                           {item.user_rating != null ? (

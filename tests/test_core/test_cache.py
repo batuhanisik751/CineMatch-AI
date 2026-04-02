@@ -57,10 +57,11 @@ async def test_delete_removes_key(cache_service, mock_redis):
 
 @pytest.mark.asyncio
 async def test_invalidate_user_recs(cache_service, mock_redis):
-    # scan: recs, mood_rec, feed, taste_profile, watchlist_recs
+    # scan: recs, mood_rec, feed, taste_profile, match, watchlist_recs
     mock_redis.scan.side_effect = [
         (0, ["recs:42:hybrid:20", "recs:42:content:10"]),
         (0, ["mood_rec:42:abc:0.3:20"]),
+        (0, []),
         (0, []),
         (0, []),
         (0, []),

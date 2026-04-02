@@ -10,6 +10,7 @@ from cinematch.api.v1 import (
     lists,
     movies,
     onboarding,
+    predictions,
     ratings,
     recommendations,
     stats,
@@ -29,3 +30,4 @@ api_v1_router.include_router(lists.router, tags=["lists"])
 api_v1_router.include_router(stats.router, prefix="/stats", tags=["stats"])
 api_v1_router.include_router(challenges.router, prefix="/challenges", tags=["challenges"])
 api_v1_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
+api_v1_router.include_router(predictions.router, tags=["predictions"])

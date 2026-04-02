@@ -11,6 +11,7 @@ import AddToListModal from "../components/AddToListModal";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
+import { useMatchPredictions } from "../hooks/useMatchPredictions";
 import { useRated } from "../hooks/useRated";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -65,6 +66,7 @@ export default function AdvancedSearch() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   // Helper: update URL params while preserving existing ones
@@ -144,7 +146,7 @@ export default function AdvancedSearch() {
       .then((data) => {
         setResults(data.results);
         setTotal(data.total);
-        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); }
+        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); fetchMatchPercents(_ids); }
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -471,7 +473,7 @@ export default function AdvancedSearch() {
               </p>
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {results.map((r) => (
-                  <MovieCard key={r.movie.id} movie={r.movie} isBookmarked={isInWatchlist(r.movie.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(r.movie.id)} onDismiss={toggleDismiss} userRating={getRating(r.movie.id)} />
+                  <MovieCard key={r.movie.id} movie={r.movie} isBookmarked={isInWatchlist(r.movie.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(r.movie.id)} onDismiss={toggleDismiss} userRating={getRating(r.movie.id)} matchPercent={getMatchPercent(r.movie.id)} />
                 ))}
               </section>
 

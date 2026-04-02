@@ -76,6 +76,29 @@ class FromSeedRecommendationsResponse(RecommendationsResponse):
     seed_movie: MovieSummary
 
 
+class PredictedMatchItem(BaseModel):
+    """Predicted match percentage for a single movie."""
+
+    movie_id: int
+    match_percent: int = Field(ge=0, le=100)
+    content_score: float
+    collab_score: float
+    alpha: float
+
+
+class PredictedMatchResponse(BaseModel):
+    """Batch response for predicted match percentages."""
+
+    user_id: int
+    predictions: list[PredictedMatchItem]
+
+
+class PredictedMatchBatchRequest(BaseModel):
+    """Request body for batch match predictions."""
+
+    movie_ids: list[int] = Field(min_length=1, max_length=100)
+
+
 class MoodRecommendationRequest(BaseModel):
     """Request body for mood-based recommendations."""
 

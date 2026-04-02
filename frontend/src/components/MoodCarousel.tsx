@@ -11,6 +11,7 @@ interface Props {
   isDismissed?: (id: number) => boolean;
   onDismiss?: (id: number) => void;
   getRating?: (id: number) => number | null;
+  getMatchPercent?: (id: number) => number | undefined;
 }
 
 export default function MoodCarousel({
@@ -23,6 +24,7 @@ export default function MoodCarousel({
   isDismissed,
   onDismiss,
   getRating,
+  getMatchPercent,
 }: Props) {
   if (!loading && movies.length === 0) return null;
 
@@ -58,6 +60,7 @@ export default function MoodCarousel({
                 isDismissed={isDismissed?.(m.id)}
                 onDismiss={onDismiss}
                 userRating={getRating?.(m.id)}
+                matchPercent={getMatchPercent?.(m.id)}
               />
             </div>
           ))}

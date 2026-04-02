@@ -12,6 +12,7 @@ import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
 import { useRated } from "../hooks/useRated";
+import { useMatchPredictions } from "../hooks/useMatchPredictions";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 const SORT_OPTIONS = [
@@ -69,6 +70,7 @@ export default function Discover() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   // Debounce year inputs — only apply after 600ms of no typing
@@ -132,6 +134,7 @@ export default function Discover() {
           refreshForMovieIds(ids);
           refreshDismissedForMovieIds(ids);
           refreshRatingsForMovieIds(ids);
+          fetchMatchPercents(ids);
         })
         .catch((e) => setError(e.detail || e.message))
         .finally(() => setLoading(false));
@@ -160,6 +163,7 @@ export default function Discover() {
           refreshForMovieIds(ids);
           refreshDismissedForMovieIds(ids);
           refreshRatingsForMovieIds(ids);
+          fetchMatchPercents(ids);
         })
         .catch((e) => setError(e.detail || e.message))
         .finally(() => setLoading(false));
@@ -434,7 +438,7 @@ export default function Discover() {
               </p>
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {movies.map((movie) => (
-                  <MovieCard key={movie.id} movie={movie} isBookmarked={isInWatchlist(movie.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(movie.id)} onDismiss={toggleDismiss} userRating={getRating(movie.id)} />
+                  <MovieCard key={movie.id} movie={movie} isBookmarked={isInWatchlist(movie.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(movie.id)} onDismiss={toggleDismiss} userRating={getRating(movie.id)} matchPercent={getMatchPercent(movie.id)} />
                 ))}
               </section>
 

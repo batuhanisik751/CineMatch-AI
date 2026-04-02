@@ -10,6 +10,7 @@ import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
 import { useRated } from "../hooks/useRated";
+import { useMatchPredictions } from "../hooks/useMatchPredictions";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 const RATING_OPTIONS = [
@@ -37,6 +38,7 @@ export default function HiddenGems() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -56,7 +58,7 @@ export default function HiddenGems() {
     })
       .then((data) => {
         setResults(data.results);
-        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); }
+        { const _ids = data.results.map((r) => r.movie.id); refreshForMovieIds(_ids); refreshDismissedForMovieIds(_ids); refreshRatingsForMovieIds(_ids); fetchMatchPercents(_ids); }
       })
       .catch((e) => setError(e.detail || e.message))
       .finally(() => setLoading(false));
@@ -182,6 +184,7 @@ export default function HiddenGems() {
                       isBookmarked={isInWatchlist(item.movie.id)}
                       onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(item.movie.id)} onDismiss={toggleDismiss}
                       userRating={getRating(item.movie.id)}
+                      matchPercent={getMatchPercent(item.movie.id)}
                     />
                     <p className="mt-2 text-xs text-on-surface-variant font-medium">
                       <span className="material-symbols-outlined text-sm align-middle mr-1">visibility</span>

@@ -10,6 +10,7 @@ import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useUserId } from "../hooks/useUserId";
 import { useDismissed } from "../hooks/useDismissed";
+import { useMatchPredictions } from "../hooks/useMatchPredictions";
 import { useRated } from "../hooks/useRated";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -18,6 +19,7 @@ export default function Collections() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   const [groups, setGroups] = useState<CollectionGroup[]>([]);
@@ -36,7 +38,7 @@ export default function Collections() {
         const allMovieIds = data.groups.flatMap((g) =>
           g.missing.map((m) => m.id)
         );
-        if (allMovieIds.length > 0) { refreshForMovieIds(allMovieIds); refreshDismissedForMovieIds(allMovieIds); refreshRatingsForMovieIds(allMovieIds); }
+        if (allMovieIds.length > 0) { refreshForMovieIds(allMovieIds); refreshDismissedForMovieIds(allMovieIds); refreshRatingsForMovieIds(allMovieIds); fetchMatchPercents(allMovieIds); }
       })
       .catch((e) => setError(e.detail || e.message || "Failed to load"))
       .finally(() => setLoading(false));
@@ -159,6 +161,7 @@ export default function Collections() {
                             isDismissed={isDismissed(movie.id)}
                             onDismiss={toggleDismiss}
                             userRating={getRating(movie.id)}
+                            matchPercent={getMatchPercent(movie.id)}
                           />
                         ))}
                       </div>

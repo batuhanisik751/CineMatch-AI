@@ -16,6 +16,7 @@ import type { MoodPreset } from "../constants/moods";
 import { useDismissed } from "../hooks/useDismissed";
 import { useRated } from "../hooks/useRated";
 import { useUserId } from "../hooks/useUserId";
+import { useMatchPredictions } from "../hooks/useMatchPredictions";
 import { useWatchlist } from "../hooks/useWatchlist";
 
 export default function Home() {
@@ -28,6 +29,7 @@ export default function Home() {
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } = useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
@@ -79,6 +81,7 @@ export default function Home() {
         refreshForMovieIds(ids);
         refreshDismissedForMovieIds(ids);
         refreshRatingsForMovieIds(ids);
+        fetchMatchPercents(ids);
       })
       .catch(() => {});
     discoverMovies({ sort_by: "vote_average", limit: 8 })
@@ -88,6 +91,7 @@ export default function Home() {
         refreshForMovieIds(ids);
         refreshDismissedForMovieIds(ids);
         refreshRatingsForMovieIds(ids);
+        fetchMatchPercents(ids);
       })
       .catch(() => {});
     getHiddenGems({ limit: 8 })
@@ -98,6 +102,7 @@ export default function Home() {
         refreshForMovieIds(ids);
         refreshDismissedForMovieIds(ids);
         refreshRatingsForMovieIds(ids);
+        fetchMatchPercents(ids);
       })
       .catch(() => {});
   }, []);
@@ -111,6 +116,7 @@ export default function Home() {
         const allIds = data.sections.flatMap((s) => s.movies.map((m) => m.id));
         refreshForMovieIds(allIds);
         refreshDismissedForMovieIds(allIds);
+        fetchMatchPercents(allIds);
       })
       .catch(() => setFeed(null))
       .finally(() => setFeedLoading(false));
@@ -126,6 +132,7 @@ export default function Home() {
         refreshForMovieIds(ids);
         refreshDismissedForMovieIds(ids);
         refreshRatingsForMovieIds(ids);
+        fetchMatchPercents(ids);
       })
       .catch(() => setRewatchItems([]))
       .finally(() => setRewatchLoading(false));
@@ -161,6 +168,7 @@ export default function Home() {
       const ids = movies.map((m) => m.id);
       refreshForMovieIds(ids);
       refreshDismissedForMovieIds(ids);
+      fetchMatchPercents(ids);
     };
 
     const fallbackToSemantic = () =>
@@ -214,6 +222,7 @@ export default function Home() {
         refreshForMovieIds(ids);
         refreshDismissedForMovieIds(ids);
         refreshRatingsForMovieIds(ids);
+        fetchMatchPercents(ids);
       })
       .catch(() => setSurpriseMovies([]))
       .finally(() => setSurpriseLoading(false));
@@ -318,6 +327,7 @@ export default function Home() {
             isDismissed={isDismissed}
             onDismiss={toggleDismiss}
             getRating={getRating}
+            getMatchPercent={getMatchPercent}
           />
         )}
 
@@ -354,6 +364,7 @@ export default function Home() {
                     isDismissed={isDismissed(m.id)}
                     onDismiss={toggleDismiss}
                     userRating={getRating(m.id)}
+                    matchPercent={getMatchPercent(m.id)}
                   />
                 </div>
               ))}
@@ -445,6 +456,7 @@ export default function Home() {
                               isDismissed={isDismissed(m.id)}
                               onDismiss={toggleDismiss}
                               userRating={getRating(m.id)}
+                              matchPercent={getMatchPercent(m.id)}
                             />
                           </div>
                         ))}
@@ -481,7 +493,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {popular.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} matchPercent={getMatchPercent(m.id)} />
                           </div>
                         ))}
                       </div>
@@ -498,7 +510,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {topRated.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} matchPercent={getMatchPercent(m.id)} />
                           </div>
                         ))}
                       </div>
@@ -515,7 +527,7 @@ export default function Home() {
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {gems.map((m) => (
                           <div key={m.id} className="flex-shrink-0 w-44">
-                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} />
+                            <MovieCard movie={m} isBookmarked={isInWatchlist(m.id)} onToggleBookmark={toggle} onAddToList={(id) => setAddToListMovieId(id)} isDismissed={isDismissed(m.id)} onDismiss={toggleDismiss} userRating={getRating(m.id)} matchPercent={getMatchPercent(m.id)} />
                           </div>
                         ))}
                       </div>
@@ -593,6 +605,7 @@ export default function Home() {
                     isDismissed={isDismissed(item.movie.id)}
                     onDismiss={toggleDismiss}
                     userRating={getRating(item.movie.id)}
+                    matchPercent={getMatchPercent(item.movie.id)}
                   />
                   <p className="text-[11px] text-on-surface-variant/60 mt-1.5 px-1 flex items-center gap-1">
                     <span className="material-symbols-outlined text-[12px]">

@@ -15,6 +15,7 @@ import AddToListModal from "../components/AddToListModal";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useDismissed } from "../hooks/useDismissed";
+import { useMatchPredictions } from "../hooks/useMatchPredictions";
 import { useRated } from "../hooks/useRated";
 import { useWatchlist } from "../hooks/useWatchlist";
 
@@ -48,6 +49,7 @@ export default function Curated() {
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } =
     useDismissed();
   const { getRating, refreshRatingsForMovieIds } = useRated();
+  const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
   // Load collection catalog
@@ -77,6 +79,7 @@ export default function Curated() {
           refreshForMovieIds(ids);
           refreshDismissedForMovieIds(ids);
           refreshRatingsForMovieIds(ids);
+          fetchMatchPercents(ids);
         }
       })
       .catch((e) => setError(e.detail || e.message || "Failed to load"))
@@ -276,6 +279,7 @@ export default function Curated() {
                           isDismissed={isDismissed(item.movie.id)}
                           onDismiss={toggleDismiss}
                           userRating={getRating(item.movie.id)}
+                          matchPercent={getMatchPercent(item.movie.id)}
                         />
                         <div className="mt-2 flex items-center gap-3 text-xs text-on-surface-variant font-medium">
                           <span>
