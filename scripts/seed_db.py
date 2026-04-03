@@ -17,7 +17,7 @@ def seed_database(processed_dir: str | None = None) -> None:
     settings = get_settings()
     processed_dir = Path(processed_dir or settings.data_processed_dir)
 
-    engine = create_engine(settings.database_url_sync, pool_size=5, echo=False)
+    engine = create_engine(settings.database_url_sync.get_secret_value(), pool_size=5, echo=False)
 
     # Load data
     print("Loading processed data...")

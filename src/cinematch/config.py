@@ -4,20 +4,21 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="CINEMATCH_", extra="ignore")
 
-    # Database
-    database_url: str = "postgresql+asyncpg://cinematch:cinematch@localhost:5432/cinematch"
-    database_url_sync: str = "postgresql://cinematch:cinematch@localhost:5432/cinematch"
+    # Database (required — no insecure defaults)
+    database_url: SecretStr
+    database_url_sync: SecretStr
     db_pool_size: int = 20
     db_max_overflow: int = 10
 
-    # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    # Redis (required — no insecure defaults)
+    redis_url: SecretStr
     cache_ttl_seconds: int = 3600
 
     # Embedding model
@@ -48,7 +49,7 @@ class Settings(BaseSettings):
     llm_model_name: str = "mistral"
     llm_base_url: str = "http://localhost:11434"
     llm_backend: str = "ollama"
-    llm_api_key: str | None = None
+    llm_api_key: SecretStr | None = None
     llm_rerank_enabled: bool = True
     llm_rerank_timeout: float = 60.0
     llm_rerank_candidates: int = 50
@@ -64,8 +65,8 @@ class Settings(BaseSettings):
     import_max_rows: int = 10_000
     import_max_file_size_mb: int = 5
 
-    # Authentication
-    secret_key: str = "CHANGE-ME-IN-PRODUCTION"
+    # Authentication (required — no insecure defaults)
+    secret_key: SecretStr
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 1440
 

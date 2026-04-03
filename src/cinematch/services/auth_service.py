@@ -32,13 +32,15 @@ def create_access_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_access_token_expire_minutes)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.jwt_algorithm)
+    secret = settings.secret_key.get_secret_value()
+    return jwt.encode(to_encode, secret, algorithm=settings.jwt_algorithm)
 
 
 def decode_access_token(token: str) -> dict:
     """Decode and validate a JWT token. Raises JWTError on failure."""
     settings = get_settings()
-    return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+    secret = settings.secret_key.get_secret_value()
+    return jwt.decode(token, secret, algorithms=[settings.jwt_algorithm])
 
 
 async def get_user_by_email(email: str, db: AsyncSession) -> User | None:
@@ -60,9 +62,7 @@ async def authenticate_user(email: str, password: str, db: AsyncSession) -> User
     return user
 
 
-async def register_user(
-    email: str, username: str, password: str, db: AsyncSession
-) -> User:
+async def register_user(email: str, username: str, password: str, db: AsyncSession) -> User:
     user = User(
         email=email.lower().strip(),
         username=username.strip(),

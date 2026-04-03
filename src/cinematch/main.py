@@ -89,7 +89,9 @@ async def lifespan(app: FastAPI):
                     model_name=settings.llm_model_name,
                     timeout=settings.llm_rerank_timeout,
                     backend=settings.llm_backend,
-                    api_key=settings.llm_api_key,
+                    api_key=(
+                        settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
+                    ),
                 )
                 app.state.llm_service = llm_service
                 logger.info(
@@ -176,7 +178,7 @@ async def lifespan(app: FastAPI):
     # Redis cache (optional — app works without it)
     try:
         cache_service = CacheService(
-            redis_url=settings.redis_url, default_ttl=settings.cache_ttl_seconds
+            redis_url=settings.redis_url.get_secret_value(), default_ttl=settings.cache_ttl_seconds
         )
         app.state.cache_service = cache_service
         logger.info("Redis cache connected.")

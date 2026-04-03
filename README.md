@@ -194,6 +194,10 @@ docker compose up -d
 
 # 3. Configure environment
 cp .env.example .env
+# Edit the REQUIRED section at the bottom of .env:
+#   - Set POSTGRES_PASSWORD and REDIS_PASSWORD
+#   - Update CINEMATCH_DATABASE_URL and CINEMATCH_REDIS_URL to match
+#   - Generate CINEMATCH_SECRET_KEY: python -c "import secrets; print(secrets.token_urlsafe(64))"
 
 # 4. Run database migrations
 alembic upgrade head
@@ -273,7 +277,8 @@ make prod-build
 
 # 2. Configure production environment
 cp .env.example .env
-# Edit .env: set CINEMATCH_SECRET_KEY, CINEMATCH_DOMAIN, etc.
+# Edit .env: set strong POSTGRES_PASSWORD, REDIS_PASSWORD, CINEMATCH_SECRET_KEY,
+# CINEMATCH_DOMAIN, and update CINEMATCH_DATABASE_URL / CINEMATCH_REDIS_URL to match
 
 # 3. Start production stack
 make prod-up
