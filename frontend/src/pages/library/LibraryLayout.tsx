@@ -7,7 +7,6 @@ const TABS = [
   { label: "Watchlist",   icon: "bookmark",             path: "watchlist" },
   { label: "My Lists",    icon: "playlist_add",         path: "lists" },
   { label: "Collections", icon: "collections_bookmark", path: "collections" },
-  { label: "Gaps",        icon: "person_search",        path: "gaps" },
   { label: "Curated",     icon: "auto_awesome_mosaic",  path: "curated" },
 ];
 

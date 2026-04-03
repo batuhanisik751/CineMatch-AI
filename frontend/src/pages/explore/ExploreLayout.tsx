@@ -6,7 +6,6 @@ import TopNav from "../../components/TopNav";
 const TABS = [
   { label: "Directors",  icon: "movie_filter",   path: "directors" },
   { label: "Actors",     icon: "theater_comedy",  path: "actors" },
-  { label: "Cast Combo", icon: "group",           path: "cast-combo" },
   { label: "Keywords",   icon: "sell",            path: "keywords" },
 ];
 

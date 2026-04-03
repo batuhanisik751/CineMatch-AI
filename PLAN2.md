@@ -848,7 +848,7 @@ These features require importing additional columns from the TMDb CSV that we al
 | 26 | 7.6 Movie Popularity Timeline | Low | Movie Detail |
 | 27 | 4.4 Rating Comparison | Low | Social |
 | 28 | 2.4 Diversity Controls | Low-Med | Personalization |
-| 29 | 8.5 Search by Cast Combo | Low | Search |
+| 29 | 8.5 Search by Cast Combo ✅ | Low | Search |
 | 30 | 9.2 Rewatch Recommender ✅ | Low | Onboarding |
 | 31 | 9.7 Predicted Match Percentage ✅ | Low-Med | Onboarding |
 
