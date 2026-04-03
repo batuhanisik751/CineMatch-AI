@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -104,7 +105,7 @@ router = APIRouter()
 @limiter.limit(get_settings().rate_limit_search)
 async def search_movies(
     request: Request,
-    q: str = Query(min_length=1),
+    q: str = Query(min_length=1, max_length=200),
     limit: int = Query(default=20, ge=1, le=100),
     user_id: int | None = Query(default=None, ge=1),
     exclude_rated: bool = Query(default=False),
@@ -205,7 +206,7 @@ async def discover_movies(
 @limiter.limit(get_settings().rate_limit_search)
 async def semantic_search(
     request: Request,
-    q: str = Query(min_length=1),
+    q: str = Query(min_length=1, max_length=200),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
@@ -522,7 +523,7 @@ async def get_decade_movies(
 @limiter.limit(get_settings().rate_limit_search)
 async def search_directors(
     request: Request,
-    q: str = Query(min_length=1),
+    q: str = Query(min_length=1, max_length=200),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
@@ -578,7 +579,7 @@ async def director_filmography(
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
     use_cache = user_id is None
-    cache_key = f"director_filmography:{name.lower()}"
+    cache_key = f"director_filmography:{hashlib.sha256(name.lower().encode()).hexdigest()[:16]}"
 
     if use_cache and cache_service is not None:
         cached = await cache_service.get(cache_key)
@@ -615,7 +616,7 @@ async def director_filmography(
 @limiter.limit(get_settings().rate_limit_search)
 async def search_actors(
     request: Request,
-    q: str = Query(min_length=1),
+    q: str = Query(min_length=1, max_length=200),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
@@ -671,7 +672,7 @@ async def actor_filmography(
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
     use_cache = user_id is None
-    cache_key = f"actor_filmography:{name.lower()}"
+    cache_key = f"actor_filmography:{hashlib.sha256(name.lower().encode()).hexdigest()[:16]}"
 
     if use_cache and cache_service is not None:
         cached = await cache_service.get(cache_key)
@@ -768,7 +769,7 @@ async def movies_by_cast(
 
 @router.get("/keywords/popular", response_model=PopularKeywordsResponse)
 async def popular_keywords(
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     cache_service: CacheService | None = Depends(get_cache_service),
@@ -797,7 +798,7 @@ async def popular_keywords(
 
 @router.get("/keywords/search", response_model=KeywordSearchResponse)
 async def search_keywords(
-    q: str = Query(min_length=1),
+    q: str = Query(min_length=1, max_length=200),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
@@ -818,7 +819,7 @@ async def keyword_movies(
     movie_service: MovieService = Depends(get_movie_service),
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
-    cache_key = f"keyword_movies:{keyword.lower()}:{offset}:{limit}"
+    cache_key = f"keyword_movies:{hashlib.sha256(keyword.lower().encode()).hexdigest()[:16]}:{offset}:{limit}"
     if cache_service is not None:
         cached = await cache_service.get(cache_key)
         if cached is not None:
@@ -873,10 +874,11 @@ async def advanced_search(
     movie_service: MovieService = Depends(get_movie_service),
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
-    cache_key = (
+    raw_key = (
         f"adv_search:{genre}:{decade}:{min_rating}:{max_rating}"
         f":{director}:{keyword}:{cast}:{language}:{min_runtime}:{max_runtime}:{sort_by.value}:{offset}:{limit}"
     )
+    cache_key = f"adv_search:{hashlib.sha256(raw_key.encode()).hexdigest()[:16]}"
     if cache_service is not None:
         cached = await cache_service.get(cache_key)
         if cached is not None:

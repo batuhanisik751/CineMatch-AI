@@ -19,10 +19,26 @@ export interface RatingBulkCheckResponse {
   ratings: Record<number, number>;
 }
 
-export function bulkCheckRatings(userId: number, movieIds: number[]) {
-  return apiFetch<RatingBulkCheckResponse>(
-    `/api/v1/users/${userId}/ratings/check?movie_ids=${movieIds.join(",")}`
-  );
+const BULK_CHECK_LIMIT = 200;
+
+export async function bulkCheckRatings(
+  userId: number,
+  movieIds: number[]
+): Promise<RatingBulkCheckResponse> {
+  if (movieIds.length <= BULK_CHECK_LIMIT) {
+    return apiFetch<RatingBulkCheckResponse>(
+      `/api/v1/users/${userId}/ratings/check?movie_ids=${movieIds.join(",")}`
+    );
+  }
+  const merged: Record<number, number> = {};
+  for (let i = 0; i < movieIds.length; i += BULK_CHECK_LIMIT) {
+    const batch = movieIds.slice(i, i + BULK_CHECK_LIMIT);
+    const resp = await apiFetch<RatingBulkCheckResponse>(
+      `/api/v1/users/${userId}/ratings/check?movie_ids=${batch.join(",")}`
+    );
+    Object.assign(merged, resp.ratings);
+  }
+  return { ratings: merged };
 }
 
 export async function importRatings(

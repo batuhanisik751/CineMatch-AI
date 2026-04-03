@@ -132,6 +132,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **HTTPS** | Caddy reverse proxy with automatic TLS / Let's Encrypt |
 | **Rate Limiting** | Redis-backed per-endpoint limits (100/min global, 5/min auth, 10/min recommendations, 30/min search, 3/min CSV import) |
 | **Credential Protection** | SecretStr for all sensitive config, no insecure defaults, Redis password auth |
+| **Input Validation** | 200-ID cap on bulk endpoints, max_length on search queries, SHA-256 hashed cache keys, frontend auto-batching |
 
 ### Content Analysis (Per Movie)
 

@@ -78,3 +78,11 @@ async def test_bulk_check_dismissals(client):
 async def test_bulk_check_invalid_ids(client):
     resp = await client.get("/api/v1/users/1/dismissals/check?movie_ids=abc,def")
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_check_dismissals_too_many_ids(client):
+    ids = ",".join(str(i) for i in range(1, 202))  # 201 IDs
+    resp = await client.get(f"/api/v1/users/1/dismissals/check?movie_ids={ids}")
+    assert resp.status_code == 400
+    assert "Too many IDs" in resp.json()["detail"]

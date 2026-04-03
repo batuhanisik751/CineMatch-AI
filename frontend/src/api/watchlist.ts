@@ -25,10 +25,26 @@ export function getWatchlist(userId: number, offset = 0, limit = 20) {
   );
 }
 
-export function bulkCheckWatchlist(userId: number, movieIds: number[]) {
-  return apiFetch<WatchlistBulkStatusResponse>(
-    `/api/v1/users/${userId}/watchlist/check?movie_ids=${movieIds.join(",")}`
-  );
+const BULK_CHECK_LIMIT = 200;
+
+export async function bulkCheckWatchlist(
+  userId: number,
+  movieIds: number[]
+): Promise<WatchlistBulkStatusResponse> {
+  if (movieIds.length <= BULK_CHECK_LIMIT) {
+    return apiFetch<WatchlistBulkStatusResponse>(
+      `/api/v1/users/${userId}/watchlist/check?movie_ids=${movieIds.join(",")}`
+    );
+  }
+  const allIds: number[] = [];
+  for (let i = 0; i < movieIds.length; i += BULK_CHECK_LIMIT) {
+    const batch = movieIds.slice(i, i + BULK_CHECK_LIMIT);
+    const resp = await apiFetch<WatchlistBulkStatusResponse>(
+      `/api/v1/users/${userId}/watchlist/check?movie_ids=${batch.join(",")}`
+    );
+    allIds.push(...resp.movie_ids);
+  }
+  return { movie_ids: allIds };
 }
 
 export function getWatchlistRecommendations(userId: number, limit = 10) {

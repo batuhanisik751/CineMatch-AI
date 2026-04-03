@@ -97,3 +97,22 @@ async def test_bulk_check_ratings_empty_result(client, mock_rating_service):
 async def test_bulk_check_ratings_missing_param(client):
     resp = await client.get("/api/v1/users/1/ratings/check")
     assert resp.status_code == 422
+
+
+async def test_bulk_check_ratings_too_many_ids(client):
+    ids = ",".join(str(i) for i in range(1, 202))  # 201 IDs
+    resp = await client.get("/api/v1/users/1/ratings/check", params={"movie_ids": ids})
+    assert resp.status_code == 400
+    assert "Too many IDs" in resp.json()["detail"]
+
+
+async def test_bulk_check_ratings_max_ids_accepted(client, mock_rating_service):
+    mock_rating_service.bulk_check.return_value = {}
+    ids = ",".join(str(i) for i in range(1, 201))  # exactly 200
+    resp = await client.get("/api/v1/users/1/ratings/check", params={"movie_ids": ids})
+    assert resp.status_code == 200
+
+
+async def test_bulk_check_ratings_invalid_ids(client):
+    resp = await client.get("/api/v1/users/1/ratings/check", params={"movie_ids": "abc,def"})
+    assert resp.status_code == 422

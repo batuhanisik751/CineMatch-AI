@@ -776,7 +776,9 @@ async def test_directors_filmography_cache_miss_without_user_id(
     mock_movie_service.filmography_by_director.assert_called_once()
     mock_cache_service.set.assert_called_once()
     call_args = mock_cache_service.set.call_args
-    assert call_args[0][0] == "director_filmography:lana wachowski"
+    key = call_args[0][0]
+    assert key.startswith("director_filmography:")
+    assert len(key.split(":", 1)[1]) == 16
     assert call_args[1]["ttl"] == 21600
 
 
@@ -923,7 +925,9 @@ async def test_actors_filmography_cache_miss_without_user_id(
     mock_movie_service.filmography_by_actor.assert_called_once()
     mock_cache_service.set.assert_called_once()
     call_args = mock_cache_service.set.call_args
-    assert call_args[0][0] == "actor_filmography:keanu reeves"
+    key = call_args[0][0]
+    assert key.startswith("actor_filmography:")
+    assert len(key.split(":", 1)[1]) == 16
     assert call_args[1]["ttl"] == 21600
 
 
@@ -1155,3 +1159,35 @@ async def test_seasonal_exclude_rated(
     data = resp.json()
     assert len(data["results"]) == 1
     assert data["results"][0]["movie"]["title"] == "Scream"
+
+
+async def test_search_movies_query_too_long(client):
+    resp = await client.get("/api/v1/movies/search", params={"q": "a" * 201})
+    assert resp.status_code == 422
+
+
+async def test_search_directors_query_too_long(client):
+    resp = await client.get("/api/v1/movies/directors/search", params={"q": "a" * 201})
+    assert resp.status_code == 422
+
+
+async def test_search_actors_query_too_long(client):
+    resp = await client.get("/api/v1/movies/actors/search", params={"q": "a" * 201})
+    assert resp.status_code == 422
+
+
+async def test_popular_keywords_limit_exceeds_max(client):
+    resp = await client.get("/api/v1/movies/keywords/popular", params={"limit": 101})
+    assert resp.status_code == 422
+
+
+async def test_advanced_search_cache_key_is_hashed(client, mock_movie_service, mock_cache_service):
+    mock_movie_service.advanced_search.return_value = ([], 0)
+    resp = await client.get("/api/v1/movies/advanced-search", params={"genre": "Action"})
+    assert resp.status_code == 200
+    if mock_cache_service.set.called:
+        cache_key = mock_cache_service.set.call_args[0][0]
+        assert cache_key.startswith("adv_search:")
+        suffix = cache_key.split(":", 1)[1]
+        assert len(suffix) == 16
+        assert all(c in "0123456789abcdef" for c in suffix)

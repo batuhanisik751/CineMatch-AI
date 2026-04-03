@@ -81,6 +81,14 @@ async def test_bulk_check_invalid_ids(client):
 
 
 @pytest.mark.asyncio
+async def test_bulk_check_watchlist_too_many_ids(client):
+    ids = ",".join(str(i) for i in range(1, 202))  # 201 IDs
+    resp = await client.get(f"/api/v1/users/1/watchlist/check?movie_ids={ids}")
+    assert resp.status_code == 400
+    assert "Too many IDs" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_watchlist_recommendations_success(client):
     resp = await client.get("/api/v1/users/1/watchlist/recommendations?limit=10")
     assert resp.status_code == 200

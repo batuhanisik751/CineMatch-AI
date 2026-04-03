@@ -234,7 +234,12 @@ async def bulk_check_ratings(
     rating_service: RatingService = Depends(get_rating_service),
 ):
     require_same_user(current_user.id, user_id)
-    id_list = [int(x.strip()) for x in movie_ids.split(",") if x.strip()]
+    try:
+        id_list = [int(x.strip()) for x in movie_ids.split(",") if x.strip()]
+    except ValueError:
+        raise HTTPException(status_code=422, detail="movie_ids must be comma-separated integers")
+    if len(id_list) > 200:
+        raise HTTPException(status_code=400, detail="Too many IDs (max 200)")
     ratings = await rating_service.bulk_check(user_id, id_list, db)
     return RatingBulkCheckResponse(ratings=ratings)
 
