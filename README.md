@@ -1,6 +1,6 @@
 # CineMatch-AI
 
-A hybrid movie recommendation engine that combines content-based filtering, collaborative filtering, and optional LLM re-ranking to deliver personalized movie discovery. Built with FastAPI, PostgreSQL + pgvector, and local ML models. Runs entirely on your machine with no paid APIs.
+A hybrid movie recommendation engine that combines content-based filtering, collaborative filtering, and optional LLM re-ranking to deliver personalized movie discovery. Built with FastAPI, PostgreSQL + pgvector, and local ML models. Runs locally or deployed with free-tier cloud services.
 
 > **29K movies | 162K users | 24.7M ratings | 384-dim embeddings | 85+ API endpoints**
 
@@ -33,7 +33,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Embeddings** | sentence-transformers / all-MiniLM-L6-v2 (384-dim) |
 | **Collaborative Filtering** | implicit ALS (matrix factorization) |
 | **Caching** | Redis 7 |
-| **LLM** | Mistral 7B via Ollama (optional) |
+| **LLM** | Ollama (local) or Groq (cloud, free tier) — optional |
 | **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS + Recharts |
 | **Infrastructure** | Docker Compose (PostgreSQL + Redis) |
 
@@ -52,7 +52,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 |---------|-------------|
 | **Hybrid Engine** | Blends content similarity + collaborative filtering with configurable alpha |
 | **Diversity Controls** | Safe / Balanced / Adventurous modes via MMR re-ranking |
-| **LLM Re-ranking** | Mistral re-ranks top 50 candidates for thematic diversity (falls back to MMR) |
+| **LLM Re-ranking** | LLM re-ranks top 50 candidates for thematic diversity (falls back to MMR) |
 | **"More Like This"** | Seed any movie to get personalized similar recommendations |
 | **Mood Discovery** | 9 preset moods + custom vibe input, blended with user taste |
 | **Watchlist Recs** | Recommendations based on your saved-for-later movies |
@@ -165,7 +165,7 @@ User rates movies
 3. **Hybrid Scoring:** Both scores are normalized and combined: `alpha * content + (1-alpha) * collab` (default 0.5). Cold-start users automatically fall back to content-only.
 4. **Franchise Penalty:** Sequels and franchise entries are detected and downranked to prevent clustering.
 5. **MMR Diversity:** Maximal Marginal Relevance ensures results span different genres, not just the most similar.
-6. **LLM Re-ranking:** Mistral 7B optionally re-ranks the top 50 candidates for deeper thematic diversity and taste matching.
+6. **LLM Re-ranking:** An LLM (Ollama locally or Groq cloud) optionally re-ranks the top 50 candidates for deeper thematic diversity and taste matching.
 
 ---
 
@@ -176,7 +176,7 @@ User rates movies
 - Python 3.11+
 - Node.js 18+
 - Docker + Docker Compose
-- Ollama (optional, for LLM features)
+- Ollama (optional, for local LLM) or a free Groq API key (for cloud LLM)
 
 ### Installation
 
@@ -214,13 +214,27 @@ cd frontend && npm install && cd ..
 
 ### Optional: LLM Setup
 
+**Option A: Groq (cloud, recommended for deployment)**
+
+1. Sign up at [console.groq.com](https://console.groq.com) (free, no credit card)
+2. Create an API key
+3. Set in `.env`:
+```env
+CINEMATCH_LLM_BACKEND=groq
+CINEMATCH_LLM_MODEL_NAME=llama-3.1-8b-instant
+CINEMATCH_LLM_BASE_URL=https://api.groq.com
+CINEMATCH_LLM_API_KEY=gsk_your_key_here
+```
+
+**Option B: Ollama (local)**
+
 ```bash
 brew install ollama
 ollama serve          # keep running in a separate terminal
 ollama pull mistral
 ```
 
-Set `CINEMATCH_LLM_ENABLED=true` in `.env`. If Ollama is not running, the app still works -- recommendations use algorithmic MMR diversity instead.
+Set `CINEMATCH_LLM_ENABLED=true` in `.env`. If neither backend is reachable, the app still works -- recommendations use algorithmic MMR diversity instead.
 
 ---
 
@@ -241,12 +255,12 @@ cd frontend && npm run dev
 ```
 Opens at http://localhost:3000
 
-**Terminal 3 -- Ollama (optional)**
+**Terminal 3 -- Ollama (optional, only if using local LLM)**
 ```bash
 ollama serve
 ```
 
-Docker services run in the background (`docker compose up -d`).
+Docker services run in the background (`docker compose up -d`). If using Groq, no third terminal is needed.
 
 ---
 

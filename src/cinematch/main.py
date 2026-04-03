@@ -88,6 +88,8 @@ async def lifespan(app: FastAPI):
                     base_url=settings.llm_base_url,
                     model_name=settings.llm_model_name,
                     timeout=settings.llm_rerank_timeout,
+                    backend=settings.llm_backend,
+                    api_key=settings.llm_api_key,
                 )
                 app.state.llm_service = llm_service
                 logger.info(

@@ -151,36 +151,22 @@ async def test_critic_label_balanced():
 @pytest.mark.asyncio
 async def test_llm_summary_generated_when_service_available(mock_user_stats, mock_db):
     """LLM summary is populated when llm_service is present and succeeds."""
-    mock_llm = MagicMock()
-    mock_llm._base_url = "http://localhost:11434"
-    mock_llm._model_name = "mistral"
-
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"response": "You're a cinephile with great taste."}
-    mock_response.raise_for_status = MagicMock()
-
-    mock_client = AsyncMock()
-    mock_client.post.return_value = mock_response
-    mock_llm._client = mock_client
+    mock_llm = AsyncMock()
+    mock_llm.generate.return_value = "You're a cinephile with great taste."
 
     service = TasteProfileService(user_stats_service=mock_user_stats, llm_service=mock_llm)
 
     result = await service.get_taste_profile(1, mock_db)
 
     assert result["llm_summary"] == "You're a cinephile with great taste."
-    mock_client.post.assert_called_once()
+    mock_llm.generate.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_llm_failure_falls_back_to_none(mock_user_stats, mock_db):
     """LLM failure degrades gracefully to llm_summary=None."""
-    mock_llm = MagicMock()
-    mock_llm._base_url = "http://localhost:11434"
-    mock_llm._model_name = "mistral"
-
-    mock_client = AsyncMock()
-    mock_client.post.side_effect = Exception("Connection refused")
-    mock_llm._client = mock_client
+    mock_llm = AsyncMock()
+    mock_llm.generate.side_effect = Exception("Connection refused")
 
     service = TasteProfileService(user_stats_service=mock_user_stats, llm_service=mock_llm)
 

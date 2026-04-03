@@ -1,4 +1,4 @@
-"""LLM service for generating recommendation explanations via Ollama."""
+"""LLM service for generating recommendation explanations via Ollama or Groq."""
 
 from __future__ import annotations
 
@@ -18,12 +18,88 @@ logger = logging.getLogger(__name__)
 
 
 class LLMService:
-    """Async client for Ollama LLM API to generate recommendation explanations and re-ranking."""
+    """Async client for LLM APIs (Ollama or Groq) to generate explanations and re-ranking."""
 
-    def __init__(self, base_url: str, model_name: str, timeout: float = 30.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        model_name: str,
+        timeout: float = 30.0,
+        backend: str = "ollama",
+        api_key: str | None = None,
+    ) -> None:
         self._base_url = base_url.rstrip("/")
         self._model_name = model_name
-        self._client = httpx.AsyncClient(timeout=timeout)
+        self._backend = backend
+
+        headers = {}
+        if backend == "groq" and api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        self._client = httpx.AsyncClient(timeout=timeout, headers=headers)
+
+    async def generate(self, prompt: str, *, json_mode: bool = False) -> str:
+        """Send a prompt to the configured LLM backend and return the text response.
+
+        Raises ServiceUnavailableError on connection/timeout failures.
+        Returns empty string on unexpected response format.
+        """
+        if self._backend == "groq":
+            return await self._call_groq(prompt, json_mode=json_mode)
+        return await self._call_ollama(prompt, json_mode=json_mode)
+
+    async def _call_ollama(self, prompt: str, *, json_mode: bool = False) -> str:
+        payload: dict = {
+            "model": self._model_name,
+            "prompt": prompt,
+            "stream": False,
+        }
+        if json_mode:
+            payload["format"] = "json"
+
+        try:
+            resp = await self._client.post(
+                f"{self._base_url}/api/generate",
+                json=payload,
+            )
+            resp.raise_for_status()
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            logger.warning("Ollama request failed: %s", e)
+            raise ServiceUnavailableError("LLM service (Ollama)") from e
+        except httpx.HTTPStatusError as e:
+            logger.warning("Ollama returned HTTP %s: %s", e.response.status_code, e)
+            raise ServiceUnavailableError("LLM service (Ollama)") from e
+
+        data = resp.json()
+        return data.get("response", "")
+
+    async def _call_groq(self, prompt: str, *, json_mode: bool = False) -> str:
+        payload: dict = {
+            "model": self._model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+        }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+
+        try:
+            resp = await self._client.post(
+                f"{self._base_url}/openai/v1/chat/completions",
+                json=payload,
+            )
+            resp.raise_for_status()
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            logger.warning("Groq request failed: %s", e)
+            raise ServiceUnavailableError("LLM service (Groq)") from e
+        except httpx.HTTPStatusError as e:
+            logger.warning("Groq returned HTTP %s: %s", e.response.status_code, e)
+            raise ServiceUnavailableError("LLM service (Groq)") from e
+
+        data = resp.json()
+        choices = data.get("choices", [])
+        if not choices:
+            return ""
+        return choices[0].get("message", {}).get("content", "")
 
     async def explain_recommendation(
         self,
@@ -35,25 +111,18 @@ class LLMService:
         prompt = self._build_prompt(movie, user_top_rated, score)
 
         try:
-            resp = await self._client.post(
-                f"{self._base_url}/api/generate",
-                json={"model": self._model_name, "prompt": prompt, "stream": False},
-            )
-            resp.raise_for_status()
-        except (httpx.ConnectError, httpx.TimeoutException) as e:
-            logger.warning("Ollama request failed: %s", e)
-            raise ServiceUnavailableError("LLM service (Ollama)") from e
-        except httpx.HTTPStatusError as e:
-            logger.warning("Ollama returned HTTP %s: %s", e.response.status_code, e)
-            raise ServiceUnavailableError("LLM service (Ollama)") from e
+            text = await self.generate(prompt)
+        except ServiceUnavailableError:
+            raise
+        except Exception as e:
+            logger.warning("LLM explain request failed: %s", e)
+            raise ServiceUnavailableError("LLM service") from e
 
-        data = resp.json()
-        explanation = data.get("response")
-        if not explanation:
-            logger.warning("Ollama response missing 'response' field: %s", data)
+        if not text:
+            logger.warning("LLM response empty for explanation")
             return "Explanation unavailable."
 
-        return explanation.strip()
+        return text.strip()
 
     async def rerank_candidates(
         self,
@@ -67,25 +136,11 @@ class LLMService:
         prompt = self._build_rerank_prompt(candidates, user_history)
 
         try:
-            resp = await self._client.post(
-                f"{self._base_url}/api/generate",
-                json={
-                    "model": self._model_name,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json",
-                },
-            )
-            resp.raise_for_status()
-        except (httpx.ConnectError, httpx.TimeoutException) as e:
-            logger.warning("Ollama rerank request failed: %s", e)
-            return None
-        except httpx.HTTPStatusError as e:
-            logger.warning("Ollama rerank returned HTTP %s: %s", e.response.status_code, e)
+            response_text = await self.generate(prompt, json_mode=True)
+        except Exception as e:
+            logger.warning("LLM rerank request failed: %s", e)
             return None
 
-        data = resp.json()
-        response_text = data.get("response", "")
         return self._parse_rerank_response(response_text, {c["id"] for c in candidates})
 
     @staticmethod

@@ -112,6 +112,9 @@ cython_debug/
 # Evaluation reports
 evaluation_report.json
 
+# Plan files
+PLAN*.md
+
 # Frontend
 node_modules/
 frontend/dist/

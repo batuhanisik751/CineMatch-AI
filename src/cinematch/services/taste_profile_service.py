@@ -163,13 +163,8 @@ class TasteProfileService:
         )
 
         try:
-            resp = await self._llm._client.post(
-                f"{self._llm._base_url}/api/generate",
-                json={"model": self._llm._model_name, "prompt": prompt, "stream": False},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            summary = data.get("response", "").strip()
+            summary = await self._llm.generate(prompt)
+            summary = summary.strip() if summary else ""
             return summary if summary else None
         except Exception:
             logger.warning("LLM taste profile summary failed", exc_info=True)
