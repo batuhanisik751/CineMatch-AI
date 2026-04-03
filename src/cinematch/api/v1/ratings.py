@@ -9,9 +9,17 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cinematch.api.deps import get_cache_service, get_db, get_movie_service, get_rating_service
+from cinematch.api.deps import (
+    get_cache_service,
+    get_current_user,
+    get_db,
+    get_movie_service,
+    get_rating_service,
+    require_same_user,
+)
 from cinematch.config import get_settings
 from cinematch.core.cache import CacheService
+from cinematch.models.user import User
 from cinematch.schemas.rating import (
     ImportResponse,
     ImportResultItem,
@@ -40,10 +48,12 @@ async def import_ratings(
     user_id: int,
     file: UploadFile = File(...),
     source: ImportSource = Query(default=ImportSource.AUTO),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     rating_service: RatingService = Depends(get_rating_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
+    require_same_user(current_user.id, user_id)
     settings = get_settings()
 
     # Validate file size
@@ -158,9 +168,11 @@ async def import_ratings(
 @router.get("/users/{user_id}/ratings/export")
 async def export_ratings(
     user_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     rating_service: RatingService = Depends(get_rating_service),
 ):
+    require_same_user(current_user.id, user_id)
     rows = await rating_service.export_ratings(user_id, db)
 
     output = io.StringIO()
@@ -185,11 +197,13 @@ async def export_ratings(
 async def add_rating(
     user_id: int,
     body: RatingCreate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     rating_service: RatingService = Depends(get_rating_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
+    require_same_user(current_user.id, user_id)
     movie = await movie_service.get_by_id(body.movie_id, db)
     if movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
@@ -212,9 +226,11 @@ async def add_rating(
 async def bulk_check_ratings(
     user_id: int,
     movie_ids: str = Query(..., description="Comma-separated movie IDs"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     rating_service: RatingService = Depends(get_rating_service),
 ):
+    require_same_user(current_user.id, user_id)
     id_list = [int(x.strip()) for x in movie_ids.split(",") if x.strip()]
     ratings = await rating_service.bulk_check(user_id, id_list, db)
     return RatingBulkCheckResponse(ratings=ratings)
@@ -225,9 +241,11 @@ async def get_user_ratings(
     user_id: int,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     rating_service: RatingService = Depends(get_rating_service),
 ):
+    require_same_user(current_user.id, user_id)
     rows, total = await rating_service.get_user_ratings(user_id, db, offset=offset, limit=limit)
     ratings = []
     for rating, movie_title in rows:

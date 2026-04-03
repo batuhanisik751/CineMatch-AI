@@ -17,6 +17,7 @@ from cinematch.api.deps import (
     get_challenge_service,
     get_collab_recommender,
     get_content_recommender,
+    get_current_user,
     get_db,
     get_dismissal_service,
     get_embedding_service,
@@ -80,6 +81,9 @@ def _make_user(id: int = 1) -> MagicMock:
     u = MagicMock()
     u.id = id
     u.movielens_id = id
+    u.email = "test@example.com"
+    u.username = "testuser"
+    u.hashed_password = "hashed"
     u.created_at = datetime(2024, 1, 1, tzinfo=UTC)
     return u
 
@@ -893,6 +897,7 @@ def app(
 ):
     test_app = create_app()
 
+    test_app.dependency_overrides[get_current_user] = lambda: _make_user(id=1)
     test_app.dependency_overrides[get_db] = lambda: mock_db
     test_app.dependency_overrides[get_movie_service] = lambda: mock_movie_service
     test_app.dependency_overrides[get_rating_service] = lambda: mock_rating_service

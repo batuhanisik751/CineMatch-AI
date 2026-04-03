@@ -12,6 +12,7 @@ from cinematch.api.deps import (
     get_blind_spot_service,
     get_cache_service,
     get_challenge_service,
+    get_current_user,
     get_db,
     get_feed_service,
     get_movie_service,
@@ -21,6 +22,7 @@ from cinematch.api.deps import (
     get_taste_evolution_service,
     get_taste_profile_service,
     get_user_stats_service,
+    require_same_user,
 )
 from cinematch.core.cache import CacheService
 from cinematch.models.rating import Rating
@@ -66,8 +68,10 @@ router = APIRouter()
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    require_same_user(current_user.id, user_id)
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
@@ -78,9 +82,11 @@ async def get_user(
 @router.get("/{user_id}/stats", response_model=UserStatsResponse)
 async def get_user_stats(
     user_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     stats_service: UserStatsService = Depends(get_user_stats_service),
 ):
+    require_same_user(current_user.id, user_id)
     stats = await stats_service.get_user_stats(user_id, db)
     return UserStatsResponse(**stats)
 
@@ -89,11 +95,13 @@ async def get_user_stats(
 async def get_user_diary(
     user_id: int,
     year: int = Query(default=2025, ge=2000, le=2100),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     stats_service: UserStatsService = Depends(get_user_stats_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Film diary — daily rating activity calendar for a given year."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"diary:{user_id}:{year}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -116,11 +124,13 @@ async def get_user_diary(
 async def surprise_me(
     user_id: int,
     limit: int = Query(default=5, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     stats_service: UserStatsService = Depends(get_user_stats_service),
     movie_service: MovieService = Depends(get_movie_service),
 ):
     """Get serendipitous movie recommendations outside the user's taste profile."""
+    require_same_user(current_user.id, user_id)
     stats = await stats_service.get_user_stats(user_id, db)
     genre_dist = stats.get("genre_distribution", [])
     top_genres = [g["genre"] for g in genre_dist[:2]]
@@ -147,10 +157,12 @@ async def surprise_me(
 async def get_completions(
     user_id: int,
     limit: int = Query(default=10, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
 ):
     """Suggest unrated films by directors/actors the user has rated >= 3 films for."""
+    require_same_user(current_user.id, user_id)
     groups = await movie_service.collection_completions(db, user_id=user_id, limit=limit)
 
     total_missing = sum(len(g["missing"]) for g in groups)
@@ -176,11 +188,13 @@ async def get_director_gaps(
     user_id: int,
     limit: int = Query(default=20, ge=1, le=50),
     top_n: int = Query(default=5, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Movies you haven't seen by directors you love."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"director_gaps:{user_id}:{top_n}:{limit}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -218,11 +232,13 @@ async def get_actor_gaps(
     user_id: int,
     limit: int = Query(default=20, ge=1, le=50),
     top_n: int = Query(default=5, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Movies you haven't seen by actors you love."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"actor_gaps:{user_id}:{top_n}:{limit}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -259,11 +275,13 @@ async def get_actor_gaps(
 async def get_user_feed(
     user_id: int,
     sections: int = Query(default=5, ge=1, le=10),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     feed_service: FeedService = Depends(get_feed_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Personalized home feed with named sections tailored to the user's taste."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"feed:{user_id}:{sections}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -284,11 +302,13 @@ async def get_user_feed(
 @router.get("/{user_id}/taste-profile", response_model=TasteProfileResponse)
 async def get_taste_profile(
     user_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     taste_service: TasteProfileService = Depends(get_taste_profile_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Natural-language summary of the user's movie taste."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"taste_profile:{user_id}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -311,11 +331,13 @@ async def get_taste_profile(
 async def get_affinities(
     user_id: int,
     limit: int = Query(default=15, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     stats_service: UserStatsService = Depends(get_user_stats_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Director and actor affinity rankings weighted by rating enthusiasm."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"affinities:{user_id}:{limit}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -337,11 +359,13 @@ async def get_affinities(
 @router.get("/{user_id}/rating-comparison", response_model=RatingComparisonResponse)
 async def get_rating_comparison(
     user_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     comparison_service: RatingComparisonService = Depends(get_rating_comparison_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Compare user's ratings against community averages."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"rating_comparison:{user_id}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -363,11 +387,13 @@ async def get_rating_comparison(
 @router.get("/{user_id}/streaks", response_model=StreakResponse)
 async def get_streaks(
     user_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     streak_service: StreakService = Depends(get_streak_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Rating streak and milestone data for a user."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"streaks:{user_id}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -390,11 +416,13 @@ async def get_streaks(
 async def get_taste_evolution(
     user_id: int,
     granularity: str = Query(default="quarter", pattern=r"^(month|quarter|year)$"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: TasteEvolutionService = Depends(get_taste_evolution_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Genre distribution over time for a user."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"taste_evolution:{user_id}:{granularity}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -416,11 +444,13 @@ async def get_taste_evolution(
 @router.get("/{user_id}/achievements", response_model=AchievementResponse)
 async def get_achievements(
     user_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     achievement_service: AchievementService = Depends(get_achievement_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Achievement badges computed from rating history."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"achievements:{user_id}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -442,11 +472,13 @@ async def get_achievements(
 @router.get("/{user_id}/challenges/progress", response_model=ChallengesProgressResponse)
 async def get_challenge_progress(
     user_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     challenge_service: ChallengeService = Depends(get_challenge_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Weekly challenge progress for a user."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"challenges:progress:{user_id}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -469,11 +501,13 @@ async def get_challenge_progress(
 async def get_user_bingo(
     user_id: int,
     seed: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     bingo_service: BingoService = Depends(get_bingo_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Monthly Movie Bingo card with user progress."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"bingo:{user_id}:{seed}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -497,11 +531,13 @@ async def get_rewatch_suggestions(
     user_id: int,
     limit: int = Query(default=10, ge=1, le=50),
     min_rating: int = Query(default=8, ge=1, le=10),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     rewatch_service: RewatchService = Depends(get_rewatch_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Suggest highly-rated movies worth revisiting."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"rewatch:{user_id}:{limit}:{min_rating}"
     if cache is not None:
         cached = await cache.get(cache_key)
@@ -530,11 +566,13 @@ async def get_blind_spots(
     user_id: int,
     limit: int = Query(default=20, ge=1, le=50),
     genre: str | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     blind_spot_service: BlindSpotService = Depends(get_blind_spot_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Popular, highly-regarded movies the user has never rated."""
+    require_same_user(current_user.id, user_id)
     cache_key = f"blind-spots:{user_id}:{limit}:{genre or 'all'}"
     if cache is not None:
         cached = await cache.get(cache_key)

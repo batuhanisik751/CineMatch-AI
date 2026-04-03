@@ -1,7 +1,10 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 export default function TopNav() {
   const { pathname } = useLocation();
+  const { isAuthenticated, username, logout } = useAuth();
+  const navigate = useNavigate();
 
   const navLink = (to: string, label: string) => {
     const active =
@@ -19,6 +22,11 @@ export default function TopNav() {
         {label}
       </Link>
     );
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -39,15 +47,25 @@ export default function TopNav() {
         {navLink("/activity", "Activity")}
         {navLink("/profile", "Profile")}
       </div>
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-4">
-          <button className="material-symbols-outlined text-[#d4c5ab] hover:text-[#FFC107] transition-all duration-300">
-            notifications
-          </button>
-          <button className="material-symbols-outlined text-[#d4c5ab] hover:text-[#FFC107] transition-all duration-300">
-            settings
-          </button>
-        </div>
+      <div className="flex items-center gap-4">
+        {isAuthenticated ? (
+          <>
+            <span className="text-[#d4c5ab] text-sm hidden sm:inline">{username}</span>
+            <button
+              onClick={handleLogout}
+              className="text-[#FFC107] hover:text-[#ffca2c] transition-colors text-sm font-medium"
+            >
+              Logout
+            </button>
+          </>
+        ) : (
+          <Link
+            to="/login"
+            className="text-[#FFC107] hover:text-[#ffca2c] transition-colors text-sm font-medium"
+          >
+            Login
+          </Link>
+        )}
       </div>
     </nav>
   );

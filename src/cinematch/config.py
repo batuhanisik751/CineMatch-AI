@@ -64,6 +64,11 @@ class Settings(BaseSettings):
     import_max_rows: int = 10_000
     import_max_file_size_mb: int = 5
 
+    # Authentication
+    secret_key: str = "CHANGE-ME-IN-PRODUCTION"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 1440
+
     # API
     api_host: str = "0.0.0.0"
     api_port: int = 8000

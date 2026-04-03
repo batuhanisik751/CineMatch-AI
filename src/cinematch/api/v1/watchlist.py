@@ -9,13 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import (
     get_cache_service,
+    get_current_user,
     get_db,
     get_hybrid_recommender,
     get_movie_service,
     get_watchlist_service,
+    require_same_user,
 )
 from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import ServiceUnavailableError
+from cinematch.models.user import User
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.recommendation import RecommendationItem, RecommendationsResponse
 from cinematch.schemas.watchlist import (
@@ -40,6 +43,7 @@ router = APIRouter()
 async def get_watchlist_recommendations(
     user_id: int,
     limit: int = Query(default=10, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     watchlist_service: WatchlistService = Depends(get_watchlist_service),
@@ -47,6 +51,7 @@ async def get_watchlist_recommendations(
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
     """Recommend movies similar to what's on the user's watchlist."""
+    require_same_user(current_user.id, user_id)
     if hybrid_rec is None:
         raise ServiceUnavailableError("Recommendation service")
 
@@ -97,10 +102,12 @@ async def get_watchlist_recommendations(
 async def bulk_check_watchlist(
     user_id: int,
     movie_ids: str = Query(..., description="Comma-separated movie IDs"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     watchlist_service: WatchlistService = Depends(get_watchlist_service),
 ):
     """Check which movies from a list are in the user's watchlist."""
+    require_same_user(current_user.id, user_id)
     try:
         id_list = [int(x.strip()) for x in movie_ids.split(",") if x.strip()]
     except ValueError:
@@ -118,12 +125,14 @@ async def bulk_check_watchlist(
 async def add_to_watchlist(
     user_id: int,
     body: WatchlistAdd,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     watchlist_service: WatchlistService = Depends(get_watchlist_service),
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
     """Add a movie to the user's watchlist."""
+    require_same_user(current_user.id, user_id)
     movie = await movie_service.get_by_id(body.movie_id, db)
     if movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
@@ -152,11 +161,13 @@ async def add_to_watchlist(
 async def remove_from_watchlist(
     user_id: int,
     movie_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     watchlist_service: WatchlistService = Depends(get_watchlist_service),
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
     """Remove a movie from the user's watchlist."""
+    require_same_user(current_user.id, user_id)
     removed = await watchlist_service.remove_from_watchlist(user_id, movie_id, db)
     if not removed:
         raise HTTPException(status_code=404, detail="Movie not in watchlist")
@@ -176,10 +187,12 @@ async def get_watchlist(
     user_id: int,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     watchlist_service: WatchlistService = Depends(get_watchlist_service),
 ):
     """Get a user's watchlist with movie details."""
+    require_same_user(current_user.id, user_id)
     rows, total = await watchlist_service.get_watchlist(user_id, db, offset=offset, limit=limit)
     items = []
     for item, title, poster_path, genres, vote_average, release_date in rows:

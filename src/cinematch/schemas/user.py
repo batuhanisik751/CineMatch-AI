@@ -13,7 +13,9 @@ class UserResponse(BaseModel):
     """User details."""
 
     id: int
-    movielens_id: int
+    movielens_id: int | None = None
+    email: str | None = None
+    username: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

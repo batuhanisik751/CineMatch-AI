@@ -44,13 +44,13 @@ async def test_taste_profile_cache_hit(client, mock_cache_service, mock_taste_pr
 async def test_taste_profile_empty_for_new_user(client, mock_taste_profile_service):
     """User with no ratings gets empty insights list."""
     mock_taste_profile_service.get_taste_profile.return_value = {
-        "user_id": 999,
+        "user_id": 1,
         "total_ratings": 0,
         "insights": [],
         "llm_summary": None,
     }
 
-    resp = await client.get("/api/v1/users/999/taste-profile")
+    resp = await client.get("/api/v1/users/1/taste-profile")
 
     assert resp.status_code == 200
     data = resp.json()

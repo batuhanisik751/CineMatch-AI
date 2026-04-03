@@ -1,4 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 const items = [
   { to: "/", icon: "home", label: "Home" },
@@ -13,6 +14,13 @@ const items = [
 
 export default function Sidebar() {
   const { pathname } = useLocation();
+  const { isAuthenticated, username, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <aside className="hidden lg:flex flex-col p-6 gap-2 h-full w-64 fixed left-0 top-20 bg-[#0e0e0f] border-r border-white/5">
@@ -20,9 +28,15 @@ export default function Sidebar() {
         <span className="text-[#FFC107] font-black italic font-headline">
           Private Screening
         </span>
-        <p className="text-xs text-on-surface-variant uppercase tracking-widest font-medium">
-          Premium Member
-        </p>
+        {isAuthenticated ? (
+          <p className="text-xs text-on-surface-variant uppercase tracking-widest font-medium">
+            {username}
+          </p>
+        ) : (
+          <p className="text-xs text-on-surface-variant uppercase tracking-widest font-medium">
+            Guest
+          </p>
+        )}
       </div>
       <nav className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
         {items.map((item) => {
@@ -54,6 +68,15 @@ export default function Sidebar() {
           );
         })}
       </nav>
+      {isAuthenticated && (
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 text-[#d4c5ab] px-4 py-3 hover:bg-[#201f20] rounded-lg transition-all duration-200 font-headline text-sm font-medium mt-2"
+        >
+          <span className="material-symbols-outlined">logout</span>
+          Logout
+        </button>
+      )}
     </aside>
   );
 }

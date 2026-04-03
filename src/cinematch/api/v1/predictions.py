@@ -8,9 +8,16 @@ import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cinematch.api.deps import get_cache_service, get_db, get_hybrid_recommender
+from cinematch.api.deps import (
+    get_cache_service,
+    get_current_user,
+    get_db,
+    get_hybrid_recommender,
+    require_same_user,
+)
 from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import ServiceUnavailableError
+from cinematch.models.user import User
 from cinematch.schemas.recommendation import (
     PredictedMatchBatchRequest,
     PredictedMatchItem,
@@ -32,11 +39,13 @@ _CACHE_TTL = 900  # 15 minutes
 async def get_predicted_rating(
     user_id: int,
     movie_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     hybrid_rec: HybridRecommender | None = Depends(get_hybrid_recommender),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Get predicted match percentage for a single movie."""
+    require_same_user(current_user.id, user_id)
     if hybrid_rec is None:
         raise ServiceUnavailableError("Recommendation service")
 
@@ -80,11 +89,13 @@ async def get_predicted_rating(
 async def get_batch_predicted_ratings(
     user_id: int,
     body: PredictedMatchBatchRequest,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     hybrid_rec: HybridRecommender | None = Depends(get_hybrid_recommender),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Get predicted match percentages for a batch of movies (up to 100)."""
+    require_same_user(current_user.id, user_id)
     if hybrid_rec is None:
         raise ServiceUnavailableError("Recommendation service")
 

@@ -64,8 +64,12 @@ cover/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Environments
+# Environments & secrets
 .env
+.env.local
+.env.*.local
+.env.development
+.env.production
 .envrc
 .venv
 env/
@@ -73,6 +77,12 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Crypto / SSL
+*.pem
+*.key
+*.crt
+*.csr
 
 # mypy
 .mypy_cache/

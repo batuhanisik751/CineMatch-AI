@@ -4,9 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi import Request
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.db.session import get_db
+from cinematch.models.user import User
+from cinematch.services.auth_service import decode_access_token
 
 if TYPE_CHECKING:
     from cinematch.core.cache import CacheService
@@ -36,7 +42,40 @@ if TYPE_CHECKING:
     from cinematch.services.watchlist_service import WatchlistService
 
 # Re-export get_db so routes can import from one place
-__all__ = ["get_db"]
+__all__ = ["get_current_user", "get_db", "require_same_user"]
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=True)
+
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Validate JWT token and return the authenticated user."""
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Invalid or expired token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = decode_access_token(token)
+        user_id: int | None = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    result = await db.execute(select(User).where(User.id == int(user_id)))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+def require_same_user(current_user_id: int, path_user_id: int) -> None:
+    """Raise 403 if the authenticated user doesn't match the path user_id."""
+    if current_user_id != path_user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this resource")
 
 
 def get_movie_service(request: Request) -> MovieService:

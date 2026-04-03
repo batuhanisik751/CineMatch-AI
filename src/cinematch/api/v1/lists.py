@@ -5,7 +5,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cinematch.api.deps import get_db, get_movie_service, get_user_list_service
+from cinematch.api.deps import (
+    get_current_user,
+    get_db,
+    get_movie_service,
+    get_user_list_service,
+    require_same_user,
+)
+from cinematch.models.user import User
 from cinematch.schemas.user_list import (
     PopularListsResponse,
     UserListCreate,
@@ -61,10 +68,12 @@ def _item_response(item, title, poster_path, genres, vote_average, release_date)
 async def create_list(
     user_id: int,
     body: UserListCreate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     list_service: UserListService = Depends(get_user_list_service),
 ):
     """Create a new user list."""
+    require_same_user(current_user.id, user_id)
     ul = await list_service.create_list(user_id, body.name, body.description, body.is_public, db)
     return UserListResponse(
         id=ul.id,
@@ -82,10 +91,12 @@ async def create_list(
 @router.get("/users/{user_id}/lists", response_model=UserListsResponse)
 async def get_user_lists(
     user_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     list_service: UserListService = Depends(get_user_list_service),
 ):
     """Get all lists for a user."""
+    require_same_user(current_user.id, user_id)
     rows = await list_service.get_user_lists(user_id, db)
     lists_ = [_list_summary(ul, mc, pp) for ul, mc, pp in rows]
     return UserListsResponse(user_id=user_id, lists=lists_, total=len(lists_))
@@ -141,10 +152,12 @@ async def update_list(
     user_id: int,
     list_id: int,
     body: UserListUpdate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     list_service: UserListService = Depends(get_user_list_service),
 ):
     """Update list metadata."""
+    require_same_user(current_user.id, user_id)
     ul = await list_service.update_list(
         user_id,
         list_id,
@@ -177,10 +190,12 @@ async def update_list(
 async def delete_list(
     user_id: int,
     list_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     list_service: UserListService = Depends(get_user_list_service),
 ):
     """Delete a list and all its items."""
+    require_same_user(current_user.id, user_id)
     deleted = await list_service.delete_list(user_id, list_id, db)
     if not deleted:
         raise HTTPException(status_code=404, detail="List not found or not owned by user")
@@ -200,11 +215,13 @@ async def add_item_to_list(
     user_id: int,
     list_id: int,
     body: UserListItemAdd,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     list_service: UserListService = Depends(get_user_list_service),
 ):
     """Add a movie to a list."""
+    require_same_user(current_user.id, user_id)
     movie = await movie_service.get_by_id(body.movie_id, db)
     if movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
@@ -227,10 +244,12 @@ async def remove_item_from_list(
     user_id: int,
     list_id: int,
     movie_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     list_service: UserListService = Depends(get_user_list_service),
 ):
     """Remove a movie from a list."""
+    require_same_user(current_user.id, user_id)
     removed = await list_service.remove_item(user_id, list_id, movie_id, db)
     if not removed:
         raise HTTPException(status_code=404, detail="List or item not found")
@@ -241,10 +260,12 @@ async def reorder_list_items(
     user_id: int,
     list_id: int,
     body: UserListItemReorder,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     list_service: UserListService = Depends(get_user_list_service),
 ):
     """Reorder items in a list."""
+    require_same_user(current_user.id, user_id)
     success = await list_service.reorder_items(user_id, list_id, body.movie_ids, db)
     if not success:
         raise HTTPException(status_code=404, detail="List not found or not owned by user")

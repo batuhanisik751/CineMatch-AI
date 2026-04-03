@@ -47,12 +47,12 @@ async def test_get_affinities_success(client, mock_user_stats_service):
 
 async def test_get_affinities_empty(client, mock_user_stats_service):
     mock_user_stats_service.get_affinities.return_value = {
-        "user_id": 999,
+        "user_id": 1,
         "directors": [],
         "actors": [],
     }
 
-    resp = await client.get("/api/v1/users/999/affinities")
+    resp = await client.get("/api/v1/users/1/affinities")
     assert resp.status_code == 200
     data = resp.json()
     assert data["directors"] == []

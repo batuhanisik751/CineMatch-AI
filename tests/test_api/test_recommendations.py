@@ -114,7 +114,7 @@ async def test_get_recommendations_collab_cold_start(client, mock_hybrid_recomme
     mock_hybrid_recommender.recommend.side_effect = ValueError(
         "User 999 has no collaborative filtering data yet."
     )
-    resp = await client.get("/api/v1/users/999/recommendations", params={"strategy": "collab"})
+    resp = await client.get("/api/v1/users/1/recommendations", params={"strategy": "collab"})
     assert resp.status_code == 400
     assert "collaborative filtering data" in resp.json()["detail"]
 
@@ -185,7 +185,7 @@ async def test_mood_recommendations_cold_start(client, mock_hybrid_recommender, 
     mock_hybrid_recommender.mood_recommend.return_value = ([(1, 0.8)], False)
     resp = await client.post(
         "/api/v1/recommendations/mood",
-        json={"mood": "feel-good comedy", "user_id": 999},
+        json={"mood": "feel-good comedy", "user_id": 1},
     )
     assert resp.status_code == 200
     data = resp.json()

@@ -5,8 +5,16 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cinematch.api.deps import get_cache_service, get_db, get_dismissal_service, get_movie_service
+from cinematch.api.deps import (
+    get_cache_service,
+    get_current_user,
+    get_db,
+    get_dismissal_service,
+    get_movie_service,
+    require_same_user,
+)
 from cinematch.core.cache import CacheService
+from cinematch.models.user import User
 from cinematch.schemas.dismissal import (
     DismissalBulkStatusResponse,
     DismissalCreate,
@@ -27,10 +35,12 @@ router = APIRouter()
 async def bulk_check_dismissals(
     user_id: int,
     movie_ids: str = Query(..., description="Comma-separated movie IDs"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     dismissal_service: DismissalService = Depends(get_dismissal_service),
 ):
     """Check which movies from a list are dismissed by the user."""
+    require_same_user(current_user.id, user_id)
     try:
         id_list = [int(x.strip()) for x in movie_ids.split(",") if x.strip()]
     except ValueError:
@@ -48,12 +58,14 @@ async def bulk_check_dismissals(
 async def dismiss_movie(
     user_id: int,
     body: DismissalCreate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     dismissal_service: DismissalService = Depends(get_dismissal_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Mark a movie as 'not interested'."""
+    require_same_user(current_user.id, user_id)
     movie = await movie_service.get_by_id(body.movie_id, db)
     if movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
@@ -79,11 +91,13 @@ async def dismiss_movie(
 async def undismiss_movie(
     user_id: int,
     movie_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     dismissal_service: DismissalService = Depends(get_dismissal_service),
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Remove a dismissal (undo 'not interested')."""
+    require_same_user(current_user.id, user_id)
     removed = await dismissal_service.undismiss_movie(user_id, movie_id, db)
     if not removed:
         raise HTTPException(status_code=404, detail="Movie not dismissed")
@@ -104,10 +118,12 @@ async def get_dismissals(
     user_id: int,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     dismissal_service: DismissalService = Depends(get_dismissal_service),
 ):
     """Get the user's dismissed movies with details."""
+    require_same_user(current_user.id, user_id)
     rows, total = await dismissal_service.get_dismissals(user_id, db, offset=offset, limit=limit)
     items = []
     for item, title, poster_path, genres, vote_average, release_date in rows:

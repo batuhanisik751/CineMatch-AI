@@ -15,6 +15,9 @@ import MovieDetail from "./pages/MovieDetail";
 import Onboarding from "./pages/Onboarding";
 import { ProfileLayout, OverviewTab, TasteEvolutionTab, PlatformStatsTab } from "./pages/profile";
 import WatchlistRecommendations from "./pages/WatchlistRecommendations";
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function RedirectToBrowse() {
   const location = useLocation();
@@ -75,8 +78,11 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/onboarding" element={<Onboarding />} />
-      <Route path="/" element={<Home />} />
+      {/* Public auth routes */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      {/* Public discovery routes */}
       <Route path="/discover" element={<DiscoverLayout />}>
         <Route index element={<RedirectToBrowse />} />
         <Route path="browse" element={<BrowseTab />} />
@@ -98,39 +104,46 @@ export default function App() {
         <Route path="cast-combo" element={<Navigate to="/explore/actors" replace />} />
         <Route path="keywords" element={<KeywordsTab />} />
       </Route>
-      <Route path="/library" element={<LibraryLayout />}>
-        <Route index element={<RedirectToWatchlist />} />
-        <Route path="watchlist" element={<WatchlistTab />} />
-        <Route path="lists" element={<ListsTab />} />
-        <Route path="collections" element={<CollectionsTab key={navCountRef.current} />} />
-        <Route path="gaps" element={<Navigate to="/library/collections" replace />} />
-        <Route path="curated" element={<CuratedTab key={navCountRef.current} />} />
-      </Route>
-      <Route path="/library/watchlist/recommendations" element={<WatchlistRecommendations />} />
-      <Route path="/library/lists/popular" element={<PopularLists />} />
-      <Route path="/library/lists/:id" element={<ListDetail key={navCountRef.current} />} />
       <Route path="/compare" element={<Compare />} />
       <Route path="/movies/:id" element={<MovieDetail />} />
-      <Route path="/for-you" element={<ForYouLayout />}>
-        <Route index element={<RedirectToRecommendations />} />
-        <Route path="recommendations" element={<RecommendationsTab />} />
-        <Route path="blind-spots" element={<BlindSpotsTab />} />
-        <Route path="rewatch" element={<RewatchTab />} />
-      </Route>
       <Route path="/recommendations/from-seed/:movieId" element={<FromSeedRecommendations />} />
-      <Route path="/activity" element={<ActivityLayout />}>
-        <Route index element={<RedirectToAchievements />} />
-        <Route path="achievements" element={<AchievementsTab />} />
-        <Route path="challenges" element={<ChallengesTab />} />
-        <Route path="bingo" element={<BingoTab />} />
-        <Route path="diary" element={<DiaryTab />} />
+
+      {/* Protected routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/library" element={<LibraryLayout />}>
+          <Route index element={<RedirectToWatchlist />} />
+          <Route path="watchlist" element={<WatchlistTab />} />
+          <Route path="lists" element={<ListsTab />} />
+          <Route path="collections" element={<CollectionsTab key={navCountRef.current} />} />
+          <Route path="gaps" element={<Navigate to="/library/collections" replace />} />
+          <Route path="curated" element={<CuratedTab key={navCountRef.current} />} />
+        </Route>
+        <Route path="/library/watchlist/recommendations" element={<WatchlistRecommendations />} />
+        <Route path="/library/lists/popular" element={<PopularLists />} />
+        <Route path="/library/lists/:id" element={<ListDetail key={navCountRef.current} />} />
+        <Route path="/for-you" element={<ForYouLayout />}>
+          <Route index element={<RedirectToRecommendations />} />
+          <Route path="recommendations" element={<RecommendationsTab />} />
+          <Route path="blind-spots" element={<BlindSpotsTab />} />
+          <Route path="rewatch" element={<RewatchTab />} />
+        </Route>
+        <Route path="/activity" element={<ActivityLayout />}>
+          <Route index element={<RedirectToAchievements />} />
+          <Route path="achievements" element={<AchievementsTab />} />
+          <Route path="challenges" element={<ChallengesTab />} />
+          <Route path="bingo" element={<BingoTab />} />
+          <Route path="diary" element={<DiaryTab />} />
+        </Route>
+        <Route path="/profile" element={<ProfileLayout />}>
+          <Route index element={<RedirectToOverview />} />
+          <Route path="overview" element={<OverviewTab />} />
+          <Route path="taste-evolution" element={<TasteEvolutionTab />} />
+          <Route path="platform-stats" element={<PlatformStatsTab />} />
+        </Route>
       </Route>
-      <Route path="/profile" element={<ProfileLayout />}>
-        <Route index element={<RedirectToOverview />} />
-        <Route path="overview" element={<OverviewTab />} />
-        <Route path="taste-evolution" element={<TasteEvolutionTab />} />
-        <Route path="platform-stats" element={<PlatformStatsTab />} />
-      </Route>
+
       {/* Legacy discover redirects */}
       <Route path="/trending" element={<LegacyRedirect to="/discover/trending" />} />
       <Route path="/top-charts" element={<LegacyRedirect to="/discover/top-charts" />} />

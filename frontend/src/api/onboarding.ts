@@ -1,14 +1,14 @@
 import { apiFetch } from "./client";
 import type { OnboardingMoviesResponse, OnboardingStatusResponse } from "./types";
 
-export function getOnboardingMovies(userId: number, count = 20) {
+export function getOnboardingMovies(_userId: number, count = 20) {
   return apiFetch<OnboardingMoviesResponse>(
-    `/api/v1/onboarding/movies?user_id=${userId}&count=${count}`
+    `/api/v1/onboarding/movies?count=${count}`
   );
 }
 
-export function getOnboardingStatus(userId: number) {
+export function getOnboardingStatus(_userId: number) {
   return apiFetch<OnboardingStatusResponse>(
-    `/api/v1/onboarding/status?user_id=${userId}`
+    `/api/v1/onboarding/status`
   );
 }

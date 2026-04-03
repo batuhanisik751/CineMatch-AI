@@ -47,7 +47,7 @@ async def test_get_streaks_cached(client, mock_streak_service, mock_cache_servic
 
 async def test_get_streaks_no_ratings(client, mock_streak_service):
     mock_streak_service.get_streaks.return_value = {
-        "user_id": 999,
+        "user_id": 1,
         "current_streak": 0,
         "longest_streak": 0,
         "total_ratings": 0,
@@ -57,7 +57,7 @@ async def test_get_streaks_no_ratings(client, mock_streak_service):
         ],
     }
 
-    resp = await client.get("/api/v1/users/999/streaks")
+    resp = await client.get("/api/v1/users/1/streaks")
     assert resp.status_code == 200
     data = resp.json()
     assert data["current_streak"] == 0

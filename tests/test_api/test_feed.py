@@ -52,7 +52,7 @@ async def test_feed_endpoint_cached(client, mock_feed_service, mock_cache_servic
 async def test_feed_endpoint_cold_start(client, mock_feed_service):
     """Cold-start user gets non-personalized feed."""
     mock_feed_service.generate_feed.return_value = FeedResponse(
-        user_id=999,
+        user_id=1,
         is_personalized=False,
         sections=[
             FeedSection(key="trending", title="Trending Now", movies=[]),
@@ -60,7 +60,7 @@ async def test_feed_endpoint_cold_start(client, mock_feed_service):
             FeedSection(key="hidden_gems", title="Hidden Gems", movies=[]),
         ],
     )
-    resp = await client.get("/api/v1/users/999/feed")
+    resp = await client.get("/api/v1/users/1/feed")
     assert resp.status_code == 200
     data = resp.json()
     assert data["is_personalized"] is False

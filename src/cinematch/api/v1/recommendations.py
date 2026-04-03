@@ -10,14 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import (
     get_cache_service,
+    get_current_user,
     get_db,
     get_hybrid_recommender,
     get_llm_service,
     get_movie_service,
     get_rating_service,
+    require_same_user,
 )
 from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import NotFoundError, ServiceUnavailableError
+from cinematch.models.user import User
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.recommendation import (
     DIVERSITY_LAMBDA_MAP,
@@ -51,10 +54,12 @@ async def get_recommendations(
     top_k: int = Query(default=20, ge=1, le=100),
     strategy: str = Query(default="hybrid", pattern="^(hybrid|content|collab)$"),
     diversity: DiversityLevel = Query(default=DiversityLevel.medium),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     hybrid_rec: HybridRecommender | None = Depends(get_hybrid_recommender),
 ):
+    require_same_user(current_user.id, user_id)
     if hybrid_rec is None:
         raise ServiceUnavailableError("Recommendation service")
     diversity_lambda = DIVERSITY_LAMBDA_MAP[diversity]
@@ -117,11 +122,13 @@ async def explain_recommendation(
     user_id: int,
     movie_id: int,
     score: float | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),
     rating_service: RatingService = Depends(get_rating_service),
     llm_service: LLMService | None = Depends(get_llm_service),
 ):
+    require_same_user(current_user.id, user_id)
     if llm_service is None:
         raise ServiceUnavailableError("LLM service")
 

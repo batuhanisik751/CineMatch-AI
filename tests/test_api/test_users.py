@@ -22,7 +22,7 @@ async def test_get_user_not_found(client, mock_db):
     result_mock.scalar_one_or_none.return_value = None
     mock_db.execute = AsyncMock(return_value=result_mock)
 
-    resp = await client.get("/api/v1/users/999")
+    resp = await client.get("/api/v1/users/1")
     assert resp.status_code == 404
     assert resp.json()["detail"] == "User not found"
 
@@ -44,7 +44,7 @@ async def test_get_user_stats_success(client, mock_user_stats_service):
 
 async def test_get_user_stats_empty(client, mock_user_stats_service):
     mock_user_stats_service.get_user_stats.return_value = {
-        "user_id": 999,
+        "user_id": 1,
         "total_ratings": 0,
         "average_rating": 0.0,
         "genre_distribution": [],
@@ -53,7 +53,7 @@ async def test_get_user_stats_empty(client, mock_user_stats_service):
         "top_actors": [],
         "rating_timeline": [],
     }
-    resp = await client.get("/api/v1/users/999/stats")
+    resp = await client.get("/api/v1/users/1/stats")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_ratings"] == 0
@@ -81,7 +81,7 @@ async def test_surprise_me_success(client, mock_user_stats_service, mock_movie_s
 async def test_surprise_me_no_ratings(client, mock_user_stats_service, mock_movie_service, mock_db):
     """User with no ratings gets surprise movies with no genre exclusions."""
     mock_user_stats_service.get_user_stats.return_value = {
-        "user_id": 999,
+        "user_id": 1,
         "total_ratings": 0,
         "average_rating": 0.0,
         "genre_distribution": [],
@@ -94,7 +94,7 @@ async def test_surprise_me_no_ratings(client, mock_user_stats_service, mock_movi
     rated_result_mock.all.return_value = []
     mock_db.execute = AsyncMock(return_value=rated_result_mock)
 
-    resp = await client.get("/api/v1/users/999/surprise?limit=3")
+    resp = await client.get("/api/v1/users/1/surprise?limit=3")
     assert resp.status_code == 200
     data = resp.json()
     assert data["excluded_genres"] == []
@@ -136,7 +136,7 @@ async def test_completions_success(client, mock_movie_service):
 async def test_completions_empty(client, mock_movie_service):
     """User with no qualifying creators gets empty groups."""
     mock_movie_service.collection_completions.return_value = []
-    resp = await client.get("/api/v1/users/999/completions")
+    resp = await client.get("/api/v1/users/1/completions")
     assert resp.status_code == 200
     data = resp.json()
     assert data["groups"] == []
@@ -176,7 +176,7 @@ async def test_director_gaps_success(client, mock_movie_service):
 async def test_director_gaps_empty(client, mock_movie_service):
     """User with no qualifying directors gets empty groups."""
     mock_movie_service.director_gaps.return_value = []
-    resp = await client.get("/api/v1/users/999/director-gaps")
+    resp = await client.get("/api/v1/users/1/director-gaps")
     assert resp.status_code == 200
     data = resp.json()
     assert data["groups"] == []
@@ -216,7 +216,7 @@ async def test_actor_gaps_success(client, mock_movie_service):
 async def test_actor_gaps_empty(client, mock_movie_service):
     """User with no qualifying actors gets empty groups."""
     mock_movie_service.actor_gaps.return_value = []
-    resp = await client.get("/api/v1/users/999/actor-gaps")
+    resp = await client.get("/api/v1/users/1/actor-gaps")
     assert resp.status_code == 200
     data = resp.json()
     assert data["groups"] == []

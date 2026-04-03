@@ -8,7 +8,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_get_onboarding_movies_success(client, mock_onboarding_service):
     """GET /onboarding/movies returns genre-diverse movies."""
-    resp = await client.get("/api/v1/onboarding/movies", params={"user_id": 1})
+    resp = await client.get("/api/v1/onboarding/movies")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -22,7 +22,7 @@ async def test_get_onboarding_movies_success(client, mock_onboarding_service):
 @pytest.mark.asyncio
 async def test_get_onboarding_movies_custom_count(client, mock_onboarding_service):
     """GET /onboarding/movies respects count parameter."""
-    resp = await client.get("/api/v1/onboarding/movies", params={"user_id": 1, "count": 15})
+    resp = await client.get("/api/v1/onboarding/movies", params={"count": 15})
 
     assert resp.status_code == 200
     # Verify the service was called with count=15
@@ -33,24 +33,17 @@ async def test_get_onboarding_movies_custom_count(client, mock_onboarding_servic
 @pytest.mark.asyncio
 async def test_get_onboarding_movies_invalid_count(client):
     """GET /onboarding/movies rejects count outside 10-30 range."""
-    resp = await client.get("/api/v1/onboarding/movies", params={"user_id": 1, "count": 5})
+    resp = await client.get("/api/v1/onboarding/movies", params={"count": 5})
     assert resp.status_code == 422
 
-    resp = await client.get("/api/v1/onboarding/movies", params={"user_id": 1, "count": 50})
-    assert resp.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_get_onboarding_movies_missing_user_id(client):
-    """GET /onboarding/movies requires user_id."""
-    resp = await client.get("/api/v1/onboarding/movies")
+    resp = await client.get("/api/v1/onboarding/movies", params={"count": 50})
     assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_get_onboarding_status_incomplete(client, mock_onboarding_service):
     """GET /onboarding/status returns incomplete status."""
-    resp = await client.get("/api/v1/onboarding/status", params={"user_id": 1})
+    resp = await client.get("/api/v1/onboarding/status")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -70,7 +63,7 @@ async def test_get_onboarding_status_completed(client, mock_onboarding_service):
         "threshold": 10,
     }
 
-    resp = await client.get("/api/v1/onboarding/status", params={"user_id": 1})
+    resp = await client.get("/api/v1/onboarding/status")
 
     assert resp.status_code == 200
     data = resp.json()
