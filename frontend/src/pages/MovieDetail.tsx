@@ -238,7 +238,7 @@ export default function MovieDetail() {
                 <div className="space-y-6">
                   <h3 className="text-2xl font-headline font-bold text-on-surface">Top Cast</h3>
                   <div className="flex flex-wrap gap-3">
-                    {movie.cast_names.map((name) => (
+                    {movie.cast_names.slice(0, 10).map((name) => (
                       <span key={name} className="bg-surface-container-low border border-outline-variant/20 px-4 py-2 text-sm text-on-surface rounded-lg">{name}</span>
                     ))}
                   </div>

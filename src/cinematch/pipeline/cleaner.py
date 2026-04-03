@@ -36,13 +36,15 @@ def load_tmdb(tmdb_path: Path) -> pd.DataFrame:
         )
     )
 
-    # Cast: comma-separated names -> top 5 list
+    # Cast: comma-separated names, all actors (billing order from TMDb)
     df["cast_names"] = (
         df["cast"]
         .fillna("")
         .apply(
             lambda x: (
-                [c.strip() for c in x.split(",")][:5] if isinstance(x, str) and x.strip() else []
+                [c.strip() for c in x.split(",") if c.strip()]
+                if isinstance(x, str) and x.strip()
+                else []
             )
         )
     )
