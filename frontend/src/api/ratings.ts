@@ -1,7 +1,6 @@
 import { ApiError, apiFetch } from "./client";
 import type { ImportResponse, RatingResponse, UserRatingsResponse } from "./types";
-
-const BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "../config";
 
 export function addRating(userId: number, movieId: number, rating: number) {
   return apiFetch<RatingResponse>(`/api/v1/users/${userId}/ratings`, {
@@ -34,7 +33,7 @@ export async function importRatings(
   const formData = new FormData();
   formData.append("file", file);
   const res = await fetch(
-    `${BASE_URL}/api/v1/users/${userId}/ratings/import?source=${source}`,
+    `${API_BASE_URL}/api/v1/users/${userId}/ratings/import?source=${source}`,
     { method: "POST", body: formData }
   );
   if (!res.ok) {
@@ -46,7 +45,7 @@ export async function importRatings(
 
 export async function exportRatings(userId: number): Promise<void> {
   const res = await fetch(
-    `${BASE_URL}/api/v1/users/${userId}/ratings/export`
+    `${API_BASE_URL}/api/v1/users/${userId}/ratings/export`
   );
   if (!res.ok) throw new ApiError(res.status, "Export failed");
   const blob = await res.blob();

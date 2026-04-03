@@ -8,8 +8,9 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
+import { API_BASE_URL } from "../config";
+
 const TOKEN_KEY = "cinematch_auth_token";
-const BASE_URL = "http://localhost:8000";
 
 interface AuthState {
   token: string | null;
@@ -87,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     body.append("username", email);
     body.append("password", password);
 
-    const res = await fetch(`${BASE_URL}/api/v1/auth/login`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body,
@@ -111,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (email: string, username: string, password: string) => {
-    const res = await fetch(`${BASE_URL}/api/v1/auth/register`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, username, password }),

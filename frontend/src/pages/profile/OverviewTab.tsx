@@ -16,6 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { API_BASE_URL } from "../../config";
 import { getDismissals, undismissMovie } from "../../api/dismissals";
 import { exportRatings, getUserRatings } from "../../api/ratings";
 import type { AchievementResponse, AffinitiesResponse, AffinityEntry, DismissalItemResponse, RatingComparisonResponse, RatingResponse, StreakResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../../api/types";
@@ -808,8 +809,8 @@ export default function OverviewTab() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="text-primary font-headline font-black italic text-xl tracking-tighter">CINEMA PRIVATE</div>
           <div className="flex gap-8 text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-            <a className="hover:text-primary transition-colors" href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer">API Docs</a>
-            <a className="hover:text-primary transition-colors" href="http://localhost:8000/health" target="_blank" rel="noopener noreferrer">System Status</a>
+            <a className="hover:text-primary transition-colors" href={`${API_BASE_URL}/docs`} target="_blank" rel="noopener noreferrer">API Docs</a>
+            <a className="hover:text-primary transition-colors" href={`${API_BASE_URL}/health`} target="_blank" rel="noopener noreferrer">System Status</a>
           </div>
           <div className="text-xs text-on-surface-variant/50 font-body">
             &copy; 2024 CineMatch-AI. All rights reserved.

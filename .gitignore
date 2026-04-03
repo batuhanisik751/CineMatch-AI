@@ -128,3 +128,7 @@ PLAN*.md
 # Frontend
 node_modules/
 frontend/dist/
+
+# Caddy
+caddy_data/
+caddy_config/

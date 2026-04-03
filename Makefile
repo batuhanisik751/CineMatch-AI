@@ -1,4 +1,4 @@
-.PHONY: setup run test download pipeline seed evaluate clean lint format
+.PHONY: setup run test download pipeline seed evaluate clean lint format prod-build prod-up prod-down prod-logs
 
 setup:          ## Install dependencies and run migrations
 	pip install -e ".[dev]"
@@ -34,3 +34,16 @@ lint:           ## Run linter
 
 format:         ## Format code
 	ruff format src/ tests/
+
+prod-build:     ## Build frontend and production Docker images
+	cd frontend && npm run build
+	docker compose -f docker-compose.prod.yml build
+
+prod-up:        ## Start production stack (HTTPS via Caddy)
+	docker compose -f docker-compose.prod.yml up -d
+
+prod-down:      ## Stop production stack
+	docker compose -f docker-compose.prod.yml down
+
+prod-logs:      ## Tail production logs
+	docker compose -f docker-compose.prod.yml logs -f

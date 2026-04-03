@@ -1,4 +1,5 @@
-const BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "../config";
+
 const TOKEN_KEY = "cinematch_auth_token";
 
 export class ApiError extends Error {
@@ -24,7 +25,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers,
   });

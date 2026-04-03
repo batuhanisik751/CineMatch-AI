@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     api_port: int = 8000
     debug: bool = False
 
+    # Domain (for production HTTPS / Caddy TLS)
+    domain: str = "localhost"
+
+    # CORS origins (JSON list; defaults work for local dev)
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+
 
 @lru_cache
 def get_settings() -> Settings:

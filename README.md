@@ -35,7 +35,8 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Caching** | Redis 7 |
 | **LLM** | Ollama (local) or Groq (cloud, free tier) — optional |
 | **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS + Recharts |
-| **Infrastructure** | Docker Compose (PostgreSQL + Redis) |
+| **Reverse Proxy** | Caddy 2 (automatic HTTPS / Let's Encrypt) |
+| **Infrastructure** | Docker Compose (PostgreSQL + Redis), production compose with Caddy |
 
 ### Data Sources
 
@@ -262,6 +263,32 @@ ollama serve
 
 Docker services run in the background (`docker compose up -d`). If using Groq, no third terminal is needed.
 
+### Production Deployment
+
+The production stack runs everything in Docker behind a Caddy reverse proxy with automatic HTTPS.
+
+```bash
+# 1. Build frontend and Docker images
+make prod-build
+
+# 2. Configure production environment
+cp .env.example .env
+# Edit .env: set CINEMATCH_SECRET_KEY, CINEMATCH_DOMAIN, etc.
+
+# 3. Start production stack
+make prod-up
+# App available at https://localhost (self-signed cert)
+# or https://your-domain.com (auto Let's Encrypt cert)
+
+# 4. View logs
+make prod-logs
+
+# 5. Stop
+make prod-down
+```
+
+In production, only Caddy is exposed on ports 80/443. PostgreSQL, Redis, and the app are on an internal Docker network with no host port exposure.
+
 ---
 
 ## Data Pipeline
@@ -455,6 +482,10 @@ make seed       # Load data into PostgreSQL
 make evaluate   # Run evaluation metrics
 make lint       # Lint with ruff
 make format     # Format with ruff
+make prod-build # Build frontend + production Docker images
+make prod-up    # Start production stack (HTTPS via Caddy)
+make prod-down  # Stop production stack
+make prod-logs  # Tail production logs
 ```
 
 ---
