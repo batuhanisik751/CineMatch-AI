@@ -5,8 +5,8 @@ const items = [
   { to: "/discover", icon: "explore", label: "Discover" },
   { to: "/search", icon: "search", label: "Search" },
   { to: "/for-you", icon: "auto_awesome", label: "For You" },
-  { to: "/watchlist", icon: "bookmark", label: "Watchlist" },
-  { to: "/lists", icon: "playlist_add", label: "Lists" },
+  { to: "/library", icon: "local_library", label: "Library" },
+  { to: "/activity", icon: "emoji_events", label: "Activity" },
   { to: "/profile", icon: "person", label: "Profile" },
 ];
 

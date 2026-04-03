@@ -484,7 +484,7 @@ export default function MovieDetail() {
             <div className="text-center py-4">
               <p className="text-on-surface-variant text-sm">No lists yet</p>
               <Link
-                to="/lists"
+                to="/library/lists"
                 className="text-primary text-sm font-bold mt-2 inline-block"
                 onClick={() => setShowListModal(false)}
               >

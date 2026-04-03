@@ -113,7 +113,7 @@ export default function ListDetail() {
   const handleDelete = async () => {
     try {
       await deleteList(userId, listId);
-      navigate("/lists");
+      navigate("/library/lists");
     } catch {
       // silent
     }
@@ -203,7 +203,7 @@ export default function ListDetail() {
               {/* Header */}
               <div className="mb-10">
                 <Link
-                  to="/lists"
+                  to="/library/lists"
                   className="text-on-surface-variant text-xs uppercase tracking-widest hover:text-primary transition-colors mb-3 inline-flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-[16px]">

@@ -1,20 +1,17 @@
 import { useEffect, useState } from "react";
-import { getDirectorGaps, getActorGaps } from "../api/users";
-import type { CollectionGroup } from "../api/types";
-import BottomNav from "../components/BottomNav";
-import ErrorPanel from "../components/ErrorPanel";
-import LoadingSpinner from "../components/LoadingSpinner";
-import MovieCard from "../components/MovieCard";
-import AddToListModal from "../components/AddToListModal";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
-import { useUserId } from "../hooks/useUserId";
-import { useDismissed } from "../hooks/useDismissed";
-import { useMatchPredictions } from "../hooks/useMatchPredictions";
-import { useRated } from "../hooks/useRated";
-import { useWatchlist } from "../hooks/useWatchlist";
+import { getDirectorGaps, getActorGaps } from "../../api/users";
+import type { CollectionGroup } from "../../api/types";
+import ErrorPanel from "../../components/ErrorPanel";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import MovieCard from "../../components/MovieCard";
+import AddToListModal from "../../components/AddToListModal";
+import { useUserId } from "../../hooks/useUserId";
+import { useDismissed } from "../../hooks/useDismissed";
+import { useMatchPredictions } from "../../hooks/useMatchPredictions";
+import { useRated } from "../../hooks/useRated";
+import { useWatchlist } from "../../hooks/useWatchlist";
 
-export default function DirectorGaps() {
+export default function GapsTab() {
   const { userId } = useUserId();
   const { isInWatchlist, toggle, refreshForMovieIds } = useWatchlist();
   const { isDismissed, toggleDismiss, refreshDismissedForMovieIds } =
@@ -138,92 +135,86 @@ export default function DirectorGaps() {
 
   return (
     <>
-      <TopNav />
-      <Sidebar />
-      <main className="pt-32 pb-20 px-6 lg:ml-64 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          <header className="mb-10">
-            <h1 className="font-headline font-extrabold text-on-surface tracking-tight mb-2 text-3xl md:text-5xl">
-              Movies You Haven't Seen
-            </h1>
-            <p className="text-on-surface-variant font-label text-sm uppercase tracking-[0.2em]">
-              By directors and actors you love
-            </p>
-          </header>
+      <header className="mb-10">
+        <h1 className="font-headline font-extrabold text-on-surface tracking-tight mb-2 text-3xl md:text-5xl">
+          Movies You Haven't Seen
+        </h1>
+        <p className="text-on-surface-variant font-label text-sm uppercase tracking-[0.2em]">
+          By directors and actors you love
+        </p>
+      </header>
 
-          {loading && <LoadingSpinner text="Finding your gaps..." />}
-          {error && (
-            <ErrorPanel
-              message={error}
-              onRetry={() => window.location.reload()}
-            />
-          )}
+      {loading && <LoadingSpinner text="Finding your gaps..." />}
+      {error && (
+        <ErrorPanel
+          message={error}
+          onRetry={() => window.location.reload()}
+        />
+      )}
 
-          {!loading && !error && totalGroups === 0 && (
-            <div className="text-center py-20">
-              <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-4 block">
-                person_search
-              </span>
-              <p className="text-on-surface-variant text-lg max-w-md mx-auto">
-                Rate at least 3 films by the same director or actor to see gaps
-                here.
-              </p>
-            </div>
-          )}
+      {!loading && !error && totalGroups === 0 && (
+        <div className="text-center py-20">
+          <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-4 block">
+            person_search
+          </span>
+          <p className="text-on-surface-variant text-lg max-w-md mx-auto">
+            Rate at least 3 films by the same director or actor to see gaps
+            here.
+          </p>
+        </div>
+      )}
 
-          {!loading && !error && totalGroups > 0 && (
+      {!loading && !error && totalGroups > 0 && (
+        <>
+          <p className="text-on-surface-variant text-sm mb-8">
+            {totalMissing} film{totalMissing !== 1 ? "s" : ""} to discover
+            across {totalGroups} creator
+            {totalGroups !== 1 ? "s" : ""}
+          </p>
+
+          {/* Director section */}
+          {directorGroups.length > 0 && (
             <>
-              <p className="text-on-surface-variant text-sm mb-8">
-                {totalMissing} film{totalMissing !== 1 ? "s" : ""} to discover
-                across {totalGroups} creator
-                {totalGroups !== 1 ? "s" : ""}
-              </p>
-
-              {/* Director section */}
-              {directorGroups.length > 0 && (
-                <>
-                  <div className="flex items-center gap-2 mb-6">
-                    <span className="material-symbols-outlined text-[#FFC107]">
-                      movie_filter
-                    </span>
-                    <h2 className="font-headline font-extrabold text-on-surface text-xl md:text-2xl">
-                      Directors You Love
-                    </h2>
-                  </div>
-                  <div className="space-y-12 mb-16">
-                    {directorGroups.map(renderGroup)}
-                  </div>
-                </>
-              )}
-
-              {/* Actor section */}
-              {actorGroups.length > 0 && (
-                <>
-                  {directorGroups.length > 0 && (
-                    <hr className="border-white/5 mb-10" />
-                  )}
-                  <div className="flex items-center gap-2 mb-6">
-                    <span className="material-symbols-outlined text-[#FFC107]">
-                      theater_comedy
-                    </span>
-                    <h2 className="font-headline font-extrabold text-on-surface text-xl md:text-2xl">
-                      Actors You Love
-                    </h2>
-                  </div>
-                  <div className="space-y-12">
-                    {actorGroups.map(renderGroup)}
-                  </div>
-                </>
-              )}
+              <div className="flex items-center gap-2 mb-6">
+                <span className="material-symbols-outlined text-[#FFC107]">
+                  movie_filter
+                </span>
+                <h2 className="font-headline font-extrabold text-on-surface text-xl md:text-2xl">
+                  Directors You Love
+                </h2>
+              </div>
+              <div className="space-y-12 mb-16">
+                {directorGroups.map(renderGroup)}
+              </div>
             </>
           )}
-        </div>
-      </main>
+
+          {/* Actor section */}
+          {actorGroups.length > 0 && (
+            <>
+              {directorGroups.length > 0 && (
+                <hr className="border-white/5 mb-10" />
+              )}
+              <div className="flex items-center gap-2 mb-6">
+                <span className="material-symbols-outlined text-[#FFC107]">
+                  theater_comedy
+                </span>
+                <h2 className="font-headline font-extrabold text-on-surface text-xl md:text-2xl">
+                  Actors You Love
+                </h2>
+              </div>
+              <div className="space-y-12">
+                {actorGroups.map(renderGroup)}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       <AddToListModal
         movieId={addToListMovieId}
         onClose={() => setAddToListMovieId(null)}
       />
-      <BottomNav />
     </>
   );
 }

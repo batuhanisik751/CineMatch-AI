@@ -16,17 +16,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getDismissals, undismissMovie } from "../api/dismissals";
-import { exportRatings, getUserRatings } from "../api/ratings";
-import type { AchievementResponse, AffinitiesResponse, AffinityEntry, DismissalItemResponse, RatingComparisonResponse, RatingResponse, StreakResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../api/types";
-import { getRatingComparison, getTasteProfile, getUser, getUserAchievements, getUserAffinities, getUserStats, getUserStreaks } from "../api/users";
-import BottomNav from "../components/BottomNav";
-import ErrorPanel from "../components/ErrorPanel";
-import ImportRatingsModal from "../components/ImportRatingsModal";
-import TopNav from "../components/TopNav";
-import { useUserId } from "../hooks/useUserId";
+import { getDismissals, undismissMovie } from "../../api/dismissals";
+import { exportRatings, getUserRatings } from "../../api/ratings";
+import type { AchievementResponse, AffinitiesResponse, AffinityEntry, DismissalItemResponse, RatingComparisonResponse, RatingResponse, StreakResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "../../api/types";
+import { getRatingComparison, getTasteProfile, getUser, getUserAchievements, getUserAffinities, getUserStats, getUserStreaks } from "../../api/users";
+import ErrorPanel from "../../components/ErrorPanel";
+import ImportRatingsModal from "../../components/ImportRatingsModal";
+import { useUserId } from "../../hooks/useUserId";
 
-export default function Profile() {
+export default function OverviewTab() {
   const { userId } = useUserId();
   const [user, setUser] = useState<UserResponse | null>(null);
   const [ratings, setRatings] = useState<RatingResponse[]>([]);
@@ -144,8 +142,7 @@ export default function Profile() {
 
   return (
     <>
-      <TopNav />
-      <main className="pt-32 pb-20 px-8 max-w-7xl mx-auto flex flex-col gap-12">
+      <div className="flex flex-col gap-12">
         {/* Profile Header / Lookup */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           <div className="lg:col-span-1 flex flex-col gap-6">
@@ -260,7 +257,7 @@ export default function Profile() {
                 <span className="material-symbols-outlined text-3xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>emoji_events</span>
                 <h2 className="font-headline text-2xl font-extrabold tracking-tight text-on-surface">Achievements</h2>
               </div>
-              <Link to="/achievements" className="text-sm text-primary hover:underline">
+              <Link to="/activity/achievements" className="text-sm text-primary hover:underline">
                 View all {achievements.unlocked_count}/{achievements.total_count}
               </Link>
             </div>
@@ -287,7 +284,7 @@ export default function Profile() {
 
         {/* Taste Evolution Link */}
         <Link
-          to="/taste-evolution"
+          to="/profile/taste-evolution"
           className="flex items-center gap-4 p-6 rounded-xl bg-surface-container-low hover:bg-surface-container transition-all group"
         >
           <span className="material-symbols-outlined text-3xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>timeline</span>
@@ -416,7 +413,7 @@ export default function Profile() {
             <div>
               <div className="flex items-center justify-between">
                 <h2 className="font-headline text-3xl font-black italic tracking-tighter text-on-surface mb-2">Analytics</h2>
-                <Link to="/diary" className="flex items-center gap-1.5 text-sm font-bold text-primary hover:text-primary/80 transition-colors">
+                <Link to="/activity/diary" className="flex items-center gap-1.5 text-sm font-bold text-primary hover:text-primary/80 transition-colors">
                   <span className="material-symbols-outlined text-base">calendar_month</span>
                   Film Diary
                 </Link>
@@ -804,7 +801,7 @@ export default function Profile() {
             </div>
           </section>
         )}
-      </main>
+      </div>
 
       {/* Footer */}
       <footer className="mt-20 border-t border-white/5 bg-surface-container-lowest py-12 px-8">
@@ -819,7 +816,7 @@ export default function Profile() {
           </div>
         </div>
       </footer>
-      <BottomNav />
+
       <ImportRatingsModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}

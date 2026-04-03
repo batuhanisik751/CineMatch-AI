@@ -32,10 +32,11 @@ export default function TopNav() {
       <div className="hidden md:flex items-center gap-5">
         {navLink("/", "Home")}
         {navLink("/discover", "Discover")}
+        {navLink("/search", "Search")}
         {navLink("/explore", "Explore")}
-        {navLink("/compare", "Compare")}
         {navLink("/for-you", "For You")}
-        {navLink("/watchlist", "Watchlist")}
+        {navLink("/library", "Library")}
+        {navLink("/activity", "Activity")}
         {navLink("/profile", "Profile")}
       </div>
       <div className="flex items-center gap-6">

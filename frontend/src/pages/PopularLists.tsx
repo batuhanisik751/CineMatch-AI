@@ -46,7 +46,7 @@ export default function PopularLists() {
           {/* Header */}
           <div className="mb-10">
             <Link
-              to="/lists"
+              to="/library/lists"
               className="text-on-surface-variant text-xs uppercase tracking-widest hover:text-primary transition-colors mb-3 inline-flex items-center gap-1"
             >
               <span className="material-symbols-outlined text-[16px]">arrow_back</span>
@@ -83,7 +83,7 @@ export default function PopularLists() {
                 {lists.map((list) => (
                   <Link
                     key={list.id}
-                    to={`/lists/${list.id}`}
+                    to={`/library/lists/${list.id}`}
                     className="group glass-card rounded-xl overflow-hidden transition-all duration-300 glow-hover"
                   >
                     <div className="h-32 bg-surface-container-low flex overflow-hidden">

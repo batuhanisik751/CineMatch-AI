@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { searchMovies } from "../../api/movies";
 import type { MovieSummary } from "../../api/types";
@@ -12,8 +12,25 @@ import { useMatchPredictions } from "../../hooks/useMatchPredictions";
 import { useWatchlist } from "../../hooks/useWatchlist";
 
 export default function TitleTab() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const q = params.get("q") || "";
+  const [input, setInput] = useState(q);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Sync input when URL param changes externally (e.g. browser back)
+  useEffect(() => { setInput(q); }, [q]);
+
+  const handleInputChange = (value: string) => {
+    setInput(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (value.trim()) {
+        setParams({ q: value.trim() });
+      } else {
+        setParams({});
+      }
+    }, 500);
+  };
   const [results, setResults] = useState<MovieSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -40,21 +57,42 @@ export default function TitleTab() {
 
   return (
     <>
-      <header className="mb-12">
+      <header className="mb-8">
         <h1 className="font-headline font-extrabold text-on-surface tracking-tight mb-2 text-3xl md:text-5xl">
-          {q ? (
-            <>
-              Found <span className="text-primary-container">{total}</span> results
-              for <span className="italic text-primary">"{q}"</span>
-            </>
-          ) : (
-            "Search for movies"
-          )}
+          Search for movies
         </h1>
         <p className="text-on-surface-variant font-label text-sm uppercase tracking-[0.2em]">
           CineMatch-AI Intelligence Engine
         </p>
       </header>
+
+      <div className="mb-10">
+        <div className="relative max-w-2xl">
+          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline/60 text-xl">search</span>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => handleInputChange(e.target.value)}
+            placeholder="Type a movie title..."
+            className="w-full h-12 pl-12 pr-5 bg-surface-container-lowest border border-outline-variant/20 rounded-full text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint focus:outline-none font-body text-base"
+          />
+          {input && (
+            <button
+              onClick={() => handleInputChange("")}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {q && (
+        <p className="mb-6 text-on-surface-variant text-sm">
+          Found <span className="text-primary-container font-bold">{total}</span> results
+          for <span className="italic text-primary">"{q}"</span>
+        </p>
+      )}
 
       {loading && <LoadingSpinner text="Syncing cinematic metadata..." />}
       {error && <ErrorPanel message={error} onRetry={() => window.location.reload()} />}

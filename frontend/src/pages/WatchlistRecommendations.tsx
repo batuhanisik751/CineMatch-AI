@@ -71,7 +71,7 @@ export default function WatchlistRecommendations() {
         {/* Header */}
         <header className="mb-12">
           <Link
-            to="/watchlist"
+            to="/library/watchlist"
             className="inline-flex items-center gap-2 text-on-surface-variant hover:text-primary text-sm mb-6 transition-colors"
           >
             <span className="material-symbols-outlined text-lg">arrow_back</span>
