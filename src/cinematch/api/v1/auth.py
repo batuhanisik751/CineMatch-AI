@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import get_current_user, get_db
+from cinematch.config import get_settings
+from cinematch.core.rate_limit import limiter
 from cinematch.models.user import User
 from cinematch.schemas.auth import RegisterRequest, TokenResponse
 from cinematch.schemas.user import UserResponse
@@ -22,7 +24,9 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
+@limiter.limit(get_settings().rate_limit_auth)
 async def register(
+    request: Request,
     body: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
@@ -45,7 +49,9 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit(get_settings().rate_limit_auth)
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:

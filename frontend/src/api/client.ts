@@ -36,6 +36,21 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       window.dispatchEvent(new Event("auth:logout"));
     }
 
+    // On 429, dispatch event for toast notification
+    if (res.status === 429) {
+      const retryAfter = res.headers.get("Retry-After");
+      const seconds = retryAfter ? parseInt(retryAfter, 10) : 60;
+      const body = await res.json().catch(() => ({ detail: "Too many requests" }));
+      const message =
+        body.detail || `Too many requests. Please wait ${seconds} seconds.`;
+      window.dispatchEvent(
+        new CustomEvent("rate-limited", {
+          detail: { message, retryAfter: seconds },
+        })
+      );
+      throw new ApiError(429, message);
+    }
+
     const body = await res.json().catch(() => ({ detail: "Unknown error" }));
     throw new ApiError(res.status, body.detail || `HTTP ${res.status}`);
   }

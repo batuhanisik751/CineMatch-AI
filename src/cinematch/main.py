@@ -10,6 +10,8 @@ import faiss
 import scipy.sparse as sp
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from cinematch import __version__
 from cinematch.api.v1.router import api_v1_router
@@ -22,6 +24,7 @@ from cinematch.core.exceptions import (
     service_unavailable_handler,
 )
 from cinematch.core.logging import setup_logging
+from cinematch.core.rate_limit import limiter
 from cinematch.services.achievement_service import AchievementService
 from cinematch.services.bingo_service import BingoService
 from cinematch.services.blind_spot_service import BlindSpotService
@@ -203,6 +206,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.state.limiter = limiter
+
     settings = get_settings()
     app.add_middleware(
         CORSMiddleware,
@@ -214,6 +219,7 @@ def create_app() -> FastAPI:
 
     app.add_exception_handler(NotFoundError, not_found_handler)
     app.add_exception_handler(ServiceUnavailableError, service_unavailable_handler)
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     app.include_router(api_v1_router)
 

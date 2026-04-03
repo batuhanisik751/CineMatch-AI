@@ -35,6 +35,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Caching** | Redis 7 |
 | **LLM** | Ollama (local) or Groq (cloud, free tier) — optional |
 | **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS + Recharts |
+| **Rate Limiting** | slowapi (Redis-backed, per-endpoint tiers) |
 | **Reverse Proxy** | Caddy 2 (automatic HTTPS / Let's Encrypt) |
 | **Infrastructure** | Docker Compose (PostgreSQL + Redis), production compose with Caddy |
 
@@ -122,6 +123,15 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Import / Export** | Bring ratings from Letterboxd or IMDb via CSV |
 | **Onboarding** | Rate 10-20 popular movies to bootstrap your taste profile |
 | **Platform Stats** | Community-wide statistics dashboard |
+
+### Security
+
+| Feature | Description |
+|---------|-------------|
+| **JWT Authentication** | Register/login with email + password, bcrypt hashing, Bearer token auth |
+| **HTTPS** | Caddy reverse proxy with automatic TLS / Let's Encrypt |
+| **Rate Limiting** | Redis-backed per-endpoint limits (100/min global, 5/min auth, 10/min recommendations, 30/min search, 3/min CSV import) |
+| **Credential Protection** | SecretStr for all sensitive config, no insecure defaults, Redis password auth |
 
 ### Content Analysis (Per Movie)
 
@@ -442,7 +452,7 @@ src/cinematch/
   schemas/            Pydantic v2 request/response validation
   pipeline/           Offline data processing (cleaner, embedder, FAISS, ALS)
   evaluation/         Recommendation quality metrics (Precision, Recall, NDCG, MAP)
-  core/               Cache, exceptions, logging
+  core/               Cache, exceptions, logging, rate limiting
   db/                 Database engine, sessions, Alembic migrations
   config.py           Environment-based settings (CINEMATCH_ prefix)
   main.py             FastAPI app factory with lifespan

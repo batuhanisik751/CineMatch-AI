@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import (
@@ -18,8 +18,10 @@ from cinematch.api.deps import (
     get_rating_service,
     require_same_user,
 )
+from cinematch.config import get_settings
 from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import NotFoundError, ServiceUnavailableError
+from cinematch.core.rate_limit import get_user_or_ip, limiter
 from cinematch.models.user import User
 from cinematch.schemas.movie import MovieSummary
 from cinematch.schemas.recommendation import (
@@ -49,7 +51,9 @@ router = APIRouter()
     "/users/{user_id}/recommendations",
     response_model=RecommendationsResponse,
 )
+@limiter.limit(get_settings().rate_limit_recommendations, key_func=get_user_or_ip)
 async def get_recommendations(
+    request: Request,
     user_id: int,
     top_k: int = Query(default=20, ge=1, le=100),
     strategy: str = Query(default="hybrid", pattern="^(hybrid|content|collab)$"),
@@ -118,7 +122,9 @@ async def get_recommendations(
     "/users/{user_id}/recommendations/explain/{movie_id}",
     response_model=RecommendationExplanation,
 )
+@limiter.limit(get_settings().rate_limit_recommendations, key_func=get_user_or_ip)
 async def explain_recommendation(
+    request: Request,
     user_id: int,
     movie_id: int,
     score: float | None = Query(default=None),
@@ -172,7 +178,9 @@ async def explain_recommendation(
     "/users/{user_id}/recommendations/from-seed/{movie_id}",
     response_model=FromSeedRecommendationsResponse,
 )
+@limiter.limit(get_settings().rate_limit_recommendations, key_func=get_user_or_ip)
 async def get_from_seed_recommendations(
+    request: Request,
     user_id: int,
     movie_id: int,
     limit: int = Query(default=20, ge=1, le=100),
@@ -259,7 +267,9 @@ async def get_from_seed_recommendations(
     "/recommendations/mood",
     response_model=MoodRecommendationResponse,
 )
+@limiter.limit(get_settings().rate_limit_recommendations)
 async def mood_recommendations(
+    request: Request,
     body: MoodRecommendationRequest,
     db: AsyncSession = Depends(get_db),
     movie_service: MovieService = Depends(get_movie_service),

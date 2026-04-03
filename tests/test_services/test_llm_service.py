@@ -125,9 +125,7 @@ async def test_generate_ollama_empty_response(llm_service):
 
 async def test_generate_groq_success(groq_service):
     mock_response = MagicMock()
-    mock_response.json.return_value = {
-        "choices": [{"message": {"content": "Hello from Groq"}}]
-    }
+    mock_response.json.return_value = {"choices": [{"message": {"content": "Hello from Groq"}}]}
     mock_response.raise_for_status = MagicMock()
 
     with patch.object(groq_service._client, "post", new_callable=AsyncMock) as mock_post:

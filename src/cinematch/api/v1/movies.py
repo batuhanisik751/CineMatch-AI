@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import (
@@ -17,8 +17,10 @@ from cinematch.api.deps import (
     get_rating_service,
     get_thematic_collection_service,
 )
+from cinematch.config import get_settings
 from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import ServiceUnavailableError
+from cinematch.core.rate_limit import limiter
 from cinematch.schemas.movie import (
     ActorFilmographyResponse,
     ActorFilmResult,
@@ -99,7 +101,9 @@ router = APIRouter()
 
 
 @router.get("/search", response_model=MovieSearchResponse)
+@limiter.limit(get_settings().rate_limit_search)
 async def search_movies(
+    request: Request,
     q: str = Query(min_length=1),
     limit: int = Query(default=20, ge=1, le=100),
     user_id: int | None = Query(default=None, ge=1),
@@ -198,7 +202,9 @@ async def discover_movies(
 
 
 @router.get("/semantic-search", response_model=SemanticSearchResponse)
+@limiter.limit(get_settings().rate_limit_search)
 async def semantic_search(
+    request: Request,
     q: str = Query(min_length=1),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -513,7 +519,9 @@ async def get_decade_movies(
 
 
 @router.get("/directors/search", response_model=DirectorSearchResponse)
+@limiter.limit(get_settings().rate_limit_search)
 async def search_directors(
+    request: Request,
     q: str = Query(min_length=1),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -604,7 +612,9 @@ async def director_filmography(
 
 
 @router.get("/actors/search", response_model=ActorSearchResponse)
+@limiter.limit(get_settings().rate_limit_search)
 async def search_actors(
+    request: Request,
     q: str = Query(min_length=1),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -843,7 +853,9 @@ async def keyword_movies(
 
 
 @router.get("/advanced-search", response_model=AdvancedSearchResponse)
+@limiter.limit(get_settings().rate_limit_search)
 async def advanced_search(
+    request: Request,
     genre: str | None = Query(default=None, max_length=100),
     decade: str | None = Query(default=None, pattern=r"^\d{4}s$"),
     min_rating: float | None = Query(default=None, ge=0, le=10),
@@ -1196,7 +1208,9 @@ async def get_movie_path(
 
 
 @router.get("/autocomplete", response_model=AutocompleteResponse)
+@limiter.limit(get_settings().rate_limit_search)
 async def autocomplete_movies(
+    request: Request,
     q: str = Query(min_length=1, max_length=100),
     limit: int = Query(default=8, ge=1, le=8),
     db: AsyncSession = Depends(get_db),

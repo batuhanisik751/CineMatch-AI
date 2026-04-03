@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,7 @@ from cinematch.api.deps import (
 )
 from cinematch.config import get_settings
 from cinematch.core.cache import CacheService
+from cinematch.core.rate_limit import get_user_or_ip, limiter
 from cinematch.models.user import User
 from cinematch.schemas.rating import (
     ImportResponse,
@@ -44,7 +45,9 @@ router = APIRouter()
     "/users/{user_id}/ratings/import",
     response_model=ImportResponse,
 )
+@limiter.limit(get_settings().rate_limit_csv_import, key_func=get_user_or_ip)
 async def import_ratings(
+    request: Request,
     user_id: int,
     file: UploadFile = File(...),
     source: ImportSource = Query(default=ImportSource.AUTO),

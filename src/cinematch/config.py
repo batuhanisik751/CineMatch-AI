@@ -81,6 +81,14 @@ class Settings(BaseSettings):
     # CORS origins (JSON list; defaults work for local dev)
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
+    # Rate limiting
+    rate_limit_enabled: bool = True
+    rate_limit_default: str = "100/minute"
+    rate_limit_auth: str = "5/minute"
+    rate_limit_recommendations: str = "10/minute"
+    rate_limit_search: str = "30/minute"
+    rate_limit_csv_import: str = "3/minute"
+
 
 @lru_cache
 def get_settings() -> Settings:
