@@ -6,12 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cinematch.api.deps import get_current_user, get_db
+from cinematch.api.deps import get_audit_service, get_client_info, get_current_user, get_db
 from cinematch.config import get_settings
 from cinematch.core.rate_limit import limiter
 from cinematch.models.user import User
 from cinematch.schemas.auth import RegisterRequest, TokenResponse
 from cinematch.schemas.user import UserResponse
+from cinematch.services.audit_service import AuditService
 from cinematch.services.auth_service import (
     authenticate_user,
     create_access_token,
@@ -29,8 +30,10 @@ async def register(
     request: Request,
     body: RegisterRequest,
     db: AsyncSession = Depends(get_db),
+    audit: AuditService = Depends(get_audit_service),
 ) -> TokenResponse:
     """Register a new user account and return a JWT token."""
+    ip, ua = get_client_info(request)
     email = body.email.lower().strip()
 
     if await get_user_by_email(email, db):
@@ -40,6 +43,13 @@ async def register(
         raise HTTPException(status_code=409, detail="Username already taken")
 
     user = await register_user(email, body.username, body.password, db)
+    await audit.log(
+        "auth.register",
+        db,
+        user_id=user.id,
+        ip_address=ip,
+        user_agent=ua,
+    )
     token = create_access_token({"sub": str(user.id), "username": user.username})
     return TokenResponse(
         access_token=token,
@@ -54,19 +64,30 @@ async def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
+    audit: AuditService = Depends(get_audit_service),
 ) -> TokenResponse:
     """Authenticate with email (as username) and password. Returns a JWT token.
 
     Uses OAuth2 form format for Swagger UI compatibility.
     The `username` field should contain the user's email address.
     """
+    ip, ua = get_client_info(request)
     user = await authenticate_user(form_data.username, form_data.password, db)
     if user is None:
+        await audit.log(
+            "auth.login_failed",
+            db,
+            detail={"email": form_data.username},
+            ip_address=ip,
+            user_agent=ua,
+            status="failure",
+        )
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    await audit.log("auth.login", db, user_id=user.id, ip_address=ip, user_agent=ua)
     token = create_access_token({"sub": str(user.id), "username": user.username})
     return TokenResponse(
         access_token=token,

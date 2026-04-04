@@ -29,3 +29,6 @@ def setup_logging(debug: bool = False) -> None:
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+
+    # Prevent audit file logger from duplicating to stdout
+    logging.getLogger("audit.file").propagate = False

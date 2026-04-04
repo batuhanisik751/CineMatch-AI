@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient
 
 from cinematch.api.deps import (
     get_achievement_service,
+    get_audit_service,
     get_bingo_service,
     get_blind_spot_service,
     get_cache_service,
@@ -864,6 +865,14 @@ def mock_blind_spot_service():
 
 
 @pytest.fixture()
+def mock_audit_service():
+    svc = AsyncMock()
+    svc.log.return_value = None
+    svc.query.return_value = ([], 0)
+    return svc
+
+
+@pytest.fixture()
 def mock_db():
     return AsyncMock()
 
@@ -893,6 +902,7 @@ def app(
     mock_rewatch_service,
     mock_onboarding_service,
     mock_blind_spot_service,
+    mock_audit_service,
     mock_db,
 ):
     test_app = create_app()
@@ -924,6 +934,7 @@ def app(
     test_app.dependency_overrides[get_rewatch_service] = lambda: mock_rewatch_service
     test_app.dependency_overrides[get_onboarding_service] = lambda: mock_onboarding_service
     test_app.dependency_overrides[get_blind_spot_service] = lambda: mock_blind_spot_service
+    test_app.dependency_overrides[get_audit_service] = lambda: mock_audit_service
 
     return test_app
 

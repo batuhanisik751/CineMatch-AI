@@ -107,6 +107,10 @@ class Settings(BaseSettings):
         "form-action 'self'"
     )
 
+    # Audit logging
+    audit_log_file: str = "logs/audit.log"
+    audit_log_enabled: bool = True
+
     # Rate limiting
     rate_limit_enabled: bool = True
     rate_limit_default: str = "100/minute"

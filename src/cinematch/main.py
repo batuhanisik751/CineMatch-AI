@@ -16,6 +16,7 @@ from slowapi.errors import RateLimitExceeded
 from cinematch import __version__
 from cinematch.api.v1.router import api_v1_router
 from cinematch.config import get_settings
+from cinematch.core.audit_middleware import AuditMiddleware
 from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import (
     NotFoundError,
@@ -180,6 +181,15 @@ async def lifespan(app: FastAPI):
         dismissal_service=app.state.dismissal_service,
     )
 
+    # Audit logging service
+    from cinematch.services.audit_service import AuditService
+
+    app.state.audit_service = AuditService(
+        log_file=settings.audit_log_file,
+        enabled=settings.audit_log_enabled,
+    )
+    logger.info("Audit logging %s.", "enabled" if settings.audit_log_enabled else "disabled")
+
     # Redis cache (optional — app works without it)
     try:
         cache_service = CacheService(
@@ -215,6 +225,7 @@ def create_app() -> FastAPI:
 
     app.state.limiter = limiter
 
+    app.add_middleware(AuditMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         CORSMiddleware,

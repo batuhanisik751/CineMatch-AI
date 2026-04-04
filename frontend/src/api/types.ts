@@ -975,3 +975,21 @@ export interface MovieComparisonResponse {
   rating_comparison: RatingComparison;
   als_prediction: ALSPrediction | null;
 }
+
+export interface AuditLogEntry {
+  id: number;
+  timestamp: string;
+  user_id: number | null;
+  action: string;
+  detail: Record<string, unknown> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  status: string;
+}
+
+export interface AuditLogListResponse {
+  logs: AuditLogEntry[];
+  total: number;
+  offset: number;
+  limit: number;
+}

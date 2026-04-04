@@ -17,6 +17,7 @@ from cinematch.services.auth_service import decode_access_token
 if TYPE_CHECKING:
     from cinematch.core.cache import CacheService
     from cinematch.services.achievement_service import AchievementService
+    from cinematch.services.audit_service import AuditService
     from cinematch.services.bingo_service import BingoService
     from cinematch.services.blind_spot_service import BlindSpotService
     from cinematch.services.challenge_service import ChallengeService
@@ -176,3 +177,14 @@ def get_blind_spot_service(request: Request) -> BlindSpotService:
 
 def get_collab_recommender(request: Request) -> CollabRecommender | None:
     return getattr(request.app.state, "collab_recommender", None)
+
+
+def get_audit_service(request: Request) -> AuditService:
+    return request.app.state.audit_service
+
+
+def get_client_info(request: Request) -> tuple[str | None, str | None]:
+    """Extract IP address and User-Agent from request."""
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    return ip, ua

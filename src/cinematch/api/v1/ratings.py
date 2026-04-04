@@ -11,7 +11,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import (
+    get_audit_service,
     get_cache_service,
+    get_client_info,
     get_current_user,
     get_db,
     get_movie_service,
@@ -31,6 +33,7 @@ from cinematch.schemas.rating import (
     RatingResponse,
     UserRatingsResponse,
 )
+from cinematch.services.audit_service import AuditService
 from cinematch.services.csv_import import (
     parse_csv_content,
     resolve_movies_imdb,
@@ -58,6 +61,7 @@ async def import_ratings(
     db: AsyncSession = Depends(get_db),
     rating_service: RatingService = Depends(get_rating_service),
     cache: CacheService | None = Depends(get_cache_service),
+    audit: AuditService = Depends(get_audit_service),
 ):
     require_same_user(current_user.id, user_id)
     settings = get_settings()
@@ -166,6 +170,22 @@ async def import_ratings(
             )
         )
 
+    ip, ua = get_client_info(request)
+    await audit.log(
+        "data.import",
+        db,
+        user_id=user_id,
+        detail={
+            "source": detected_source,
+            "total_rows": len(resolved),
+            "imported": counts["imported"],
+            "updated": counts["updated"],
+            "not_found": len(not_found),
+        },
+        ip_address=ip,
+        user_agent=ua,
+    )
+
     return ImportResponse(
         user_id=user_id,
         source=detected_source,
@@ -179,13 +199,25 @@ async def import_ratings(
 
 @router.get("/users/{user_id}/ratings/export")
 async def export_ratings(
+    request: Request,
     user_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     rating_service: RatingService = Depends(get_rating_service),
+    audit: AuditService = Depends(get_audit_service),
 ):
     require_same_user(current_user.id, user_id)
     rows = await rating_service.export_ratings(user_id, db)
+
+    ip, ua = get_client_info(request)
+    await audit.log(
+        "data.export",
+        db,
+        user_id=user_id,
+        detail={"rows_exported": len(rows)},
+        ip_address=ip,
+        user_agent=ua,
+    )
 
     output = io.StringIO()
     writer = csv.writer(output)

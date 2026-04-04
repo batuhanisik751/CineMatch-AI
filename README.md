@@ -136,6 +136,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Security Headers** | X-Content-Type-Options, X-Frame-Options, HSTS, Content-Security-Policy, Referrer-Policy, Permissions-Policy on every response |
 | **CORS Lockdown** | Configurable allowed origins, methods (`GET/POST/PATCH/PUT/DELETE/OPTIONS`), and headers (`Content-Type`, `Authorization`) — no wildcards in production |
 | **Error Response Hardening** | Generic error messages in all API responses — no internal IDs, service names, stack traces, or Python exceptions leak to clients. Catch-all handler for unhandled errors. Full details logged server-side only |
+| **Audit Logging** | Structured JSON audit trail for security events (login success/failure, registration, CSV import/export, authorization failures, rate limit hits). Dual-write to database + file. Per-user audit log viewer in the frontend |
 
 ### Content Analysis (Per Movie)
 
@@ -425,6 +426,7 @@ Onboarding movies/status, global platform statistics, health check.
 | **Overview** | Stats, taste profile, achievements, streaks, rating comparison |
 | **Taste Evolution** | Genre preference changes over time (stacked area chart) |
 | **Platform Stats** | Community-wide statistics dashboard |
+| **Audit Log** | Personal security activity trail with action/status filters |
 | **Achievements** | 12 badge collection with progress bars |
 | **Challenges** | Weekly rating challenges with progress tracking |
 | **Bingo** | Monthly 5x5 movie bingo card |

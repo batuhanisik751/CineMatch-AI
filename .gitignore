@@ -60,6 +60,7 @@ cover/
 
 # Logs
 *.log
+logs/
 
 # Jupyter Notebook
 .ipynb_checkpoints
