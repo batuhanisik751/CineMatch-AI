@@ -135,6 +135,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Input Validation** | 200-ID cap on bulk endpoints, max_length on search queries, SHA-256 hashed cache keys, frontend auto-batching |
 | **Security Headers** | X-Content-Type-Options, X-Frame-Options, HSTS, Content-Security-Policy, Referrer-Policy, Permissions-Policy on every response |
 | **CORS Lockdown** | Configurable allowed origins, methods (`GET/POST/PATCH/PUT/DELETE/OPTIONS`), and headers (`Content-Type`, `Authorization`) — no wildcards in production |
+| **Error Response Hardening** | Generic error messages in all API responses — no internal IDs, service names, stack traces, or Python exceptions leak to clients. Catch-all handler for unhandled errors. Full details logged server-side only |
 
 ### Content Analysis (Per Movie)
 

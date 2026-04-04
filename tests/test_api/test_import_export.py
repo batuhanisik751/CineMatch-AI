@@ -164,7 +164,7 @@ async def test_import_unrecognized_format(client):
         files={"file": ("data.csv", csv_content, "text/csv")},
     )
     assert resp.status_code == 422
-    assert "Unrecognized" in resp.json()["detail"]
+    assert "Could not parse CSV file" in resp.json()["detail"]
 
 
 async def test_export_ratings_csv(client, mock_rating_service):

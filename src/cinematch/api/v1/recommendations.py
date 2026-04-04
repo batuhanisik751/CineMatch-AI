@@ -72,7 +72,14 @@ async def get_recommendations(
             user_id, db, top_k=top_k, strategy=strategy, diversity_lambda=diversity_lambda
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        logger.warning("Recommendation error for user %s: %s", user_id, e)
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Could not generate recommendations with the requested"
+                " settings. Try a different strategy."
+            ),
+        ) from e
 
     # Enrich with movie details
     movie_ids = [r.movie_id for r in rec_results]

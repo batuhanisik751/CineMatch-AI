@@ -20,6 +20,7 @@ from cinematch.core.cache import CacheService
 from cinematch.core.exceptions import (
     NotFoundError,
     ServiceUnavailableError,
+    catch_all_handler,
     not_found_handler,
     service_unavailable_handler,
 )
@@ -223,6 +224,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(NotFoundError, not_found_handler)
     app.add_exception_handler(ServiceUnavailableError, service_unavailable_handler)
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_exception_handler(Exception, catch_all_handler)
 
     app.include_router(api_v1_router)
 

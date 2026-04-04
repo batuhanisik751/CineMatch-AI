@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import Request
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 
 class CineMatchError(Exception):
@@ -28,10 +32,32 @@ class ServiceUnavailableError(CineMatchError):
 
 
 async def not_found_handler(request: Request, exc: NotFoundError) -> JSONResponse:
-    return JSONResponse(status_code=404, content={"detail": str(exc)})
+    logger.warning(
+        "NotFoundError: %s id=%s, path=%s",
+        exc.resource,
+        exc.resource_id,
+        request.url.path,
+    )
+    return JSONResponse(
+        status_code=404,
+        content={"detail": "The requested resource was not found."},
+    )
 
 
 async def service_unavailable_handler(
     request: Request, exc: ServiceUnavailableError
 ) -> JSONResponse:
-    return JSONResponse(status_code=503, content={"detail": str(exc)})
+    logger.error(
+        "ServiceUnavailableError: %s, path=%s",
+        exc.service,
+        request.url.path,
+    )
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Service temporarily unavailable. Please try again later."},
+    )
+
+
+async def catch_all_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "An unexpected error occurred."})

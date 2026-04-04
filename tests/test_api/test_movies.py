@@ -70,7 +70,7 @@ async def test_get_similar_movies_service_unavailable(app, client):
     app.dependency_overrides[get_content_recommender] = lambda: None
     resp = await client.get("/api/v1/movies/1/similar")
     assert resp.status_code == 503
-    assert "Content recommendation service" in resp.json()["detail"]
+    assert "Service temporarily unavailable" in resp.json()["detail"]
 
 
 # --- Discover endpoint tests ---
@@ -239,7 +239,7 @@ async def test_semantic_search_service_unavailable(app, client):
     app.dependency_overrides[get_embedding_service] = lambda: None
     resp = await client.get("/api/v1/movies/semantic-search", params={"q": "funny movie"})
     assert resp.status_code == 503
-    assert "Embedding service" in resp.json()["detail"]
+    assert "Service temporarily unavailable" in resp.json()["detail"]
 
 
 async def test_semantic_search_no_results(client, mock_movie_service):

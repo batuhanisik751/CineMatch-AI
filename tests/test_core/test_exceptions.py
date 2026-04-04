@@ -20,7 +20,7 @@ async def test_not_found_handler_returns_404():
     exc = NotFoundError("Movie", 42)
     response = await not_found_handler(request, exc)
     assert response.status_code == 404
-    assert b"Movie with id 42 not found" in response.body
+    assert b"The requested resource was not found." in response.body
 
 
 @pytest.mark.asyncio
@@ -29,7 +29,7 @@ async def test_service_unavailable_handler_returns_503():
     exc = ServiceUnavailableError("LLM service")
     response = await service_unavailable_handler(request, exc)
     assert response.status_code == 503
-    assert b"LLM service is not available" in response.body
+    assert b"Service temporarily unavailable. Please try again later." in response.body
 
 
 def test_not_found_error_message():

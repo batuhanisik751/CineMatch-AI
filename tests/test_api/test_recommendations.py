@@ -68,7 +68,7 @@ async def test_get_recommendations_service_unavailable(app, client):
     app.dependency_overrides[get_hybrid_recommender] = lambda: None
     resp = await client.get("/api/v1/users/1/recommendations")
     assert resp.status_code == 503
-    assert "Recommendation service" in resp.json()["detail"]
+    assert "Service temporarily unavailable" in resp.json()["detail"]
 
 
 async def test_get_recommendations_default_diversity(client, sample_movie, mock_movie_service):
@@ -116,7 +116,7 @@ async def test_get_recommendations_collab_cold_start(client, mock_hybrid_recomme
     )
     resp = await client.get("/api/v1/users/1/recommendations", params={"strategy": "collab"})
     assert resp.status_code == 400
-    assert "collaborative filtering data" in resp.json()["detail"]
+    assert "Could not generate recommendations" in resp.json()["detail"]
 
 
 # --- Explain endpoint tests ---
@@ -137,21 +137,21 @@ async def test_explain_recommendation_llm_disabled(app, client):
     app.dependency_overrides[get_llm_service] = lambda: None
     resp = await client.get("/api/v1/users/1/recommendations/explain/1")
     assert resp.status_code == 503
-    assert "LLM service" in resp.json()["detail"]
+    assert "Service temporarily unavailable" in resp.json()["detail"]
 
 
 async def test_explain_recommendation_movie_not_found(client, mock_movie_service):
     mock_movie_service.get_by_id.return_value = None
     resp = await client.get("/api/v1/users/1/recommendations/explain/999")
     assert resp.status_code == 404
-    assert "Movie" in resp.json()["detail"]
+    assert "requested resource was not found" in resp.json()["detail"]
 
 
 async def test_explain_recommendation_no_user_ratings(client, mock_rating_service):
     mock_rating_service.get_user_ratings.return_value = ([], 0)
     resp = await client.get("/api/v1/users/1/recommendations/explain/1")
     assert resp.status_code == 404
-    assert "User" in resp.json()["detail"]
+    assert "requested resource was not found" in resp.json()["detail"]
 
 
 async def test_explain_recommendation_with_score_param(client, mock_llm_service):
@@ -225,7 +225,7 @@ async def test_mood_recommendations_service_unavailable(app, client):
         json={"mood": "thriller", "user_id": 1},
     )
     assert resp.status_code == 503
-    assert "Recommendation service" in resp.json()["detail"]
+    assert "Service temporarily unavailable" in resp.json()["detail"]
 
 
 async def test_mood_recommendations_with_custom_alpha(
@@ -340,7 +340,7 @@ async def test_from_seed_recommendations_movie_not_found(client, mock_movie_serv
     mock_movie_service.get_by_id.return_value = None
     resp = await client.get("/api/v1/users/1/recommendations/from-seed/999")
     assert resp.status_code == 404
-    assert "Movie" in resp.json()["detail"]
+    assert "requested resource was not found" in resp.json()["detail"]
 
 
 async def test_from_seed_recommendations_service_unavailable(app, client):
@@ -349,7 +349,7 @@ async def test_from_seed_recommendations_service_unavailable(app, client):
     app.dependency_overrides[get_hybrid_recommender] = lambda: None
     resp = await client.get("/api/v1/users/1/recommendations/from-seed/5")
     assert resp.status_code == 503
-    assert "Recommendation service" in resp.json()["detail"]
+    assert "Service temporarily unavailable" in resp.json()["detail"]
 
 
 async def test_from_seed_recommendations_empty_results(

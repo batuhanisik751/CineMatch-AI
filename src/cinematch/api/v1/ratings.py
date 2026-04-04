@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -37,6 +38,8 @@ from cinematch.services.csv_import import (
 )
 from cinematch.services.movie_service import MovieService
 from cinematch.services.rating_service import RatingService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -86,7 +89,13 @@ async def import_ratings(
     try:
         parsed_rows, detected_source = parse_csv_content(text, source.value)
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        logger.warning("CSV parse error for user %s: %s", user_id, e)
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Could not parse CSV file. Please ensure it is a valid Letterboxd or IMDb export."
+            ),
+        )
 
     if not parsed_rows:
         raise HTTPException(status_code=422, detail="No valid ratings found in CSV.")
