@@ -80,6 +80,17 @@ class Settings(BaseSettings):
 
     # CORS origins (JSON list; defaults work for local dev)
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    # CORS allowed methods (restrict in production; defaults cover all API verbs)
+    cors_methods: list[str] = [
+        "GET",
+        "POST",
+        "PATCH",
+        "PUT",
+        "DELETE",
+        "OPTIONS",
+    ]
+    # CORS allowed headers
+    cors_headers: list[str] = ["Content-Type", "Authorization"]
 
     # Security headers
     hsts_enabled: bool = True

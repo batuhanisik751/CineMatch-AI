@@ -134,6 +134,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Credential Protection** | SecretStr for all sensitive config, no insecure defaults, Redis password auth |
 | **Input Validation** | 200-ID cap on bulk endpoints, max_length on search queries, SHA-256 hashed cache keys, frontend auto-batching |
 | **Security Headers** | X-Content-Type-Options, X-Frame-Options, HSTS, Content-Security-Policy, Referrer-Policy, Permissions-Policy on every response |
+| **CORS Lockdown** | Configurable allowed origins, methods (`GET/POST/PATCH/PUT/DELETE/OPTIONS`), and headers (`Content-Type`, `Authorization`) — no wildcards in production |
 
 ### Content Analysis (Per Movie)
 

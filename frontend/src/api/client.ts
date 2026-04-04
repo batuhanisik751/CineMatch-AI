@@ -25,10 +25,18 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers,
+    });
+  } catch {
+    throw new ApiError(
+      0,
+      "Unable to reach the server. Please check your connection and try again."
+    );
+  }
 
   if (!res.ok) {
     // On 401, dispatch event so AuthProvider can logout via React state
