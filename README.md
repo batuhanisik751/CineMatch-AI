@@ -266,7 +266,7 @@ Open 3 terminals:
 source .venv/bin/activate
 PYTHONPATH=src uvicorn cinematch.main:app --reload --host 0.0.0.0 --port 8000
 ```
-API docs at http://localhost:8000/docs
+API docs at http://localhost:8000/docs (requires `CINEMATCH_DEBUG=true`)
 
 **Terminal 2 -- Frontend**
 ```bash
@@ -335,7 +335,7 @@ Run the full pipeline: `PYTHONPATH=src python scripts/train_models.py`
 
 ## API Overview
 
-The REST API is organized into 10 endpoint groups with 85+ routes. Full interactive docs at `/docs`.
+The REST API is organized into 10 endpoint groups with 85+ routes. Full interactive docs at `/docs` (requires `CINEMATCH_DEBUG=true`; disabled in production).
 
 ### Movies (`/api/v1/movies`)
 Search, browse, filter, and analyze movies. Includes title search, autocomplete, semantic search, discover with filters, trending, hidden gems, top charts, decades, directors, actors, cast combos, keywords, advanced multi-criteria search, thematic collections, movie DNA, rating stats, popularity timeline, connections, path finding, and side-by-side comparison.

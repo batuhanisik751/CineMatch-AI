@@ -201,16 +201,19 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    settings = get_settings()
+
     app = FastAPI(
         title="CineMatch-AI",
         description="Hybrid movie recommendation system",
         version=__version__,
         lifespan=lifespan,
+        docs_url="/docs" if settings.debug else None,
+        redoc_url="/redoc" if settings.debug else None,
+        openapi_url="/openapi.json" if settings.debug else None,
     )
 
     app.state.limiter = limiter
-
-    settings = get_settings()
 
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
@@ -230,7 +233,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health_check():
-        return {"status": "ok", "version": __version__}
+        return {"status": "ok", "version": __version__, "debug": settings.debug}
 
     return app
 

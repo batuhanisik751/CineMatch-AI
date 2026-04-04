@@ -45,6 +45,7 @@ export default function OverviewTab() {
   const [expandedAffinity, setExpandedAffinity] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   const limit = 20;
 
   const fetchUser = async () => {
@@ -100,6 +101,15 @@ export default function OverviewTab() {
     fetchUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/health`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.debug) setDebugMode(true);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleExport = async () => {
     setExporting(true);
@@ -809,7 +819,9 @@ export default function OverviewTab() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="text-primary font-headline font-black italic text-xl tracking-tighter">CINEMA PRIVATE</div>
           <div className="flex gap-8 text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-            <a className="hover:text-primary transition-colors" href={`${API_BASE_URL}/docs`} target="_blank" rel="noopener noreferrer">API Docs</a>
+            {debugMode && (
+              <a className="hover:text-primary transition-colors" href={`${API_BASE_URL}/docs`} target="_blank" rel="noopener noreferrer">API Docs</a>
+            )}
             <a className="hover:text-primary transition-colors" href={`${API_BASE_URL}/health`} target="_blank" rel="noopener noreferrer">System Status</a>
           </div>
           <div className="text-xs text-on-surface-variant/50 font-body">
