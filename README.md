@@ -133,6 +133,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Rate Limiting** | Redis-backed per-endpoint limits (100/min global, 5/min auth, 10/min recommendations, 30/min search, 3/min CSV import) |
 | **Credential Protection** | SecretStr for all sensitive config, no insecure defaults, Redis password auth |
 | **Input Validation** | 200-ID cap on bulk endpoints, max_length on search queries, SHA-256 hashed cache keys, frontend auto-batching |
+| **Security Headers** | X-Content-Type-Options, X-Frame-Options, HSTS, Content-Security-Policy, Referrer-Policy, Permissions-Policy on every response |
 
 ### Content Analysis (Per Movie)
 
@@ -453,7 +454,7 @@ src/cinematch/
   schemas/            Pydantic v2 request/response validation
   pipeline/           Offline data processing (cleaner, embedder, FAISS, ALS)
   evaluation/         Recommendation quality metrics (Precision, Recall, NDCG, MAP)
-  core/               Cache, exceptions, logging, rate limiting
+  core/               Cache, exceptions, logging, rate limiting, security headers middleware
   db/                 Database engine, sessions, Alembic migrations
   config.py           Environment-based settings (CINEMATCH_ prefix)
   main.py             FastAPI app factory with lifespan

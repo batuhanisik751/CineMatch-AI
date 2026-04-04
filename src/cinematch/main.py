@@ -24,6 +24,7 @@ from cinematch.core.exceptions import (
     service_unavailable_handler,
 )
 from cinematch.core.logging import setup_logging
+from cinematch.core.middleware import SecurityHeadersMiddleware
 from cinematch.core.rate_limit import limiter
 from cinematch.services.achievement_service import AchievementService
 from cinematch.services.bingo_service import BingoService
@@ -209,6 +210,8 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
 
     settings = get_settings()
+
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

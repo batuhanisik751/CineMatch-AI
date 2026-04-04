@@ -81,6 +81,21 @@ class Settings(BaseSettings):
     # CORS origins (JSON list; defaults work for local dev)
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
+    # Security headers
+    hsts_enabled: bool = True
+    content_security_policy: str = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' https://image.tmdb.org data:; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
+
     # Rate limiting
     rate_limit_enabled: bool = True
     rate_limit_default: str = "100/minute"
