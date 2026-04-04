@@ -4,3 +4,4 @@ export { default as TasteEvolutionTab } from "./TasteEvolutionTab";
 export { default as PlatformStatsTab } from "./PlatformStatsTab";
 export { default as AuditLogTab } from "./AuditLogTab";
 export { default as DbSecurityTab } from "./DbSecurityTab";
+export { default as PickleSafetyTab } from "./PickleSafetyTab";

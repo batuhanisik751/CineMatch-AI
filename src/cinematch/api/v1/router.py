@@ -13,6 +13,7 @@ from cinematch.api.v1 import (
     lists,
     movies,
     onboarding,
+    pickle_safety,
     predictions,
     ratings,
     recommendations,
@@ -37,3 +38,4 @@ api_v1_router.include_router(challenges.router, prefix="/challenges", tags=["cha
 api_v1_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_v1_router.include_router(predictions.router, tags=["predictions"])
 api_v1_router.include_router(db_security.router, prefix="/system", tags=["system"])
+api_v1_router.include_router(pickle_safety.router, prefix="/system", tags=["system"])

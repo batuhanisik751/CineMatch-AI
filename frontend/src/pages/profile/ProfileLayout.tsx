@@ -9,6 +9,7 @@ const TABS = [
   { label: "Platform Stats",  icon: "bar_chart", path: "platform-stats" },
   { label: "Audit Log",       icon: "security",    path: "audit-log" },
   { label: "DB Security",     icon: "shield_lock", path: "db-security" },
+  { label: "Pickle Safety",   icon: "verified_user", path: "pickle-safety" },
 ];
 
 export default function ProfileLayout() {

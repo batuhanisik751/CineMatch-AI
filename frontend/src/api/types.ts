@@ -1031,3 +1031,19 @@ export interface DbSecurityStatusResponse {
   pool: PoolStatus;
   pgvector_query_safety: PgvectorQuerySafety;
 }
+
+export interface PickleArtifactStatus {
+  file_name: string;
+  file_path: string;
+  expected_hash: string | null;
+  actual_hash: string | null;
+  status: "verified" | "mismatch" | "missing_checksum" | "missing_artifact";
+  file_size_bytes: number | null;
+  last_modified: string | null;
+}
+
+export interface PickleSafetyResponse {
+  artifacts: PickleArtifactStatus[];
+  all_verified: boolean;
+  checked_at: string;
+}

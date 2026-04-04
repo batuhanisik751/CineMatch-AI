@@ -13,6 +13,7 @@ import scipy.sparse as sp
 from implicit.als import AlternatingLeastSquares
 
 from cinematch.config import get_settings
+from cinematch.core.pickle_safety import verify_and_log
 from cinematch.evaluation.metrics import map_at_k, ndcg_at_k, precision_at_k, recall_at_k
 from cinematch.evaluation.splitter import temporal_split
 
@@ -93,6 +94,18 @@ def run_evaluation(
     # Load FAISS
     print("Loading FAISS index...")
     faiss_index = faiss.read_index(str(processed_dir / "faiss.index"))
+    pkl_paths = [
+        processed_dir / "faiss_id_map.pkl",
+        processed_dir / "als_model.pkl",
+        processed_dir / "als_user_map.pkl",
+        processed_dir / "als_item_map.pkl",
+    ]
+    for pkl_path in pkl_paths:
+        status = verify_and_log(pkl_path)
+        if status == "mismatch":
+            raise RuntimeError(
+                f"Pickle integrity check FAILED for {pkl_path}. Aborting."
+            )
     with open(processed_dir / "faiss_id_map.pkl", "rb") as f:
         faiss_id_map = pickle.load(f)  # noqa: S301
     id_to_faiss_idx = {mid: i for i, mid in enumerate(faiss_id_map)}

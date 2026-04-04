@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from cinematch.config import get_settings
+from cinematch.core.pickle_safety import save_checksum
 
 
 def build_faiss_index(
@@ -59,6 +60,7 @@ def build_faiss_index(
     # Save ID map
     with open(id_map_path, "wb") as f:
         pickle.dump(movie_ids, f)
+    save_checksum(id_map_path)
     print(f"  Saved ID map to {id_map_path} ({len(movie_ids)} entries)")
 
     # Quick sanity check: query first movie against itself

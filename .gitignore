@@ -1,6 +1,7 @@
 # Data and model artifacts
 data/
 *.pkl
+*.pkl.sha256
 *.npy
 *.index
 *.npz

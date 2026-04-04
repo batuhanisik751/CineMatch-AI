@@ -27,6 +27,7 @@ from cinematch.core.exceptions import (
 )
 from cinematch.core.logging import setup_logging
 from cinematch.core.middleware import SecurityHeadersMiddleware
+from cinematch.core.pickle_safety import verify_and_log
 from cinematch.core.rate_limit import limiter
 from cinematch.services.achievement_service import AchievementService
 from cinematch.services.bingo_service import BingoService
@@ -55,6 +56,16 @@ from cinematch.services.watchlist_service import WatchlistService
 logger = logging.getLogger(__name__)
 
 
+def _verify_or_abort(path: str) -> None:
+    """Verify pickle checksum; abort on mismatch, warn on missing."""
+    status = verify_and_log(path)
+    if status == "mismatch":
+        raise RuntimeError(
+            f"Pickle integrity check FAILED for {path}. "
+            "The file may have been tampered with. Aborting startup."
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
@@ -71,11 +82,18 @@ async def lifespan(app: FastAPI):
         # Load FAISS artifacts
         logger.info("Loading FAISS index from %s", settings.faiss_index_path)
         faiss_index = faiss.read_index(settings.faiss_index_path)
+        _verify_or_abort(settings.faiss_id_map_path)
         with open(settings.faiss_id_map_path, "rb") as f:
             faiss_id_map = pickle.load(f)  # noqa: S301
 
         # Load ALS artifacts
         logger.info("Loading ALS model from %s", settings.als_model_path)
+        for pkl_path in (
+            settings.als_model_path,
+            settings.als_user_map_path,
+            settings.als_item_map_path,
+        ):
+            _verify_or_abort(pkl_path)
         with open(settings.als_model_path, "rb") as f:
             als_model = pickle.load(f)  # noqa: S301
         with open(settings.als_user_map_path, "rb") as f:

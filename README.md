@@ -139,6 +139,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Audit Logging** | Structured JSON audit trail for security events (login success/failure, registration, CSV import/export, authorization failures, rate limit hits). Dual-write to database + file. Per-user audit log viewer in the frontend |
 | **Database Connection Security** | SSL/TLS support for PostgreSQL connections (5 modes: disable, prefer, require, verify-ca, verify-full), statement timeout to prevent slow-query DoS, connection pool hardening (recycle + pre-ping), limited-privilege database user for production, DB security dashboard in the frontend |
 | **pgvector Query Safety** | All vector similarity queries use typed `bindparam(type_=Vector(384))` bindings instead of `str()` cast — prevents type confusion and ensures pgvector's native type adapter handles serialization. Verified via the DB security dashboard |
+| **Pickle Deserialization Safety** | SHA-256 checksum verification for all pickle artifacts (FAISS ID map, ALS model, user/item maps). Checksums generated at training time, verified at startup — mismatch aborts launch. Frontend integrity dashboard at Profile > Pickle Safety |
 
 ### Content Analysis (Per Movie)
 
@@ -327,8 +328,8 @@ TMDb Metadata ------+                                     |
 | Download | `python scripts/download_data.py` | `data/raw/ml-25m/`, `data/raw/tmdb/` |
 | Clean & Join | `pipeline/cleaner.py` | `movies_clean.parquet`, `ratings_clean.parquet` |
 | Embed | `pipeline/embedder.py` | `embeddings.npy` (29K x 384) |
-| Build FAISS | `pipeline/faiss_builder.py` | `faiss.index`, `faiss_id_map.pkl` |
-| Train ALS | `pipeline/collaborative.py` | `als_model.pkl`, mappings, sparse matrix |
+| Build FAISS | `pipeline/faiss_builder.py` | `faiss.index`, `faiss_id_map.pkl`, `faiss_id_map.pkl.sha256` |
+| Train ALS | `pipeline/collaborative.py` | `als_model.pkl`, mappings, sparse matrix, `.sha256` checksums |
 | Seed DB | `python scripts/seed_db.py` | PostgreSQL tables + IVFFlat vector index |
 | Evaluate | `python -m cinematch.evaluation.evaluate` | `evaluation_report.json` |
 
@@ -430,6 +431,7 @@ Onboarding movies/status, global platform statistics, health check.
 | **Platform Stats** | Community-wide statistics dashboard |
 | **Audit Log** | Personal security activity trail with action/status filters |
 | **DB Security** | Database connection security dashboard (SSL status, statement timeout, pool stats, connection info, pgvector query safety) |
+| **Pickle Safety** | ML artifact integrity dashboard — SHA-256 checksum verification status for all pickle files |
 | **Achievements** | 12 badge collection with progress bars |
 | **Challenges** | Weekly rating challenges with progress tracking |
 | **Bingo** | Monthly 5x5 movie bingo card |

@@ -11,6 +11,7 @@ import scipy.sparse as sp
 from implicit.als import AlternatingLeastSquares
 
 from cinematch.config import get_settings
+from cinematch.core.pickle_safety import save_checksum
 
 
 def train_als(
@@ -78,14 +79,17 @@ def train_als(
 
     with open(model_path, "wb") as f:
         pickle.dump(model, f)
+    save_checksum(model_path)
     print(f"  als_model.pkl ({model_path.stat().st_size / 1024 / 1024:.1f} MB)")
 
     with open(settings.als_user_map_path, "wb") as f:
         pickle.dump(user_map, f)
+    save_checksum(settings.als_user_map_path)
     print(f"  als_user_map.pkl ({len(user_map):,} users)")
 
     with open(settings.als_item_map_path, "wb") as f:
         pickle.dump(item_map, f)
+    save_checksum(settings.als_item_map_path)
     print(f"  als_item_map.pkl ({len(item_map):,} items)")
 
     sp.save_npz(settings.als_user_items_path, user_items)
