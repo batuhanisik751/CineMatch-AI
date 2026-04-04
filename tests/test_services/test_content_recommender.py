@@ -58,6 +58,27 @@ async def test_pgvector_search_returns_similar_movies(content_recommender, mock_
 
 
 @pytest.mark.asyncio
+async def test_pgvector_search_uses_typed_vector_binding(content_recommender, mock_db_session):
+    """Verify query_embedding is passed as list, not str (pgvector type safety)."""
+    embeddings = _make_normalized_vectors(1)
+
+    first_result = MagicMock()
+    first_result.first.return_value = (embeddings[0].tolist(),)
+
+    second_result = MagicMock()
+    second_result.fetchall.return_value = [(102, 0.95)]
+
+    mock_db_session.execute = AsyncMock(side_effect=[first_result, second_result])
+
+    await content_recommender._pgvector_search(movie_id=101, db=mock_db_session, top_k=5)
+
+    # The second execute call is the similarity query
+    second_call = mock_db_session.execute.call_args_list[1]
+    params = second_call[0][1] if len(second_call[0]) > 1 else second_call.kwargs
+    assert not isinstance(params["query_embedding"], str)
+
+
+@pytest.mark.asyncio
 async def test_pgvector_search_no_embedding_returns_empty(content_recommender, mock_db_session):
     first_result = MagicMock()
     first_result.first.return_value = None

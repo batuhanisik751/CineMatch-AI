@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cinematch.api.deps import get_current_user, get_db
 from cinematch.config import get_settings
 from cinematch.db.session import engine
-from cinematch.schemas.db_security import DbSecurityStatusResponse
+from cinematch.schemas.db_security import DbSecurityStatusResponse, PgvectorQuerySafety
 
 router = APIRouter()
 
@@ -62,6 +62,15 @@ async def get_db_security_status(
         "pool_pre_ping": settings.db_pool_pre_ping,
     }
 
+    # Verify pgvector typed bindings are functional
+    try:
+        from pgvector.sqlalchemy import Vector
+
+        bp = bindparam("v", type_=Vector(384))
+        typed_bindings = str(bp.type) == "VECTOR(384)"
+    except Exception:
+        typed_bindings = False
+
     return DbSecurityStatusResponse(
         ssl={
             "configured_mode": settings.database_ssl_mode,
@@ -77,4 +86,12 @@ async def get_db_security_status(
             "current_database": db_name,
         },
         pool=pool_status,
+        pgvector_query_safety=PgvectorQuerySafety(
+            typed_bindings=typed_bindings,
+            affected_services=[
+                "movie_service.semantic_search",
+                "content_recommender._pgvector_search",
+                "seed_db",
+            ],
+        ),
     )

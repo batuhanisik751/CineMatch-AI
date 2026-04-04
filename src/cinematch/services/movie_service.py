@@ -5,7 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, cast, desc, extract, func, or_, outerjoin, select, text
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import Integer, bindparam, cast, desc, extract, func, or_, outerjoin, select, text
 from sqlalchemy.dialects.postgresql import JSONB as JSONB_TYPE
 
 from cinematch.models.movie import Movie
@@ -193,15 +194,16 @@ class MovieService:
         limit: int = 20,
     ) -> list[tuple[Movie, float]]:
         """Search movies by embedding similarity using pgvector."""
+        stmt = text(
+            "SELECT id, (embedding <#> :query_embedding) * -1 AS similarity "
+            "FROM movies "
+            "WHERE embedding IS NOT NULL "
+            "ORDER BY embedding <#> :query_embedding "
+            "LIMIT :limit"
+        ).bindparams(bindparam("query_embedding", type_=Vector(384)))
         result = await db.execute(
-            text(
-                "SELECT id, (embedding <#> :query_embedding) * -1 AS similarity "
-                "FROM movies "
-                "WHERE embedding IS NOT NULL "
-                "ORDER BY embedding <#> :query_embedding "
-                "LIMIT :limit"
-            ),
-            {"query_embedding": str(query_embedding), "limit": limit},
+            stmt,
+            {"query_embedding": query_embedding, "limit": limit},
         )
         rows = result.fetchall()
         if not rows:

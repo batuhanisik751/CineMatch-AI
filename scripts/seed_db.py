@@ -7,7 +7,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine, text
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import bindparam, create_engine, text
 from sqlalchemy.orm import Session
 
 from cinematch.config import get_settings
@@ -69,8 +70,8 @@ def seed_database(processed_dir: str | None = None) -> None:
                         VALUES (:id, :tmdb_id, :imdb_id, :movielens_id, :title, :overview,
                             CAST(:genres AS jsonb), CAST(:keywords AS jsonb), CAST(:cast_names AS jsonb),
                             :director, :release_date,
-                            :vote_average, :vote_count, :popularity, :poster_path, :original_language, :runtime, :tagline, :budget, :revenue, CAST(:embedding AS vector))
-                    """),
+                            :vote_average, :vote_count, :popularity, :poster_path, :original_language, :runtime, :tagline, :budget, :revenue, :embedding)
+                    """).bindparams(bindparam("embedding", type_=Vector(384))),
                     {
                         "id": int(row["movie_id"]),
                         "tmdb_id": int(row["tmdb_id"]),
@@ -96,7 +97,7 @@ def seed_database(processed_dir: str | None = None) -> None:
                         ),
                         "budget": int(row["budget"]) if pd.notna(row.get("budget")) else None,
                         "revenue": int(row["revenue"]) if pd.notna(row.get("revenue")) else None,
-                        "embedding": str(emb) if emb is not None else None,
+                        "embedding": emb if emb is not None else None,
                     },
                 )
             session.commit()

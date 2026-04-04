@@ -1019,9 +1019,15 @@ export interface PoolStatus {
   pool_pre_ping: boolean;
 }
 
+export interface PgvectorQuerySafety {
+  typed_bindings: boolean;
+  affected_services: string[];
+}
+
 export interface DbSecurityStatusResponse {
   ssl: SSLStatus;
   statement_timeout: StatementTimeoutStatus;
   connection: ConnectionInfo;
   pool: PoolStatus;
+  pgvector_query_safety: PgvectorQuerySafety;
 }

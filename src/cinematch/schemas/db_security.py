@@ -30,8 +30,14 @@ class PoolStatus(BaseModel):
     pool_pre_ping: bool
 
 
+class PgvectorQuerySafety(BaseModel):
+    typed_bindings: bool
+    affected_services: list[str]
+
+
 class DbSecurityStatusResponse(BaseModel):
     ssl: SSLStatus
     statement_timeout: StatementTimeoutStatus
     connection: ConnectionInfo
     pool: PoolStatus
+    pgvector_query_safety: PgvectorQuerySafety

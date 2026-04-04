@@ -175,6 +175,43 @@ export default function DbSecurityTab() {
               value={data.pool.pool_recycle > 0 ? `${data.pool.pool_recycle}s` : "Disabled"}
             />
           </div>
+
+          {/* pgvector Query Safety Card */}
+          <div className="glass-card p-6 rounded-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="material-symbols-outlined text-2xl text-primary">
+                frame_inspect
+              </span>
+              <h2 className="text-lg font-bold text-on-surface">
+                pgvector Query Safety
+              </h2>
+              <div className="ml-auto">
+                <StatusBadge
+                  ok={data.pgvector_query_safety.typed_bindings}
+                  label={
+                    data.pgvector_query_safety.typed_bindings
+                      ? "Typed Bindings"
+                      : "String Cast"
+                  }
+                />
+              </div>
+            </div>
+            <StatRow
+              label="Binding Mode"
+              value={
+                data.pgvector_query_safety.typed_bindings
+                  ? "Vector(384) typed"
+                  : "str() cast"
+              }
+            />
+            <StatRow
+              label="Services Protected"
+              value={data.pgvector_query_safety.affected_services.length}
+            />
+            {data.pgvector_query_safety.affected_services.map((service) => (
+              <StatRow key={service} label="" value={service} />
+            ))}
+          </div>
         </div>
       )}
     </>

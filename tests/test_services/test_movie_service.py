@@ -354,6 +354,21 @@ async def test_semantic_search_preserves_order(service, mock_db):
     assert [r[1] for r in results] == [0.95, 0.88, 0.72]
 
 
+async def test_semantic_search_uses_typed_vector_binding(service, mock_db):
+    """Verify query_embedding is passed as list, not str (pgvector type safety)."""
+    pgvector_result = MagicMock()
+    pgvector_result.fetchall.return_value = []
+    mock_db.execute = AsyncMock(return_value=pgvector_result)
+
+    embedding = [0.1] * 384
+    await service.semantic_search(embedding, mock_db)
+
+    call_args = mock_db.execute.call_args
+    params = call_args[0][1] if len(call_args[0]) > 1 else call_args.kwargs
+    assert isinstance(params["query_embedding"], list)
+    assert not isinstance(params["query_embedding"], str)
+
+
 # --- trending tests ---
 
 

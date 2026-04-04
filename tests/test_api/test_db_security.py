@@ -77,6 +77,15 @@ async def test_db_security_returns_expected_shape(db_security_client):
     assert isinstance(data["pool"]["size"], int)
     assert isinstance(data["pool"]["pool_pre_ping"], bool)
 
+    assert "pgvector_query_safety" in data
+    pgvector = data["pgvector_query_safety"]
+    assert pgvector["typed_bindings"] is True
+    assert isinstance(pgvector["affected_services"], list)
+    assert len(pgvector["affected_services"]) == 3
+    assert "movie_service.semantic_search" in pgvector["affected_services"]
+    assert "content_recommender._pgvector_search" in pgvector["affected_services"]
+    assert "seed_db" in pgvector["affected_services"]
+
 
 @pytest.mark.asyncio
 async def test_db_security_requires_auth():

@@ -138,6 +138,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Error Response Hardening** | Generic error messages in all API responses — no internal IDs, service names, stack traces, or Python exceptions leak to clients. Catch-all handler for unhandled errors. Full details logged server-side only |
 | **Audit Logging** | Structured JSON audit trail for security events (login success/failure, registration, CSV import/export, authorization failures, rate limit hits). Dual-write to database + file. Per-user audit log viewer in the frontend |
 | **Database Connection Security** | SSL/TLS support for PostgreSQL connections (5 modes: disable, prefer, require, verify-ca, verify-full), statement timeout to prevent slow-query DoS, connection pool hardening (recycle + pre-ping), limited-privilege database user for production, DB security dashboard in the frontend |
+| **pgvector Query Safety** | All vector similarity queries use typed `bindparam(type_=Vector(384))` bindings instead of `str()` cast — prevents type confusion and ensures pgvector's native type adapter handles serialization. Verified via the DB security dashboard |
 
 ### Content Analysis (Per Movie)
 
@@ -428,7 +429,7 @@ Onboarding movies/status, global platform statistics, health check.
 | **Taste Evolution** | Genre preference changes over time (stacked area chart) |
 | **Platform Stats** | Community-wide statistics dashboard |
 | **Audit Log** | Personal security activity trail with action/status filters |
-| **DB Security** | Database connection security dashboard (SSL status, statement timeout, pool stats, connection info) |
+| **DB Security** | Database connection security dashboard (SSL status, statement timeout, pool stats, connection info, pgvector query safety) |
 | **Achievements** | 12 badge collection with progress bars |
 | **Challenges** | Weekly rating challenges with progress tracking |
 | **Bingo** | Monthly 5x5 movie bingo card |

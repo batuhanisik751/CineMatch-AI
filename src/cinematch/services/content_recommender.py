@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING
 
 import faiss
 import numpy as np
-from sqlalchemy import text
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import bindparam, text
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,16 +72,17 @@ class ContentRecommender:
         query_embedding = row[0]
 
         # Find similar movies using <#> (negative inner product)
+        stmt = text(
+            "SELECT id, (embedding <#> :query_embedding) * -1 AS similarity "
+            "FROM movies "
+            "WHERE id != :movie_id AND embedding IS NOT NULL "
+            "ORDER BY embedding <#> :query_embedding "
+            "LIMIT :top_k"
+        ).bindparams(bindparam("query_embedding", type_=Vector(384)))
         result = await db.execute(
-            text(
-                "SELECT id, (embedding <#> :query_embedding) * -1 AS similarity "
-                "FROM movies "
-                "WHERE id != :movie_id AND embedding IS NOT NULL "
-                "ORDER BY embedding <#> :query_embedding "
-                "LIMIT :top_k"
-            ),
+            stmt,
             {
-                "query_embedding": str(query_embedding),
+                "query_embedding": query_embedding,
                 "movie_id": movie_id,
                 "top_k": top_k,
             },
