@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     db_pool_size: int = 20
     db_max_overflow: int = 10
 
+    # Database connection security
+    database_ssl_mode: str = "disable"
+    database_statement_timeout: int = 30000
+    db_pool_recycle: int = 1800
+    db_pool_pre_ping: bool = True
+
     # Redis (required — no insecure defaults)
     redis_url: SecretStr
     cache_ttl_seconds: int = 3600

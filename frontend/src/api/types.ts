@@ -993,3 +993,35 @@ export interface AuditLogListResponse {
   offset: number;
   limit: number;
 }
+
+export interface SSLStatus {
+  configured_mode: string;
+  active: boolean;
+  protocol_version: string | null;
+}
+
+export interface StatementTimeoutStatus {
+  configured_ms: number;
+  active: string;
+}
+
+export interface ConnectionInfo {
+  current_user: string;
+  current_database: string;
+}
+
+export interface PoolStatus {
+  size: number;
+  checked_in: number;
+  checked_out: number;
+  overflow: number;
+  pool_recycle: number;
+  pool_pre_ping: boolean;
+}
+
+export interface DbSecurityStatusResponse {
+  ssl: SSLStatus;
+  statement_timeout: StatementTimeoutStatus;
+  connection: ConnectionInfo;
+  pool: PoolStatus;
+}

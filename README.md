@@ -137,6 +137,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **CORS Lockdown** | Configurable allowed origins, methods (`GET/POST/PATCH/PUT/DELETE/OPTIONS`), and headers (`Content-Type`, `Authorization`) — no wildcards in production |
 | **Error Response Hardening** | Generic error messages in all API responses — no internal IDs, service names, stack traces, or Python exceptions leak to clients. Catch-all handler for unhandled errors. Full details logged server-side only |
 | **Audit Logging** | Structured JSON audit trail for security events (login success/failure, registration, CSV import/export, authorization failures, rate limit hits). Dual-write to database + file. Per-user audit log viewer in the frontend |
+| **Database Connection Security** | SSL/TLS support for PostgreSQL connections (5 modes: disable, prefer, require, verify-ca, verify-full), statement timeout to prevent slow-query DoS, connection pool hardening (recycle + pre-ping), limited-privilege database user for production, DB security dashboard in the frontend |
 
 ### Content Analysis (Per Movie)
 
@@ -307,7 +308,7 @@ make prod-logs
 make prod-down
 ```
 
-In production, only Caddy is exposed on ports 80/443. PostgreSQL, Redis, and the app are on an internal Docker network with no host port exposure.
+In production, only Caddy is exposed on ports 80/443. PostgreSQL, Redis, and the app are on an internal Docker network with no host port exposure. PostgreSQL runs with SSL enabled (self-signed cert) and a limited-privilege `cinematch_app` user (DML-only, no DDL or superuser).
 
 ---
 
@@ -427,6 +428,7 @@ Onboarding movies/status, global platform statistics, health check.
 | **Taste Evolution** | Genre preference changes over time (stacked area chart) |
 | **Platform Stats** | Community-wide statistics dashboard |
 | **Audit Log** | Personal security activity trail with action/status filters |
+| **DB Security** | Database connection security dashboard (SSL status, statement timeout, pool stats, connection info) |
 | **Achievements** | 12 badge collection with progress bars |
 | **Challenges** | Weekly rating challenges with progress tracking |
 | **Bingo** | Monthly 5x5 movie bingo card |
@@ -470,6 +472,7 @@ frontend/src/
                       AutocompleteSearch, MovieDNA, modals)
 
 scripts/              download_data.py, train_models.py, seed_db.py
+docker/               Production Docker config (PostgreSQL SSL init, limited-privilege user)
 tests/                pytest suite mirroring src/ structure
 ```
 

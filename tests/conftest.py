@@ -16,3 +16,5 @@ os.environ.setdefault(
 os.environ.setdefault("CINEMATCH_REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("CINEMATCH_RATE_LIMIT_ENABLED", "false")
 os.environ.setdefault("CINEMATCH_SECRET_KEY", "test-secret-key-not-for-production")
+os.environ.setdefault("CINEMATCH_DATABASE_SSL_MODE", "disable")
+os.environ.setdefault("CINEMATCH_DATABASE_STATEMENT_TIMEOUT", "0")

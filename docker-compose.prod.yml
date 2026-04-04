@@ -40,8 +40,18 @@ services:
       POSTGRES_USER: cinematch
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: cinematch
+      CINEMATCH_APP_DB_PASSWORD: ${CINEMATCH_APP_DB_PASSWORD}
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/var/lib/postgresql/server.crt
+      - -c
+      - ssl_key_file=/var/lib/postgresql/server.key
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init-ssl-and-user.sh:/docker-entrypoint-initdb.d/01-init-ssl-and-user.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cinematch"]
       interval: 5s

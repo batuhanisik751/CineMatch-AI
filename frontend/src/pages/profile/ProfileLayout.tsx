@@ -7,7 +7,8 @@ const TABS = [
   { label: "Overview",        icon: "person",    path: "overview" },
   { label: "Taste Evolution", icon: "timeline",  path: "taste-evolution" },
   { label: "Platform Stats",  icon: "bar_chart", path: "platform-stats" },
-  { label: "Audit Log",       icon: "security",  path: "audit-log" },
+  { label: "Audit Log",       icon: "security",    path: "audit-log" },
+  { label: "DB Security",     icon: "shield_lock", path: "db-security" },
 ];
 
 export default function ProfileLayout() {

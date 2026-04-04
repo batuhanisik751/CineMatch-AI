@@ -8,6 +8,7 @@ from cinematch.api.v1 import (
     audit,
     auth,
     challenges,
+    db_security,
     dismissals,
     lists,
     movies,
@@ -35,3 +36,4 @@ api_v1_router.include_router(stats.router, prefix="/stats", tags=["stats"])
 api_v1_router.include_router(challenges.router, prefix="/challenges", tags=["challenges"])
 api_v1_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_v1_router.include_router(predictions.router, tags=["predictions"])
+api_v1_router.include_router(db_security.router, prefix="/system", tags=["system"])
