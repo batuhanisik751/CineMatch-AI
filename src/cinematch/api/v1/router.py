@@ -10,6 +10,7 @@ from cinematch.api.v1 import (
     challenges,
     container_security,
     db_security,
+    dep_scan,
     dismissals,
     lists,
     movies,
@@ -41,3 +42,4 @@ api_v1_router.include_router(predictions.router, tags=["predictions"])
 api_v1_router.include_router(db_security.router, prefix="/system", tags=["system"])
 api_v1_router.include_router(pickle_safety.router, prefix="/system", tags=["system"])
 api_v1_router.include_router(container_security.router, prefix="/system", tags=["system"])
+api_v1_router.include_router(dep_scan.router, prefix="/system", tags=["system"])

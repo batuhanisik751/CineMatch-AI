@@ -6,3 +6,4 @@ export { default as AuditLogTab } from "./AuditLogTab";
 export { default as DbSecurityTab } from "./DbSecurityTab";
 export { default as PickleSafetyTab } from "./PickleSafetyTab";
 export { default as ContainerSecurityTab } from "./ContainerSecurityTab";
+export { default as DepScanTab } from "./DepScanTab";

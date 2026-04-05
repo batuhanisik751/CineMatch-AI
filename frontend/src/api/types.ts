@@ -1115,3 +1115,57 @@ export interface ContainerSecurityResponse {
   all_passed: boolean;
   checked_at: string;
 }
+
+// Dependency vulnerability scanning
+export interface PipAuditVulnerability {
+  name: string;
+  version: string;
+  vuln_id: string;
+  fix_versions: string[];
+  description: string;
+}
+
+export interface PipAuditResult {
+  available: boolean;
+  vulnerabilities: PipAuditVulnerability[];
+  dependency_count: number;
+  vulnerable_count: number;
+  error: string | null;
+}
+
+export interface BanditFinding {
+  filename: string;
+  line_number: number;
+  issue_text: string;
+  issue_severity: string;
+  issue_confidence: string;
+  test_id: string;
+}
+
+export interface BanditResult {
+  available: boolean;
+  results: BanditFinding[];
+  severity_counts: Record<string, number>;
+  error: string | null;
+}
+
+export interface SafetyResult {
+  available: boolean;
+  vulnerabilities: PipAuditVulnerability[];
+  error: string | null;
+}
+
+export interface DepScanSummary {
+  total_dependencies: number;
+  vulnerable_dependencies: number;
+  bandit_issues: number;
+  overall_status: string;
+}
+
+export interface DepScanResponse {
+  pip_audit: PipAuditResult;
+  bandit: BanditResult;
+  safety: SafetyResult;
+  summary: DepScanSummary;
+  scanned_at: string;
+}

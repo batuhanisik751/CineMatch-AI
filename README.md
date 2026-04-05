@@ -141,6 +141,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **pgvector Query Safety** | All vector similarity queries use typed `bindparam(type_=Vector(384))` bindings instead of `str()` cast — prevents type confusion and ensures pgvector's native type adapter handles serialization. Verified via the DB security dashboard |
 | **Pickle Deserialization Safety** | SHA-256 checksum verification for all pickle artifacts (FAISS ID map, ALS model, user/item maps). Checksums generated at training time, verified at startup — mismatch aborts launch. Frontend integrity dashboard at Profile > Pickle Safety |
 | **Container Security** | Non-root containers (USER 1000), read-only root filesystems with tmpfs, `no-new-privileges` flag, capability dropping (`cap_drop: ALL` with targeted `cap_add`), multi-stage Docker builds, expanded `.dockerignore`, HEALTHCHECK directive. Frontend container security dashboard at Profile > Container Security |
+| **Dependency Vulnerability Scanning** | On-demand scanning via pip-audit (PyPI vulnerability database), bandit (Python static security analysis), and safety. Backend endpoint runs tools as subprocesses with timeout handling and graceful degradation. Frontend dashboard at Profile > Dep Scan. GitHub Actions CI workflow runs pip-audit and bandit on every PR |
 
 ### Content Analysis (Per Movie)
 
@@ -434,6 +435,7 @@ Onboarding movies/status, global platform statistics, health check.
 | **DB Security** | Database connection security dashboard (SSL status, statement timeout, pool stats, connection info, pgvector query safety) |
 | **Pickle Safety** | ML artifact integrity dashboard — SHA-256 checksum verification status for all pickle files |
 | **Container Security** | Docker container runtime security posture — non-root check, read-only filesystem, capabilities, no-new-privileges, multi-stage build verification |
+| **Dep Scan** | Dependency vulnerability scanning — pip-audit CVEs, bandit static analysis findings, safety check, overall status with severity badges |
 | **Achievements** | 12 badge collection with progress bars |
 | **Challenges** | Weekly rating challenges with progress tracking |
 | **Bingo** | Monthly 5x5 movie bingo card |

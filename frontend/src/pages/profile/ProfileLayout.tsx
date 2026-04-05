@@ -11,6 +11,7 @@ const TABS = [
   { label: "DB Security",     icon: "shield_lock", path: "db-security" },
   { label: "Pickle Safety",   icon: "verified_user", path: "pickle-safety" },
   { label: "Container Security", icon: "deployed_code", path: "container-security" },
+  { label: "Dep Scan", icon: "bug_report", path: "dep-scan" },
 ];
 
 export default function ProfileLayout() {

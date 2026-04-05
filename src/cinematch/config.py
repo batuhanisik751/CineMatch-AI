@@ -117,6 +117,9 @@ class Settings(BaseSettings):
     audit_log_file: str = "logs/audit.log"
     audit_log_enabled: bool = True
 
+    # Dependency scanning
+    dep_scan_timeout: int = 120
+
     # Rate limiting
     rate_limit_enabled: bool = True
     rate_limit_default: str = "100/minute"

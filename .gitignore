@@ -124,6 +124,9 @@ cython_debug/
 # Evaluation reports
 evaluation_report.json
 
+# Security scan reports
+bandit-report.json
+
 # Plan files
 PLAN*.md
 

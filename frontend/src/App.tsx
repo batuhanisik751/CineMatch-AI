@@ -13,7 +13,7 @@ import PopularLists from "./pages/PopularLists";
 import { LibraryLayout, WatchlistTab, ListsTab, CollectionsTab, CuratedTab } from "./pages/library";
 import MovieDetail from "./pages/MovieDetail";
 import Onboarding from "./pages/Onboarding";
-import { ProfileLayout, OverviewTab, TasteEvolutionTab, PlatformStatsTab, AuditLogTab, DbSecurityTab, PickleSafetyTab, ContainerSecurityTab } from "./pages/profile";
+import { ProfileLayout, OverviewTab, TasteEvolutionTab, PlatformStatsTab, AuditLogTab, DbSecurityTab, PickleSafetyTab, ContainerSecurityTab, DepScanTab } from "./pages/profile";
 import WatchlistRecommendations from "./pages/WatchlistRecommendations";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
@@ -145,6 +145,7 @@ export default function App() {
           <Route path="db-security" element={<DbSecurityTab />} />
           <Route path="pickle-safety" element={<PickleSafetyTab />} />
           <Route path="container-security" element={<ContainerSecurityTab />} />
+          <Route path="dep-scan" element={<DepScanTab />} />
         </Route>
       </Route>
 
