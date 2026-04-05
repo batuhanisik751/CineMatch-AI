@@ -142,6 +142,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Pickle Deserialization Safety** | SHA-256 checksum verification for all pickle artifacts (FAISS ID map, ALS model, user/item maps). Checksums generated at training time, verified at startup — mismatch aborts launch. Frontend integrity dashboard at Profile > Pickle Safety |
 | **Container Security** | Non-root containers (USER 1000), read-only root filesystems with tmpfs, `no-new-privileges` flag, capability dropping (`cap_drop: ALL` with targeted `cap_add`), multi-stage Docker builds, expanded `.dockerignore`, HEALTHCHECK directive. Frontend container security dashboard at Profile > Container Security |
 | **Dependency Vulnerability Scanning** | On-demand scanning via pip-audit (PyPI vulnerability database), bandit (Python static security analysis), and safety. Backend endpoint runs tools as subprocesses with timeout handling and graceful degradation. Frontend dashboard at Profile > Dep Scan. GitHub Actions CI workflow runs pip-audit and bandit on every PR |
+| **Security Test Suite** | 218 dedicated security tests covering auth (JWT, password hashing, registration, login), authorization enforcement (401/403 on all protected endpoints, IDOR prevention), input validation (bulk ID caps, query length limits, pagination bounds), audit middleware, error response hardening (no info leakage), config security (SecretStr, safe defaults, CSP), and schema validation |
 
 ### Content Analysis (Per Movie)
 
@@ -480,7 +481,8 @@ frontend/src/
 
 scripts/              download_data.py, train_models.py, seed_db.py
 docker/               Production Docker config (PostgreSQL SSL init, limited-privilege user)
-tests/                pytest suite mirroring src/ structure
+tests/                pytest suite mirroring src/ structure (1000+ tests including
+                      218 dedicated security tests)
 ```
 
 ---
