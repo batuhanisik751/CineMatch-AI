@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     redis_url: SecretStr
     cache_ttl_seconds: int = 3600
 
+    # Lightweight mode (skip ML model loading; use pgvector + HF API + cache table)
+    lightweight_mode: bool = False
+    hf_inference_url: str = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+    hf_api_token: SecretStr | None = None
+
     # Embedding model
     embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     embedding_dim: int = 384

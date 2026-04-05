@@ -6,8 +6,6 @@ import logging
 import pickle
 from contextlib import asynccontextmanager
 
-import faiss
-import scipy.sparse as sp
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -33,10 +31,7 @@ from cinematch.services.achievement_service import AchievementService
 from cinematch.services.bingo_service import BingoService
 from cinematch.services.blind_spot_service import BlindSpotService
 from cinematch.services.challenge_service import ChallengeService
-from cinematch.services.collab_recommender import CollabRecommender
-from cinematch.services.content_recommender import ContentRecommender
 from cinematch.services.dismissal_service import DismissalService
-from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.feed_service import FeedService
 from cinematch.services.global_stats_service import GlobalStatsService
 from cinematch.services.hybrid_recommender import HybridRecommender
@@ -71,71 +66,61 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     setup_logging(debug=settings.debug)
 
-    try:
-        # Load embedding service
-        logger.info("Loading embedding model: %s", settings.embedding_model_name)
-        embedding_service = EmbeddingService(
-            model_name=settings.embedding_model_name,
-            batch_size=settings.embedding_batch_size,
+    # LLM service (shared by both lightweight and full modes)
+    app.state.llm_service = None
+    if settings.llm_enabled:
+        try:
+            from cinematch.services.llm_service import LLMService
+
+            llm_service = LLMService(
+                base_url=settings.llm_base_url,
+                model_name=settings.llm_model_name,
+                timeout=settings.llm_rerank_timeout,
+                backend=settings.llm_backend,
+                api_key=(
+                    settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
+                ),
+            )
+            app.state.llm_service = llm_service
+            logger.info(
+                "LLM service enabled (model=%s, backend=%s).",
+                settings.llm_model_name,
+                settings.llm_backend,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to initialize LLM service. "
+                "Recommendations will use algorithmic fallback."
+            )
+            app.state.llm_service = None
+
+    if settings.lightweight_mode:
+        # ---- LIGHTWEIGHT MODE: no ML models, use pgvector + HF API + cache ----
+        logger.info("Starting in LIGHTWEIGHT mode (no ML models loaded)")
+        from cinematch.services.lightweight_collab_recommender import (
+            LightweightCollabRecommender,
+        )
+        from cinematch.services.lightweight_content_recommender import (
+            LightweightContentRecommender,
+        )
+        from cinematch.services.lightweight_embedding_service import (
+            LightweightEmbeddingService,
+        )
+        from cinematch.services.lightweight_hybrid_recommender import (
+            LightweightHybridRecommender,
         )
 
-        # Load FAISS artifacts
-        logger.info("Loading FAISS index from %s", settings.faiss_index_path)
-        faiss_index = faiss.read_index(settings.faiss_index_path)
-        _verify_or_abort(settings.faiss_id_map_path)
-        with open(settings.faiss_id_map_path, "rb") as f:
-            faiss_id_map = pickle.load(f)  # noqa: S301
-
-        # Load ALS artifacts
-        logger.info("Loading ALS model from %s", settings.als_model_path)
-        for pkl_path in (
-            settings.als_model_path,
-            settings.als_user_map_path,
-            settings.als_item_map_path,
-        ):
-            _verify_or_abort(pkl_path)
-        with open(settings.als_model_path, "rb") as f:
-            als_model = pickle.load(f)  # noqa: S301
-        with open(settings.als_user_map_path, "rb") as f:
-            als_user_map = pickle.load(f)  # noqa: S301
-        with open(settings.als_item_map_path, "rb") as f:
-            als_item_map = pickle.load(f)  # noqa: S301
-        als_user_items = sp.load_npz(settings.als_user_items_path)
-
-        # LLM service (initialized before HybridRecommender so it can be injected)
-        app.state.llm_service = None
-        if settings.llm_enabled:
-            try:
-                from cinematch.services.llm_service import LLMService
-
-                llm_service = LLMService(
-                    base_url=settings.llm_base_url,
-                    model_name=settings.llm_model_name,
-                    timeout=settings.llm_rerank_timeout,
-                    backend=settings.llm_backend,
-                    api_key=(
-                        settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
-                    ),
-                )
-                app.state.llm_service = llm_service
-                logger.info(
-                    "LLM service enabled (model=%s, backend=%s).",
-                    settings.llm_model_name,
-                    settings.llm_backend,
-                )
-            except Exception:
-                logger.warning(
-                    "Failed to initialize LLM service. "
-                    "Recommendations will use algorithmic fallback."
-                )
-                app.state.llm_service = None
-
-        # Create services
-        content_recommender = ContentRecommender(embedding_service, faiss_index, faiss_id_map)
-        collab_recommender = CollabRecommender(
-            als_model, als_user_map, als_item_map, als_user_items
+        embedding_service = LightweightEmbeddingService(
+            inference_url=settings.hf_inference_url,
+            api_token=(
+                settings.hf_api_token.get_secret_value() if settings.hf_api_token else None
+            ),
         )
-        hybrid_recommender = HybridRecommender(
+        embedding_service.warm_up()
+
+        content_recommender = LightweightContentRecommender(embedding_service)
+        collab_recommender = LightweightCollabRecommender()
+        hybrid_recommender = LightweightHybridRecommender(
             content_recommender,
             collab_recommender,
             alpha=settings.hybrid_alpha,
@@ -146,18 +131,82 @@ async def lifespan(app: FastAPI):
             llm_rerank_enabled=settings.llm_rerank_enabled,
         )
 
-        # Attach to app.state
         app.state.embedding_service = embedding_service
         app.state.content_recommender = content_recommender
         app.state.collab_recommender = collab_recommender
         app.state.hybrid_recommender = hybrid_recommender
 
-        logger.info("All recommendation services loaded successfully.")
-    except FileNotFoundError:
-        logger.warning(
-            "Data artifacts not found. Run the pipeline first. "
-            "App will start without recommendation services."
-        )
+        logger.info("Lightweight recommendation services loaded successfully.")
+    else:
+        # ---- FULL MODE: load ML models from disk ----
+        try:
+            import faiss
+            import scipy.sparse as sp
+
+            from cinematch.services.collab_recommender import CollabRecommender
+            from cinematch.services.content_recommender import ContentRecommender
+            from cinematch.services.embedding_service import EmbeddingService
+
+            # Load embedding service
+            logger.info("Loading embedding model: %s", settings.embedding_model_name)
+            embedding_service = EmbeddingService(
+                model_name=settings.embedding_model_name,
+                batch_size=settings.embedding_batch_size,
+            )
+
+            # Load FAISS artifacts
+            logger.info("Loading FAISS index from %s", settings.faiss_index_path)
+            faiss_index = faiss.read_index(settings.faiss_index_path)
+            _verify_or_abort(settings.faiss_id_map_path)
+            with open(settings.faiss_id_map_path, "rb") as f:
+                faiss_id_map = pickle.load(f)  # noqa: S301
+
+            # Load ALS artifacts
+            logger.info("Loading ALS model from %s", settings.als_model_path)
+            for pkl_path in (
+                settings.als_model_path,
+                settings.als_user_map_path,
+                settings.als_item_map_path,
+            ):
+                _verify_or_abort(pkl_path)
+            with open(settings.als_model_path, "rb") as f:
+                als_model = pickle.load(f)  # noqa: S301
+            with open(settings.als_user_map_path, "rb") as f:
+                als_user_map = pickle.load(f)  # noqa: S301
+            with open(settings.als_item_map_path, "rb") as f:
+                als_item_map = pickle.load(f)  # noqa: S301
+            als_user_items = sp.load_npz(settings.als_user_items_path)
+
+            # Create services
+            content_recommender = ContentRecommender(
+                embedding_service, faiss_index, faiss_id_map
+            )
+            collab_recommender = CollabRecommender(
+                als_model, als_user_map, als_item_map, als_user_items
+            )
+            hybrid_recommender = HybridRecommender(
+                content_recommender,
+                collab_recommender,
+                alpha=settings.hybrid_alpha,
+                llm_service=app.state.llm_service,
+                sequel_penalty=settings.hybrid_sequel_penalty,
+                diversity_lambda=settings.hybrid_diversity_lambda,
+                rerank_candidates=settings.llm_rerank_candidates,
+                llm_rerank_enabled=settings.llm_rerank_enabled,
+            )
+
+            # Attach to app.state
+            app.state.embedding_service = embedding_service
+            app.state.content_recommender = content_recommender
+            app.state.collab_recommender = collab_recommender
+            app.state.hybrid_recommender = hybrid_recommender
+
+            logger.info("All recommendation services loaded successfully.")
+        except FileNotFoundError:
+            logger.warning(
+                "Data artifacts not found. Run the pipeline first. "
+                "App will start without recommendation services."
+            )
 
     # Services that work without pipeline artifacts
     app.state.movie_service = MovieService()
@@ -226,6 +275,9 @@ async def lifespan(app: FastAPI):
         await app.state.llm_service.close()
     if getattr(app.state, "cache_service", None) is not None:
         await app.state.cache_service.close()
+    embedding_svc = getattr(app.state, "embedding_service", None)
+    if embedding_svc is not None and hasattr(embedding_svc, "close"):
+        embedding_svc.close()
 
 
 def create_app() -> FastAPI:
@@ -262,7 +314,12 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health_check():
-        return {"status": "ok", "version": __version__, "debug": settings.debug}
+        return {
+            "status": "ok",
+            "version": __version__,
+            "debug": settings.debug,
+            "lightweight_mode": settings.lightweight_mode,
+        }
 
     return app
 

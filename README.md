@@ -1,6 +1,6 @@
 # CineMatch-AI
 
-A hybrid movie recommendation engine that combines content-based filtering, collaborative filtering, and optional LLM re-ranking to deliver personalized movie discovery. Built with FastAPI, PostgreSQL + pgvector, and local ML models. Runs locally or deployed with free-tier cloud services.
+A hybrid movie recommendation engine that combines content-based filtering, collaborative filtering, and optional LLM re-ranking to deliver personalized movie discovery. Built with FastAPI, PostgreSQL + pgvector, and local ML models. Runs locally with full ML models or in lightweight mode for free-tier cloud deployment (Render, 512 MB RAM).
 
 > **29K movies | 162K users | 24.7M ratings | 384-dim embeddings | 85+ API endpoints**
 
@@ -37,6 +37,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS + Recharts |
 | **Rate Limiting** | slowapi (Redis-backed, per-endpoint tiers) |
 | **Reverse Proxy** | Caddy 2 (automatic HTTPS / Let's Encrypt) |
+| **Lightweight Mode** | HuggingFace Inference API (remote embeddings), pgvector-only search, precomputed collab cache |
 | **Infrastructure** | Docker Compose (PostgreSQL + Redis), production compose with Caddy |
 
 ### Data Sources
@@ -315,6 +316,24 @@ make prod-down
 
 In production, only Caddy is exposed on ports 80/443. PostgreSQL, Redis, and the app are on an internal Docker network with no host port exposure. PostgreSQL runs with SSL enabled (self-signed cert) and a limited-privilege `cinematch_app` user (DML-only, no DDL or superuser). All containers run with `no-new-privileges`, `cap_drop: ALL` (with targeted `cap_add` where needed), and read-only root filesystems (tmpfs for `/tmp`). The app container runs as non-root (UID 1000).
 
+### Lightweight Mode (Render Free Tier)
+
+For deployment on Render's free tier (512 MB RAM), set `CINEMATCH_LIGHTWEIGHT_MODE=true`. This skips loading all ML models and instead uses:
+
+- **pgvector** for movie similarity (embeddings already in the database)
+- **HuggingFace Inference API** for text embeddings (free, no API key needed)
+- **`recommendations_cache` table** for collaborative recommendations (precomputed weekly via GitHub Actions)
+
+```bash
+# Build the lightweight Docker image (~500 MB vs ~2 GB full)
+docker build -f Dockerfile.lightweight -t cinematch-lightweight .
+
+# Or run locally with the flag
+CINEMATCH_LIGHTWEIGHT_MODE=true PYTHONPATH=src uvicorn cinematch.main:app --host 0.0.0.0 --port 8000
+```
+
+RAM usage drops from ~360-450 MB to ~100-140 MB. All features work identically except collaborative recommendations update weekly instead of in real-time. See `PLAN5.md` for the full deployment guide.
+
 ---
 
 ## Data Pipeline
@@ -461,8 +480,9 @@ Onboarding movies/status, global platform statistics, health check.
 src/cinematch/
   api/v1/             REST endpoints (movies, ratings, recommendations, users,
                       watchlist, dismissals, lists, predictions, challenges, stats)
-  services/           Business logic (25 services -- recommendation engines,
-                      discovery, analytics, gamification, import/export)
+  services/           Business logic (25+ services -- recommendation engines,
+                      lightweight mode adapters, discovery, analytics,
+                      gamification, import/export)
   models/             SQLAlchemy ORM (movies, users, ratings, watchlist,
                       dismissals, user_lists, user_list_items)
   schemas/            Pydantic v2 request/response validation

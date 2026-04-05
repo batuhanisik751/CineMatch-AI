@@ -17,3 +17,9 @@ docker-compose*.yml
 scripts/
 logs/
 .claude/
+Makefile
+Caddyfile
+docker/
+LICENSE
+frontend/
+.gitignore
