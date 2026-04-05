@@ -1047,3 +1047,71 @@ export interface PickleSafetyResponse {
   all_verified: boolean;
   checked_at: string;
 }
+
+export interface TastemakerMovie {
+  id: number;
+  title: string;
+  genres: string[];
+  release_date: string | null;
+  poster_path: string | null;
+}
+
+export interface TastemakerEvidenceItem {
+  movie: TastemakerMovie;
+  user_rating: number;
+  early_percentile: number;
+  community_avg: number;
+}
+
+export interface TastemakerScoreResponse {
+  score: number;
+  label: string;
+  total_early_high: number;
+  total_became_favorites: number;
+  evidence: TastemakerEvidenceItem[];
+}
+
+export interface LeaderboardEntry {
+  user_id: number;
+  score: number;
+  label: string;
+  total_early_high: number;
+  total_became_favorites: number;
+}
+
+export interface TastemakerLeaderboardResponse {
+  entries: LeaderboardEntry[];
+}
+
+export interface ContainerRuntimeInfo {
+  running_as_root: boolean;
+  current_uid: number;
+  current_gid: number;
+  current_user: string;
+}
+
+export interface FilesystemStatus {
+  root_writable: boolean;
+  tmp_writable: boolean;
+}
+
+export interface ImageInfo {
+  base_image: string;
+  python_version: string;
+  multi_stage_build: boolean;
+}
+
+export interface ContainerSecurityCheck {
+  name: string;
+  passed: boolean;
+  detail: string;
+}
+
+export interface ContainerSecurityResponse {
+  runtime: ContainerRuntimeInfo;
+  filesystem: FilesystemStatus;
+  image: ImageInfo;
+  checks: ContainerSecurityCheck[];
+  all_passed: boolean;
+  checked_at: string;
+}

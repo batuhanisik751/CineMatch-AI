@@ -144,7 +144,7 @@ export default function TasteEvolution() {
                         borderRadius: 12,
                         fontSize: 12,
                       }}
-                      formatter={(value: number) => `${(value * 100).toFixed(1)}%`}
+                      formatter={(value) => `${(Number(value) * 100).toFixed(1)}%`}
                       labelStyle={{ color: "#e6e1e5" }}
                     />
                     {allGenres.map((genre, i) => (

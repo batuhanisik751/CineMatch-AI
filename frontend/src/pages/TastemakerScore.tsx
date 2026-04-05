@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type {
-  TastemakerMovie,
   TastemakerScoreResponse,
-  LeaderboardEntry,
   TastemakerLeaderboardResponse,
 } from "../api/types";
 import { getUserTastemakerScore, getTastemakerLeaderboard } from "../api/users";

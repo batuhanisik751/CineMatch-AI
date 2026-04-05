@@ -140,6 +140,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Database Connection Security** | SSL/TLS support for PostgreSQL connections (5 modes: disable, prefer, require, verify-ca, verify-full), statement timeout to prevent slow-query DoS, connection pool hardening (recycle + pre-ping), limited-privilege database user for production, DB security dashboard in the frontend |
 | **pgvector Query Safety** | All vector similarity queries use typed `bindparam(type_=Vector(384))` bindings instead of `str()` cast — prevents type confusion and ensures pgvector's native type adapter handles serialization. Verified via the DB security dashboard |
 | **Pickle Deserialization Safety** | SHA-256 checksum verification for all pickle artifacts (FAISS ID map, ALS model, user/item maps). Checksums generated at training time, verified at startup — mismatch aborts launch. Frontend integrity dashboard at Profile > Pickle Safety |
+| **Container Security** | Non-root containers (USER 1000), read-only root filesystems with tmpfs, `no-new-privileges` flag, capability dropping (`cap_drop: ALL` with targeted `cap_add`), multi-stage Docker builds, expanded `.dockerignore`, HEALTHCHECK directive. Frontend container security dashboard at Profile > Container Security |
 
 ### Content Analysis (Per Movie)
 
@@ -310,7 +311,7 @@ make prod-logs
 make prod-down
 ```
 
-In production, only Caddy is exposed on ports 80/443. PostgreSQL, Redis, and the app are on an internal Docker network with no host port exposure. PostgreSQL runs with SSL enabled (self-signed cert) and a limited-privilege `cinematch_app` user (DML-only, no DDL or superuser).
+In production, only Caddy is exposed on ports 80/443. PostgreSQL, Redis, and the app are on an internal Docker network with no host port exposure. PostgreSQL runs with SSL enabled (self-signed cert) and a limited-privilege `cinematch_app` user (DML-only, no DDL or superuser). All containers run with `no-new-privileges`, `cap_drop: ALL` (with targeted `cap_add` where needed), and read-only root filesystems (tmpfs for `/tmp`). The app container runs as non-root (UID 1000).
 
 ---
 
@@ -432,6 +433,7 @@ Onboarding movies/status, global platform statistics, health check.
 | **Audit Log** | Personal security activity trail with action/status filters |
 | **DB Security** | Database connection security dashboard (SSL status, statement timeout, pool stats, connection info, pgvector query safety) |
 | **Pickle Safety** | ML artifact integrity dashboard — SHA-256 checksum verification status for all pickle files |
+| **Container Security** | Docker container runtime security posture — non-root check, read-only filesystem, capabilities, no-new-privileges, multi-stage build verification |
 | **Achievements** | 12 badge collection with progress bars |
 | **Challenges** | Weekly rating challenges with progress tracking |
 | **Bingo** | Monthly 5x5 movie bingo card |

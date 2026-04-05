@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { AchievementResponse, ActorGapsResponse, AffinitiesResponse, BlindSpotResponse, CompletionsResponse, DiaryResponse, DirectorGapsResponse, FeedResponse, RatingComparisonResponse, RewatchResponse, StreakResponse, TasteEvolutionResponse, TasteProfileResponse, UserResponse, UserStatsResponse } from "./types";
+import type { AchievementResponse, ActorGapsResponse, AffinitiesResponse, BlindSpotResponse, CompletionsResponse, DiaryResponse, DirectorGapsResponse, FeedResponse, RatingComparisonResponse, RewatchResponse, StreakResponse, TasteEvolutionResponse, TasteProfileResponse, TastemakerLeaderboardResponse, TastemakerScoreResponse, UserResponse, UserStatsResponse } from "./types";
 
 export function getUser(id: number) {
   return apiFetch<UserResponse>(`/api/v1/users/${id}`);
@@ -82,5 +82,17 @@ export function getDirectorGaps(userId: number, limit = 20, topN = 5) {
 export function getActorGaps(userId: number, limit = 20, topN = 5) {
   return apiFetch<ActorGapsResponse>(
     `/api/v1/users/${userId}/actor-gaps?limit=${limit}&top_n=${topN}`
+  );
+}
+
+export function getUserTastemakerScore(userId: number) {
+  return apiFetch<TastemakerScoreResponse>(
+    `/api/v1/users/${userId}/tastemaker-score`
+  );
+}
+
+export function getTastemakerLeaderboard(limit = 20) {
+  return apiFetch<TastemakerLeaderboardResponse>(
+    `/api/v1/leaderboard/tastemakers?limit=${limit}`
   );
 }

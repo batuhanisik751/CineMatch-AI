@@ -8,6 +8,7 @@ from cinematch.api.v1 import (
     audit,
     auth,
     challenges,
+    container_security,
     db_security,
     dismissals,
     lists,
@@ -39,3 +40,4 @@ api_v1_router.include_router(onboarding.router, prefix="/onboarding", tags=["onb
 api_v1_router.include_router(predictions.router, tags=["predictions"])
 api_v1_router.include_router(db_security.router, prefix="/system", tags=["system"])
 api_v1_router.include_router(pickle_safety.router, prefix="/system", tags=["system"])
+api_v1_router.include_router(container_security.router, prefix="/system", tags=["system"])

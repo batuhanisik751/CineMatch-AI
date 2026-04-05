@@ -8,3 +8,12 @@ frontend/dist
 .env
 *.egg-info
 tests/
+data/
+.github/
+docs/
+*.md
+.dockerignore
+docker-compose*.yml
+scripts/
+logs/
+.claude/
