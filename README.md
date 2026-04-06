@@ -38,7 +38,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Rate Limiting** | slowapi (Redis-backed, per-endpoint tiers) |
 | **Reverse Proxy** | Caddy 2 (automatic HTTPS / Let's Encrypt) |
 | **Lightweight Mode** | HuggingFace Inference API (remote embeddings), pgvector-only search, precomputed collab cache |
-| **Infrastructure** | Docker Compose (PostgreSQL + Redis), production compose with Caddy, GitHub Actions (weekly precompute) |
+| **Infrastructure** | Docker Compose (PostgreSQL + Redis), production compose with Caddy, Render Blueprint (`render.yaml`), GitHub Actions (weekly precompute) |
 
 ### Data Sources
 
@@ -335,6 +335,14 @@ CINEMATCH_LIGHTWEIGHT_MODE=true PYTHONPATH=src uvicorn cinematch.main:app --host
 
 RAM usage drops from ~360-450 MB to ~100-140 MB. All features work identically except collaborative recommendations update weekly instead of in real-time.
 
+#### Render Blueprint Deployment
+
+A `render.yaml` Blueprint defines all 4 services (backend, frontend, PostgreSQL, Redis) for one-click deployment. The `entrypoint.sh` script auto-transforms Render's `DATABASE_URL` into the async (`postgresql+asyncpg://`) and sync (`postgresql://`) variants the app needs. Dependencies are managed via the `lightweight` optional-dependencies group in `pyproject.toml` (no ML packages).
+
+To deploy: connect your repo in the Render dashboard via **New > Blueprint**, and Render provisions everything from `render.yaml`.
+
+#### GitHub Actions Precomputation
+
 A GitHub Actions workflow (`.github/workflows/precompute.yml`) runs the ALS precomputation every Sunday at 3 AM UTC. It downloads model artifacts from a GitHub Release, computes top-50 recommendations per user, and writes them to the `recommendations_cache` table. To set it up:
 
 1. Upload model artifacts: `cd data/processed && tar -czf /tmp/als-artifacts.tar.gz als_model.pkl als_model.pkl.sha256 als_user_map.pkl als_user_map.pkl.sha256 als_item_map.pkl als_item_map.pkl.sha256 als_user_items.npz && gh release create als-model-v1 /tmp/als-artifacts.tar.gz --title "ALS Model Artifacts v1"`
@@ -512,6 +520,8 @@ frontend/src/
 scripts/              download_data.py, train_models.py, seed_db.py,
                       precompute_recommendations.py
 docker/               Production Docker config (PostgreSQL SSL init, limited-privilege user)
+render.yaml           Render Blueprint (4 services: backend, frontend, PostgreSQL, Redis)
+entrypoint.sh         Docker entrypoint for Render (DATABASE_URL transform + migrations)
 tests/                pytest suite mirroring src/ structure (1000+ tests including
                       218 dedicated security tests)
 ```

@@ -1,0 +1,84 @@
+# Render Blueprint — CineMatch-AI (free tier, $0/month)
+# Deploy via: Render Dashboard > New > Blueprint > Connect this repo
+#
+# After first deploy:
+#   1. Seed the database from your laptop (see PLAN5.md Phase 10)
+#   2. Run precompute_recommendations.py (see PLAN5.md Phase 11)
+#   3. Set GitHub Actions secrets for weekly precomputation (see PLAN5.md Phase 12)
+
+services:
+  # --- Backend API (lightweight mode, no ML models in memory) ---
+  - type: web
+    name: cinematch-api
+    runtime: docker
+    branch: production
+    region: oregon
+    plan: free
+    dockerfilePath: ./Dockerfile.lightweight
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      # Render provides DATABASE_URL automatically; entrypoint.sh transforms it
+      # into CINEMATCH_DATABASE_URL (asyncpg) and CINEMATCH_DATABASE_URL_SYNC.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cinematch-db
+          property: connectionString
+      - key: CINEMATCH_REDIS_URL
+        fromService:
+          name: cinematch-redis
+          type: keyvalue
+          property: connectionString
+      - key: CINEMATCH_SECRET_KEY
+        generateValue: true
+      - key: CINEMATCH_LIGHTWEIGHT_MODE
+        value: "true"
+      - key: CINEMATCH_DEBUG
+        value: "false"
+      - key: CINEMATCH_CORS_ORIGINS
+        value: '["https://cinematch-frontend.onrender.com"]'
+      - key: CINEMATCH_DATABASE_SSL_MODE
+        value: require
+      - key: CINEMATCH_LLM_ENABLED
+        value: "false"
+      - key: CINEMATCH_RATE_LIMIT_ENABLED
+        value: "true"
+      - key: CINEMATCH_AUDIT_LOG_ENABLED
+        value: "false"
+      - key: CINEMATCH_HSTS_ENABLED
+        value: "true"
+
+  # --- Frontend (React SPA, always-on static site) ---
+  - type: web
+    name: cinematch-frontend
+    runtime: static
+    branch: production
+    region: oregon
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://cinematch-api.onrender.com
+
+  # --- Redis (response caching) ---
+  - type: keyvalue
+    name: cinematch-redis
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+databases:
+  # --- PostgreSQL (movies, users, ratings, embeddings, cached recommendations) ---
+  - name: cinematch-db
+    region: oregon
+    plan: free
+    databaseName: cinematch
+    user: cinematch
+    postgresMajorVersion: "16"
+    ipAllowList: []
