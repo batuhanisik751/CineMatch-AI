@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 import numpy as np
@@ -54,78 +55,85 @@ def seed_database(processed_dir: str | None = None) -> None:
         session.execute(text("TRUNCATE recommendations_cache, ratings, users, movies RESTART IDENTITY CASCADE"))
         session.commit()
 
-        # --- Insert movies ---
+        # --- Insert movies (batched with parameters) ---
         print("Inserting movies...")
-        batch_size = 1000
+        t0 = time.time()
+        insert_stmt = text("""
+            INSERT INTO movies (id, tmdb_id, imdb_id, movielens_id, title, overview,
+                genres, keywords, cast_names, director, release_date,
+                vote_average, vote_count, popularity, poster_path, original_language,
+                runtime, tagline, budget, revenue, embedding)
+            VALUES (:id, :tmdb_id, :imdb_id, :movielens_id, :title, :overview,
+                CAST(:genres AS jsonb), CAST(:keywords AS jsonb), CAST(:cast_names AS jsonb),
+                :director, :release_date,
+                :vote_average, :vote_count, :popularity, :poster_path, :original_language,
+                :runtime, :tagline, :budget, :revenue, :embedding)
+        """).bindparams(bindparam("embedding", type_=Vector(384)))
+
+        batch_size = 100
         for start in range(0, len(movies), batch_size):
             end = min(start + batch_size, len(movies))
             batch = movies.iloc[start:end]
+            rows = []
             for i, (_, row) in enumerate(batch.iterrows()):
                 emb = embeddings[start + i].tolist() if embeddings is not None else None
-                session.execute(
-                    text("""
-                        INSERT INTO movies (id, tmdb_id, imdb_id, movielens_id, title, overview,
-                            genres, keywords, cast_names, director, release_date,
-                            vote_average, vote_count, popularity, poster_path, original_language, runtime, tagline, budget, revenue, embedding)
-                        VALUES (:id, :tmdb_id, :imdb_id, :movielens_id, :title, :overview,
-                            CAST(:genres AS jsonb), CAST(:keywords AS jsonb), CAST(:cast_names AS jsonb),
-                            :director, :release_date,
-                            :vote_average, :vote_count, :popularity, :poster_path, :original_language, :runtime, :tagline, :budget, :revenue, :embedding)
-                    """).bindparams(bindparam("embedding", type_=Vector(384))),
-                    {
-                        "id": int(row["movie_id"]),
-                        "tmdb_id": int(row["tmdb_id"]),
-                        "imdb_id": str(row["imdb_id"]) if pd.notna(row.get("imdb_id")) else None,
-                        "movielens_id": int(row["movielens_id"]),
-                        "title": str(row["title"]),
-                        "overview": str(row["overview"]) if pd.notna(row.get("overview")) else None,
-                        "genres": json.dumps(list(row["genres"]) if hasattr(row["genres"], "__iter__") and not isinstance(row["genres"], str) else []),
-                        "keywords": json.dumps(list(row["keywords"]) if hasattr(row["keywords"], "__iter__") and not isinstance(row["keywords"], str) else []),
-                        "cast_names": json.dumps(list(row["cast_names"]) if hasattr(row["cast_names"], "__iter__") and not isinstance(row["cast_names"], str) else []),
-                        "director": str(row["director"]) if pd.notna(row.get("director")) else None,
-                        "release_date": row["release_date"].date() if pd.notna(row.get("release_date")) else None,
-                        "vote_average": float(row["vote_average"]),
-                        "vote_count": int(row["vote_count"]),
-                        "popularity": float(row["popularity"]),
-                        "poster_path": str(row["poster_path"]) if pd.notna(row.get("poster_path")) else None,
-                        "original_language": str(row["original_language"]) if pd.notna(row.get("original_language")) and row.get("original_language") else None,
-                        "runtime": int(row["runtime"]) if pd.notna(row.get("runtime")) else None,
-                        "tagline": (
-                            str(row["tagline"])
-                            if pd.notna(row.get("tagline")) and row.get("tagline")
-                            else None
-                        ),
-                        "budget": int(row["budget"]) if pd.notna(row.get("budget")) else None,
-                        "revenue": int(row["revenue"]) if pd.notna(row.get("revenue")) else None,
-                        "embedding": emb if emb is not None else None,
-                    },
-                )
+                rows.append({
+                    "id": int(row["movie_id"]),
+                    "tmdb_id": int(row["tmdb_id"]),
+                    "imdb_id": str(row["imdb_id"]) if pd.notna(row.get("imdb_id")) else None,
+                    "movielens_id": int(row["movielens_id"]),
+                    "title": str(row["title"]),
+                    "overview": str(row["overview"]) if pd.notna(row.get("overview")) else None,
+                    "genres": json.dumps(list(row["genres"]) if hasattr(row["genres"], "__iter__") and not isinstance(row["genres"], str) else []),
+                    "keywords": json.dumps(list(row["keywords"]) if hasattr(row["keywords"], "__iter__") and not isinstance(row["keywords"], str) else []),
+                    "cast_names": json.dumps(list(row["cast_names"]) if hasattr(row["cast_names"], "__iter__") and not isinstance(row["cast_names"], str) else []),
+                    "director": str(row["director"]) if pd.notna(row.get("director")) else None,
+                    "release_date": row["release_date"].date() if pd.notna(row.get("release_date")) else None,
+                    "vote_average": float(row["vote_average"]),
+                    "vote_count": int(row["vote_count"]),
+                    "popularity": float(row["popularity"]),
+                    "poster_path": str(row["poster_path"]) if pd.notna(row.get("poster_path")) else None,
+                    "original_language": str(row["original_language"]) if pd.notna(row.get("original_language")) and row.get("original_language") else None,
+                    "runtime": int(row["runtime"]) if pd.notna(row.get("runtime")) else None,
+                    "tagline": str(row["tagline"]) if pd.notna(row.get("tagline")) and row.get("tagline") else None,
+                    "budget": int(row["budget"]) if pd.notna(row.get("budget")) else None,
+                    "revenue": int(row["revenue"]) if pd.notna(row.get("revenue")) else None,
+                    "embedding": emb,
+                })
+            for r in rows:
+                session.execute(insert_stmt, r)
             session.commit()
-            if (end % 5000 == 0) or end == len(movies):
-                print(f"  Movies: {end:,}/{len(movies):,}")
+            elapsed = time.time() - t0
+            if (end % 1000 == 0) or end == len(movies):
+                print(f"  Movies: {end:,}/{len(movies):,}  ({elapsed:.0f}s)")
 
         session.execute(text(f"SELECT setval('movies_id_seq', {int(movies['movie_id'].max())})"))
         session.commit()
+        print(f"  Movies done in {time.time() - t0:.0f}s")
 
         # --- Insert users ---
         print("Inserting users...")
+        t0 = time.time()
         unique_users = sorted(ratings["user_id"].unique())
-        batch_size = 10000
+        batch_size = 5000
         for start in range(0, len(unique_users), batch_size):
             end = min(start + batch_size, len(unique_users))
             batch = unique_users[start:end]
             values = ", ".join(f"({uid}, {uid})" for uid in batch)
             session.execute(text(f"INSERT INTO users (id, movielens_id) VALUES {values}"))
             session.commit()
-            if (end % 50000 == 0) or end == len(unique_users):
-                print(f"  Users: {end:,}/{len(unique_users):,}")
+            if (end % 20000 == 0) or end == len(unique_users):
+                elapsed = time.time() - t0
+                print(f"  Users: {end:,}/{len(unique_users):,}  ({elapsed:.0f}s)")
 
         session.execute(text(f"SELECT setval('users_id_seq', {max(unique_users)})"))
         session.commit()
+        print(f"  Users done in {time.time() - t0:.0f}s")
 
-        # --- Insert ratings ---
+        # --- Insert ratings (bulk VALUES) ---
         print("Inserting ratings...")
-        batch_size = 50000
+        t0 = time.time()
+        batch_size = 10000
         total = len(ratings)
         for start in range(0, total, batch_size):
             end = min(start + batch_size, total)
@@ -142,8 +150,9 @@ def seed_database(processed_dir: str | None = None) -> None:
                 text(f"INSERT INTO ratings (user_id, movie_id, rating, timestamp) VALUES {', '.join(values_parts)}")
             )
             session.commit()
-            if (end % 500000 == 0) or end == total:
-                print(f"  Ratings: {end:,}/{total:,}")
+            if (end % 100000 == 0) or end == total:
+                elapsed = time.time() - t0
+                print(f"  Ratings: {end:,}/{total:,}  ({elapsed:.0f}s)")
 
         # --- IVFFlat vector index ---
         if embeddings is not None:
