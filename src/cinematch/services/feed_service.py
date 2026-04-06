@@ -193,10 +193,27 @@ class FeedService:
         stats: dict,
     ) -> FeedSection | None:
         """ALS recommendations intersected with trending movies."""
-        if self._collab is None or not self._collab.is_known_user(user_id):
+        if self._collab is None:
             return None
 
-        collab_results = self._collab.recommend_for_user(user_id, top_k=50)
+        # Support both sync (full mode) and async (lightweight mode) collab
+        import inspect
+
+        sig = inspect.signature(self._collab.is_known_user)
+        if "db" in sig.parameters:
+            is_known = await self._collab.is_known_user(user_id, db)
+        else:
+            is_known = self._collab.is_known_user(user_id)
+        if not is_known:
+            return None
+
+        sig_rec = inspect.signature(self._collab.recommend_for_user)
+        if "db" in sig_rec.parameters:
+            collab_results = await self._collab.recommend_for_user(
+                user_id, db, top_k=50
+            )
+        else:
+            collab_results = self._collab.recommend_for_user(user_id, top_k=50)
         if not collab_results:
             return None
 

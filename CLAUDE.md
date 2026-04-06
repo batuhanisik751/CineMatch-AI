@@ -16,6 +16,7 @@
 - `python scripts/download_data.py` — download datasets (MovieLens ml-25m + TMDb instructions)
 - `python scripts/train_models.py` — run full pipeline (clean, embed, build FAISS, train ALS)
 - `python scripts/seed_db.py` — load processed data into PostgreSQL
+- `PYTHONPATH=src python scripts/precompute_recommendations.py` — precompute collaborative recommendations into `recommendations_cache`
 - `python -m cinematch.evaluation.evaluate` — run evaluation metrics
 
 ## Environment Setup

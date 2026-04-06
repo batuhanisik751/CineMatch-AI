@@ -353,6 +353,7 @@ TMDb Metadata ------+                                     |
 | Build FAISS | `pipeline/faiss_builder.py` | `faiss.index`, `faiss_id_map.pkl`, `faiss_id_map.pkl.sha256` |
 | Train ALS | `pipeline/collaborative.py` | `als_model.pkl`, mappings, sparse matrix, `.sha256` checksums |
 | Seed DB | `python scripts/seed_db.py` | PostgreSQL tables + IVFFlat vector index |
+| Precompute Recs | `python scripts/precompute_recommendations.py` | `recommendations_cache` table (collab recs for all users) |
 | Evaluate | `python -m cinematch.evaluation.evaluate` | `evaluation_report.json` |
 
 Run the full pipeline: `PYTHONPATH=src python scripts/train_models.py`
@@ -499,7 +500,8 @@ frontend/src/
   components/         Reusable UI (MovieCard, MoodCarousel, StarRating,
                       AutocompleteSearch, MovieDNA, modals)
 
-scripts/              download_data.py, train_models.py, seed_db.py
+scripts/              download_data.py, train_models.py, seed_db.py,
+                      precompute_recommendations.py
 docker/               Production Docker config (PostgreSQL SSL init, limited-privilege user)
 tests/                pytest suite mirroring src/ structure (1000+ tests including
                       218 dedicated security tests)

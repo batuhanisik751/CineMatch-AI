@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import TYPE_CHECKING
 
@@ -69,7 +70,12 @@ class ContentRecommender:
         if row is None or row[0] is None:
             return []
 
-        query_embedding = row[0]
+        raw_embedding = row[0]
+        # asyncpg returns pgvector values as strings via text() queries;
+        # parse to a list so the Vector bindparam adapter can serialize it.
+        query_embedding = (
+            json.loads(raw_embedding) if isinstance(raw_embedding, str) else raw_embedding
+        )
 
         # Find similar movies using <#> (negative inner product)
         stmt = text(
