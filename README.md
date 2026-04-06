@@ -38,7 +38,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Rate Limiting** | slowapi (Redis-backed, per-endpoint tiers) |
 | **Reverse Proxy** | Caddy 2 (automatic HTTPS / Let's Encrypt) |
 | **Lightweight Mode** | HuggingFace Inference API (remote embeddings), pgvector-only search, precomputed collab cache |
-| **Infrastructure** | Docker Compose (PostgreSQL + Redis), production compose with Caddy |
+| **Infrastructure** | Docker Compose (PostgreSQL + Redis), production compose with Caddy, GitHub Actions (weekly precompute) |
 
 ### Data Sources
 
@@ -143,6 +143,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Pickle Deserialization Safety** | SHA-256 checksum verification for all pickle artifacts (FAISS ID map, ALS model, user/item maps). Checksums generated at training time, verified at startup — mismatch aborts launch. Frontend integrity dashboard at Profile > Pickle Safety |
 | **Container Security** | Non-root containers (USER 1000), read-only root filesystems with tmpfs, `no-new-privileges` flag, capability dropping (`cap_drop: ALL` with targeted `cap_add`), multi-stage Docker builds, expanded `.dockerignore`, HEALTHCHECK directive. Frontend container security dashboard at Profile > Container Security |
 | **Dependency Vulnerability Scanning** | On-demand scanning via pip-audit (PyPI vulnerability database), bandit (Python static security analysis), and safety. Backend endpoint runs tools as subprocesses with timeout handling and graceful degradation. Frontend dashboard at Profile > Dep Scan. GitHub Actions CI workflow runs pip-audit and bandit on every PR |
+| **Automated Precomputation** | Weekly GitHub Actions workflow precomputes collaborative recommendations (ALS model on 7 GB runner), downloads model artifacts from GitHub Releases, writes to production database. Manual trigger available |
 | **Security Test Suite** | 218 dedicated security tests covering auth (JWT, password hashing, registration, login), authorization enforcement (401/403 on all protected endpoints, IDOR prevention), input validation (bulk ID caps, query length limits, pagination bounds), audit middleware, error response hardening (no info leakage), config security (SecretStr, safe defaults, CSP), and schema validation |
 
 ### Content Analysis (Per Movie)
@@ -332,7 +333,15 @@ docker build -f Dockerfile.lightweight -t cinematch-lightweight .
 CINEMATCH_LIGHTWEIGHT_MODE=true PYTHONPATH=src uvicorn cinematch.main:app --host 0.0.0.0 --port 8000
 ```
 
-RAM usage drops from ~360-450 MB to ~100-140 MB. All features work identically except collaborative recommendations update weekly instead of in real-time. See `PLAN5.md` for the full deployment guide.
+RAM usage drops from ~360-450 MB to ~100-140 MB. All features work identically except collaborative recommendations update weekly instead of in real-time.
+
+A GitHub Actions workflow (`.github/workflows/precompute.yml`) runs the ALS precomputation every Sunday at 3 AM UTC. It downloads model artifacts from a GitHub Release, computes top-50 recommendations per user, and writes them to the `recommendations_cache` table. To set it up:
+
+1. Upload model artifacts: `cd data/processed && tar -czf /tmp/als-artifacts.tar.gz als_model.pkl als_model.pkl.sha256 als_user_map.pkl als_user_map.pkl.sha256 als_item_map.pkl als_item_map.pkl.sha256 als_user_items.npz && gh release create als-model-v1 /tmp/als-artifacts.tar.gz --title "ALS Model Artifacts v1"`
+2. Add GitHub Secrets: `CINEMATCH_DATABASE_URL_SYNC`, `CINEMATCH_DATABASE_URL`, `CINEMATCH_REDIS_URL`, `CINEMATCH_SECRET_KEY`
+3. The workflow can also be triggered manually from the Actions tab.
+
+See `PLAN5.md` for the full deployment guide.
 
 ---
 

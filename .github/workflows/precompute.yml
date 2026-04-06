@@ -1,0 +1,71 @@
+name: Weekly Recommendation Precompute
+
+# Runs the ALS collaborative filtering precomputation script weekly.
+# Computes top-50 recommendations per user and writes them to the
+# recommendations_cache table in the production database.
+#
+# One-time setup required:
+#   1. Upload model artifacts to a GitHub Release tagged "als-model-v1":
+#      cd data/processed
+#      tar -czf /tmp/als-artifacts.tar.gz \
+#        als_model.pkl als_model.pkl.sha256 \
+#        als_user_map.pkl als_user_map.pkl.sha256 \
+#        als_item_map.pkl als_item_map.pkl.sha256 \
+#        als_user_items.npz
+#      gh release create als-model-v1 /tmp/als-artifacts.tar.gz \
+#        --title "ALS Model Artifacts v1" \
+#        --notes "Trained ALS collaborative filtering model for precomputation."
+#
+#   2. Add these GitHub Secrets (Settings > Secrets > Actions):
+#      - CINEMATCH_DATABASE_URL_SYNC  (Render External DB URL)
+#      - CINEMATCH_DATABASE_URL       (same with postgresql+asyncpg:// prefix)
+#      - CINEMATCH_REDIS_URL          (dummy: redis://localhost:6379)
+#      - CINEMATCH_SECRET_KEY         (dummy: dummy-precompute)
+
+on:
+  schedule:
+    - cron: '0 3 * * 0' # Every Sunday at 3:00 AM UTC
+  workflow_dispatch: # Allow manual trigger from Actions tab
+
+permissions:
+  contents: read
+
+jobs:
+  precompute:
+    name: Precompute Collaborative Recommendations
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Download ALS model artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/processed
+          gh release download als-model-v1 \
+            --pattern 'als-artifacts.tar.gz' \
+            --dir /tmp
+          tar -xzf /tmp/als-artifacts.tar.gz -C data/processed/
+          echo "Artifacts downloaded:"
+          ls -lh data/processed/
+
+      - name: Run precomputation
+        env:
+          CINEMATCH_DATABASE_URL_SYNC: ${{ secrets.CINEMATCH_DATABASE_URL_SYNC }}
+          CINEMATCH_DATABASE_URL: ${{ secrets.CINEMATCH_DATABASE_URL }}
+          CINEMATCH_REDIS_URL: ${{ secrets.CINEMATCH_REDIS_URL }}
+          CINEMATCH_SECRET_KEY: ${{ secrets.CINEMATCH_SECRET_KEY }}
+        run: |
+          PYTHONPATH=src python scripts/precompute_recommendations.py
