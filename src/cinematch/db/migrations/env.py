@@ -55,12 +55,36 @@ def do_run_migrations(connection):
         context.run_migrations()
 
 
+def _build_connect_args() -> dict:
+    """Build asyncpg-specific connect_args for SSL (mirrors session.py)."""
+    import ssl as _ssl
+
+    connect_args: dict = {}
+    mode = settings.database_ssl_mode
+    if mode == "require":
+        ssl_ctx = _ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = _ssl.CERT_NONE
+        connect_args["ssl"] = ssl_ctx
+    elif mode == "verify-ca":
+        ssl_ctx = _ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        connect_args["ssl"] = ssl_ctx
+    elif mode == "verify-full":
+        ssl_ctx = _ssl.create_default_context()
+        connect_args["ssl"] = ssl_ctx
+    elif mode == "prefer":
+        connect_args["ssl"] = "prefer"
+    return connect_args
+
+
 async def run_async_migrations() -> None:
     """Run migrations in 'online' mode with async engine."""
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=_build_connect_args(),
     )
 
     async with connectable.connect() as connection:
