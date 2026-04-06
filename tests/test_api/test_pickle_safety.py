@@ -35,9 +35,7 @@ def _make_artifacts(statuses: list[str]) -> list[dict]:
             "actual_hash": "a" * 64 if s != "missing_artifact" else None,
             "status": s,
             "file_size_bytes": 1024 if s != "missing_artifact" else None,
-            "last_modified": datetime.now(UTC)
-            if s != "missing_artifact"
-            else None,
+            "last_modified": datetime.now(UTC) if s != "missing_artifact" else None,
         }
         for i, s in enumerate(statuses)
     ]
@@ -86,9 +84,7 @@ async def test_pickle_safety_all_verified(pickle_safety_client):
 
 @pytest.mark.asyncio
 async def test_pickle_safety_mismatch_detected(pickle_safety_client):
-    artifacts = _make_artifacts(
-        ["verified", "mismatch", "verified", "verified"]
-    )
+    artifacts = _make_artifacts(["verified", "mismatch", "verified", "verified"])
     with patch(
         "cinematch.api.v1.pickle_safety.get_all_artifact_statuses",
         return_value=artifacts,

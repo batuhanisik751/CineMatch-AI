@@ -12,9 +12,7 @@ from cinematch.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-VerificationStatus = Literal[
-    "verified", "mismatch", "missing_checksum", "missing_artifact"
-]
+VerificationStatus = Literal["verified", "mismatch", "missing_checksum", "missing_artifact"]
 
 _CHUNK_SIZE = 65_536  # 64 KB
 
@@ -46,9 +44,7 @@ def read_expected_checksum(artifact_path: str | Path) -> str | None:
 
     Returns ``None`` if the sidecar does not exist.
     """
-    sidecar = Path(artifact_path).with_suffix(
-        Path(artifact_path).suffix + ".sha256"
-    )
+    sidecar = Path(artifact_path).with_suffix(Path(artifact_path).suffix + ".sha256")
     if not sidecar.exists():
         return None
     content = sidecar.read_text().strip()
@@ -83,9 +79,7 @@ def verify_and_log(artifact_path: str | Path) -> VerificationStatus:
             name,
         )
     elif status == "missing_checksum":
-        logger.warning(
-            "No .sha256 sidecar for %s — skipping integrity check", name
-        )
+        logger.warning("No .sha256 sidecar for %s — skipping integrity check", name)
     elif status == "missing_artifact":
         logger.warning("Artifact not found: %s", name)
 

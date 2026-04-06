@@ -288,7 +288,7 @@ async def mood_recommendations(
         raise ServiceUnavailableError("Recommendation service")
 
     # Check cache
-    mood_hash = hashlib.md5(body.mood.lower().encode()).hexdigest()[:8]  # noqa: S324
+    mood_hash = hashlib.md5(body.mood.lower().encode()).hexdigest()[:8]  # noqa: S324  # nosec B324 - non-security cache key
     cache_key = f"mood_rec:{body.user_id}:{mood_hash}:{body.alpha}:{body.limit}"
     if cache_service is not None:
         cached = await cache_service.get(cache_key)

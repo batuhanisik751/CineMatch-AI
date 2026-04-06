@@ -71,8 +71,10 @@ def test_health_endpoint_includes_lightweight_mode():
         debug=True,
     )
 
-    with patch("cinematch.main.get_settings", return_value=test_settings), \
-         patch("cinematch.config.get_settings", return_value=test_settings):
+    with (
+        patch("cinematch.main.get_settings", return_value=test_settings),
+        patch("cinematch.config.get_settings", return_value=test_settings),
+    ):
         # Re-import to pick up patched settings
         from cinematch.main import create_app
 

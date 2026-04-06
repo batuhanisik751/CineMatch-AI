@@ -15,17 +15,17 @@ from httpx import ASGITransport, AsyncClient
 
 from cinematch.api.deps import (
     get_audit_service,
+    get_cache_service,
+    get_content_recommender,
     get_current_user,
     get_db,
     get_dismissal_service,
+    get_hybrid_recommender,
     get_movie_service,
     get_rating_service,
     get_user_list_service,
     get_user_stats_service,
     get_watchlist_service,
-    get_hybrid_recommender,
-    get_content_recommender,
-    get_cache_service,
 )
 from cinematch.main import create_app
 

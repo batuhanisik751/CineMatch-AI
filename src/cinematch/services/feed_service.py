@@ -209,9 +209,7 @@ class FeedService:
 
         sig_rec = inspect.signature(self._collab.recommend_for_user)
         if "db" in sig_rec.parameters:
-            collab_results = await self._collab.recommend_for_user(
-                user_id, db, top_k=50
-            )
+            collab_results = await self._collab.recommend_for_user(user_id, db, top_k=50)
         else:
             collab_results = self._collab.recommend_for_user(user_id, top_k=50)
         if not collab_results:

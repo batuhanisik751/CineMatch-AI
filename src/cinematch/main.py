@@ -77,9 +77,7 @@ async def lifespan(app: FastAPI):
                 model_name=settings.llm_model_name,
                 timeout=settings.llm_rerank_timeout,
                 backend=settings.llm_backend,
-                api_key=(
-                    settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
-                ),
+                api_key=(settings.llm_api_key.get_secret_value() if settings.llm_api_key else None),
             )
             app.state.llm_service = llm_service
             logger.info(
@@ -89,8 +87,7 @@ async def lifespan(app: FastAPI):
             )
         except Exception:
             logger.warning(
-                "Failed to initialize LLM service. "
-                "Recommendations will use algorithmic fallback."
+                "Failed to initialize LLM service. Recommendations will use algorithmic fallback."
             )
             app.state.llm_service = None
 
@@ -112,9 +109,7 @@ async def lifespan(app: FastAPI):
 
         embedding_service = LightweightEmbeddingService(
             inference_url=settings.hf_inference_url,
-            api_token=(
-                settings.hf_api_token.get_secret_value() if settings.hf_api_token else None
-            ),
+            api_token=(settings.hf_api_token.get_secret_value() if settings.hf_api_token else None),
         )
         embedding_service.warm_up()
 
@@ -159,7 +154,7 @@ async def lifespan(app: FastAPI):
             faiss_index = faiss.read_index(settings.faiss_index_path)
             _verify_or_abort(settings.faiss_id_map_path)
             with open(settings.faiss_id_map_path, "rb") as f:
-                faiss_id_map = pickle.load(f)  # noqa: S301
+                faiss_id_map = pickle.load(f)  # noqa: S301  # nosec B301 - trusted local artifact
 
             # Load ALS artifacts
             logger.info("Loading ALS model from %s", settings.als_model_path)
@@ -170,17 +165,15 @@ async def lifespan(app: FastAPI):
             ):
                 _verify_or_abort(pkl_path)
             with open(settings.als_model_path, "rb") as f:
-                als_model = pickle.load(f)  # noqa: S301
+                als_model = pickle.load(f)  # noqa: S301  # nosec B301 - trusted local artifact
             with open(settings.als_user_map_path, "rb") as f:
-                als_user_map = pickle.load(f)  # noqa: S301
+                als_user_map = pickle.load(f)  # noqa: S301  # nosec B301 - trusted local artifact
             with open(settings.als_item_map_path, "rb") as f:
-                als_item_map = pickle.load(f)  # noqa: S301
+                als_item_map = pickle.load(f)  # noqa: S301  # nosec B301 - trusted local artifact
             als_user_items = sp.load_npz(settings.als_user_items_path)
 
             # Create services
-            content_recommender = ContentRecommender(
-                embedding_service, faiss_index, faiss_id_map
-            )
+            content_recommender = ContentRecommender(embedding_service, faiss_index, faiss_id_map)
             collab_recommender = CollabRecommender(
                 als_model, als_user_map, als_item_map, als_user_items
             )

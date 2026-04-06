@@ -107,9 +107,7 @@ def test_get_all_artifact_statuses_returns_four_items(tmp_path):
         },
     )()
 
-    with patch(
-        "cinematch.core.pickle_safety.get_settings", return_value=mock_settings
-    ):
+    with patch("cinematch.core.pickle_safety.get_settings", return_value=mock_settings):
         results = get_all_artifact_statuses()
 
     assert len(results) == 4

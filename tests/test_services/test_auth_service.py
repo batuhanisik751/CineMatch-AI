@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from jose import jwt
@@ -324,7 +324,7 @@ class TestRegisterUser:
         db = AsyncMock()
         db.refresh = AsyncMock()
 
-        user = await register_user("new@test.com", "newuser", "strongpass", db)
+        await register_user("new@test.com", "newuser", "strongpass", db)
 
         db.add.assert_called_once()
         db.commit.assert_awaited_once()

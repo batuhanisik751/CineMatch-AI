@@ -37,7 +37,7 @@ def _check_root_writable() -> bool:
 
 def _check_tmp_writable() -> bool:
     """Return True if /tmp is writable (tmpfs mount)."""
-    probe = Path("/tmp/.__container_probe")
+    probe = Path("/tmp/.__container_probe")  # nosec B108 - intentional /tmp check
     try:
         probe.write_text("probe")
         probe.unlink()
@@ -118,9 +118,9 @@ def get_container_security_status() -> dict:
         {
             "name": "Writable /tmp",
             "passed": tmp_writable,
-            "detail": "/tmp is writable (tmpfs mounted)"
+            "detail": "/tmp is writable (tmpfs mounted)"  # nosec B108
             if tmp_writable
-            else "/tmp is not writable — mount tmpfs at /tmp",
+            else "/tmp is not writable — mount tmpfs at /tmp",  # nosec B108
         },
         {
             "name": "No new privileges",

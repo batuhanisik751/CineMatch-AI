@@ -16,6 +16,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from cinematch.api.deps import (
+    get_audit_service,
     get_cache_service,
     get_current_user,
     get_db,
@@ -24,7 +25,6 @@ from cinematch.api.deps import (
     get_movie_service,
     get_rating_service,
     get_watchlist_service,
-    get_audit_service,
 )
 from cinematch.main import create_app
 

@@ -33,14 +33,24 @@ def mock_lw_embedding_service():
 def mock_lw_content():
     content = AsyncMock(spec=LightweightContentRecommender)
     content.get_similar_movies.return_value = [
-        (201, 0.95), (202, 0.90), (203, 0.85), (204, 0.80), (205, 0.75),
+        (201, 0.95),
+        (202, 0.90),
+        (203, 0.85),
+        (204, 0.80),
+        (205, 0.75),
     ]
     content.pgvector_search_by_vector.return_value = [
-        (201, 0.92), (202, 0.88), (203, 0.80),
+        (201, 0.92),
+        (202, 0.88),
+        (203, 0.80),
     ]
     vecs = _make_normalized_vectors(5)
     content.fetch_embeddings.return_value = {
-        201: vecs[0], 202: vecs[1], 203: vecs[2], 204: vecs[3], 205: vecs[4],
+        201: vecs[0],
+        202: vecs[1],
+        203: vecs[2],
+        204: vecs[3],
+        205: vecs[4],
     }
     content._embedding_service = MagicMock()
     content._embedding_service.embed_text.return_value = _make_normalized_vectors(1)[0]
@@ -52,7 +62,10 @@ def mock_lw_collab():
     collab = AsyncMock(spec=LightweightCollabRecommender)
     collab.is_known_user.return_value = True
     collab.recommend_for_user.return_value = [
-        (201, 0.9), (202, 0.8), (206, 0.7), (207, 0.6),
+        (201, 0.9),
+        (202, 0.8),
+        (206, 0.7),
+        (207, 0.6),
     ]
     collab.score_items.return_value = {201: 0.9, 202: 0.8, 203: 0.7}
     return collab
@@ -123,9 +136,7 @@ async def test_mood_recommend_cold_start(lw_hybrid, mock_db):
 @pytest.mark.asyncio
 async def test_mood_recommend_personalized(lw_hybrid, mock_db, mock_lw_content):
     """Known user gets personalized mood results with taste blending."""
-    lw_hybrid._get_user_top_rated_diverse = AsyncMock(
-        return_value=[(201, 9.0), (202, 8.0)]
-    )
+    lw_hybrid._get_user_top_rated_diverse = AsyncMock(return_value=[(201, 9.0), (202, 8.0)])
     lw_hybrid._get_excluded_movie_ids = AsyncMock(return_value=set())
 
     results, is_personalized = await lw_hybrid.mood_recommend(
@@ -158,9 +169,7 @@ async def test_watchlist_recommend(lw_hybrid, mock_db, mock_lw_content):
 @pytest.mark.asyncio
 async def test_watchlist_recommend_empty(lw_hybrid, mock_db):
     """Empty watchlist returns empty results."""
-    results = await lw_hybrid.watchlist_recommend(
-        watchlist_movie_ids=[], user_id=1, db=mock_db
-    )
+    results = await lw_hybrid.watchlist_recommend(watchlist_movie_ids=[], user_id=1, db=mock_db)
     assert results == []
 
 
@@ -172,13 +181,9 @@ async def test_watchlist_recommend_empty(lw_hybrid, mock_db):
 @pytest.mark.asyncio
 async def test_predict_match(lw_hybrid, mock_db, mock_lw_content, mock_lw_collab):
     """Predict match uses DB embeddings and cached collab scores."""
-    lw_hybrid._get_user_top_rated_diverse = AsyncMock(
-        return_value=[(201, 9.0), (202, 8.0)]
-    )
+    lw_hybrid._get_user_top_rated_diverse = AsyncMock(return_value=[(201, 9.0), (202, 8.0)])
 
-    results = await lw_hybrid.predict_match(
-        user_id=1, movie_ids=[201, 202, 203], db=mock_db
-    )
+    results = await lw_hybrid.predict_match(user_id=1, movie_ids=[201, 202, 203], db=mock_db)
     assert len(results) == 3
     for r in results:
         assert 0 <= r.match_percent <= 100
@@ -206,9 +211,7 @@ async def test_from_seed_recommend(lw_hybrid, mock_db, mock_lw_collab):
     lw_hybrid._get_movie_genres = AsyncMock(return_value={})
     lw_hybrid._generate_feature_explanations = AsyncMock(return_value={})
 
-    await lw_hybrid.from_seed_recommend(
-        seed_movie_id=101, user_id=1, db=mock_db, top_k=3
-    )
+    await lw_hybrid.from_seed_recommend(seed_movie_id=101, user_id=1, db=mock_db, top_k=3)
     # Should have called async collab methods
     mock_lw_collab.is_known_user.assert_called()
     mock_lw_collab.score_items.assert_called()

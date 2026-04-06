@@ -819,7 +819,8 @@ async def keyword_movies(
     movie_service: MovieService = Depends(get_movie_service),
     cache_service: CacheService | None = Depends(get_cache_service),
 ):
-    cache_key = f"keyword_movies:{hashlib.sha256(keyword.lower().encode()).hexdigest()[:16]}:{offset}:{limit}"
+    kw_hash = hashlib.sha256(keyword.lower().encode()).hexdigest()[:16]
+    cache_key = f"keyword_movies:{kw_hash}:{offset}:{limit}"
     if cache_service is not None:
         cached = await cache_service.get(cache_key)
         if cached is not None:

@@ -82,7 +82,7 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 1440
 
     # API
-    api_host: str = "0.0.0.0"
+    api_host: str = "0.0.0.0"  # nosec B104 - container binding
     api_port: int = 8000
     debug: bool = False
 

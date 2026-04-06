@@ -42,7 +42,7 @@ def download_movielens(raw_dir: str | None = None) -> Path:
     # Download
     if not zip_path.exists():
         print("Downloading MovieLens ml-32m (~440MB)...")
-        urllib.request.urlretrieve(url, zip_path, reporthook=_progress_hook)
+        urllib.request.urlretrieve(url, zip_path, reporthook=_progress_hook)  # nosec B310 - hardcoded known URL
         print("\n  Download complete.")
     else:
         print(f"[OK] Zip already downloaded at {zip_path}")

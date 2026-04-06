@@ -95,9 +95,7 @@ async def test_pgvector_search_by_vector_no_excludes(lw_content_recommender, moc
     mock_db.execute.return_value = mock_result
 
     query_vec = np.random.randn(384).astype(np.float32)
-    results = await lw_content_recommender.pgvector_search_by_vector(
-        query_vec, mock_db, top_k=1
-    )
+    results = await lw_content_recommender.pgvector_search_by_vector(query_vec, mock_db, top_k=1)
     assert results == [(401, 0.99)]
 
 

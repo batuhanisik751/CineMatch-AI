@@ -103,21 +103,19 @@ def run_evaluation(
     for pkl_path in pkl_paths:
         status = verify_and_log(pkl_path)
         if status == "mismatch":
-            raise RuntimeError(
-                f"Pickle integrity check FAILED for {pkl_path}. Aborting."
-            )
+            raise RuntimeError(f"Pickle integrity check FAILED for {pkl_path}. Aborting.")
     with open(processed_dir / "faiss_id_map.pkl", "rb") as f:
-        faiss_id_map = pickle.load(f)  # noqa: S301
+        faiss_id_map = pickle.load(f)  # noqa: S301  # nosec B301 - trusted local artifact
     id_to_faiss_idx = {mid: i for i, mid in enumerate(faiss_id_map)}
 
     # Load ALS
     print("Loading ALS model...")
     with open(processed_dir / "als_model.pkl", "rb") as f:
-        als_model = pickle.load(f)  # noqa: S301
+        als_model = pickle.load(f)  # noqa: S301  # nosec B301 - trusted local artifact
     with open(processed_dir / "als_user_map.pkl", "rb") as f:
-        user_map = pickle.load(f)  # noqa: S301
+        user_map = pickle.load(f)  # noqa: S301  # nosec B301 - trusted local artifact
     with open(processed_dir / "als_item_map.pkl", "rb") as f:
-        item_map = pickle.load(f)  # noqa: S301
+        item_map = pickle.load(f)  # noqa: S301  # nosec B301 - trusted local artifact
     reverse_item_map = {v: k for k, v in item_map.items()}
     user_items = sp.load_npz(str(processed_dir / "als_user_items.npz"))
 

@@ -141,14 +141,23 @@ class LightweightHybridRecommender(HybridRecommender):
 
         # Step 9: LLM re-ranking (with MMR fallback)
         final = await self._rerank(
-            ranked, candidate_titles, seed_titles, user_top, db, top_k,
+            ranked,
+            candidate_titles,
+            seed_titles,
+            user_top,
+            db,
+            top_k,
             diversity_lambda=diversity_lambda,
         )
 
         # Step 10: generate feature explanations for final results
         final_ids = [mid for mid, _ in final]
         feature_explanations = await self._generate_feature_explanations(
-            final_ids, user_top, best_seed, seed_titles, db,
+            final_ids,
+            user_top,
+            best_seed,
+            seed_titles,
+            db,
         )
 
         return self._build_results(final, best_seed, seed_titles, breakdowns, feature_explanations)
@@ -174,9 +183,7 @@ class LightweightHybridRecommender(HybridRecommender):
             RecommendationResult(
                 movie_id=mid,
                 score=score,
-                score_breakdown=ScoreBreakdown(
-                    content_score=0.0, collab_score=score, alpha=0.0
-                ),
+                score_breakdown=ScoreBreakdown(content_score=0.0, collab_score=score, alpha=0.0),
             )
             for mid, score in results
         ]
@@ -196,11 +203,17 @@ class LightweightHybridRecommender(HybridRecommender):
         """Main entry point — dispatches to the right strategy."""
         if strategy == "hybrid":
             return await self._hybrid_recommend(
-                user_id, db, top_k, diversity_lambda=diversity_lambda,
+                user_id,
+                db,
+                top_k,
+                diversity_lambda=diversity_lambda,
             )
         if strategy == "content":
             return await self._content_only_recommend(
-                user_id, db, top_k, diversity_lambda=diversity_lambda,
+                user_id,
+                db,
+                top_k,
+                diversity_lambda=diversity_lambda,
             )
         if strategy == "collab":
             return await self._collab_only_recommend(user_id, db, top_k)
@@ -226,9 +239,7 @@ class LightweightHybridRecommender(HybridRecommender):
         alpha = self._alpha
         collab_scores: dict[int, float] = {}
         if await self._collab.is_known_user(user_id, db):
-            collab_scores = await self._collab.score_items(
-                user_id, list(content_scores.keys()), db
-            )
+            collab_scores = await self._collab.score_items(user_id, list(content_scores.keys()), db)
         else:
             alpha = 1.0
 
@@ -238,9 +249,7 @@ class LightweightHybridRecommender(HybridRecommender):
         if not candidates:
             return []
 
-        content_norm = self._min_max_normalize(
-            {mid: content_scores[mid] for mid in candidates}
-        )
+        content_norm = self._min_max_normalize({mid: content_scores[mid] for mid in candidates})
         collab_norm = self._min_max_normalize(
             {mid: collab_scores[mid] for mid in candidates if mid in collab_scores}
         )
@@ -252,7 +261,9 @@ class LightweightHybridRecommender(HybridRecommender):
             f = collab_norm.get(mid, 0.0)
             scored[mid] = alpha * c + (1 - alpha) * f
             breakdowns[mid] = ScoreBreakdown(
-                content_score=round(c, 4), collab_score=round(f, 4), alpha=alpha,
+                content_score=round(c, 4),
+                collab_score=round(f, 4),
+                alpha=alpha,
             )
 
         best_seed: dict[int, tuple[int, float, float]] = {
@@ -275,7 +286,11 @@ class LightweightHybridRecommender(HybridRecommender):
         user_top: list[tuple[int, float]] = [(seed_movie_id, 10.0)]
         final_ids = [mid for mid, _ in final]
         feature_explanations = await self._generate_feature_explanations(
-            final_ids, user_top, best_seed, seed_titles, db,
+            final_ids,
+            user_top,
+            best_seed,
+            seed_titles,
+            db,
         )
 
         return self._build_results(final, best_seed, seed_titles, breakdowns, feature_explanations)

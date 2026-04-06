@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.testclient import TestClient
 
 from cinematch.core.audit_middleware import AuditMiddleware
 
