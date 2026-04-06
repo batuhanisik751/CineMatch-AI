@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -89,10 +90,12 @@ from cinematch.schemas.thematic_collection import (
     ThematicCollectionDetailResponse,
     ThematicCollectionsResponse,
 )
-from cinematch.services.collab_recommender import CollabRecommender
-from cinematch.services.content_recommender import ContentRecommender
-from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.movie_service import MovieService
+
+if TYPE_CHECKING:
+    from cinematch.services.collab_recommender import CollabRecommender
+    from cinematch.services.content_recommender import ContentRecommender
+    from cinematch.services.embedding_service import EmbeddingService
 from cinematch.services.rating_service import RatingService
 from cinematch.services.thematic_collection_service import ThematicCollectionService
 

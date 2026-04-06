@@ -1,16 +1,10 @@
 {
-  "buildCommand": "pip install -e '.[lightweight]'",
-  "outputDirectory": ".",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ],
-  "functions": {
-    "api/index.py": {
-      "runtime": "@vercel/python",
-      "maxDuration": 10
-    }
-  },
   "env": {
     "PYTHONPATH": "src"
-  }
+  },
+  "installCommand": "pip install -r requirements.txt",
+  "buildCommand": "true"
 }
