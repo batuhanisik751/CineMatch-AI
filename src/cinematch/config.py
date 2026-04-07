@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     # Lightweight mode (skip ML model loading; use pgvector + HF API + cache table)
     lightweight_mode: bool = False
-    hf_inference_url: str = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+    hf_inference_url: str = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2"
     hf_api_token: SecretStr | None = None
 
     # Embedding model
