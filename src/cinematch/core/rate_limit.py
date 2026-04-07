@@ -28,9 +28,19 @@ def get_user_or_ip(request: Request) -> str:
 
 settings = get_settings()
 
+# Use in-memory storage when Redis is unavailable (e.g. Vercel deployment
+# where Render's internal Redis is not reachable).
+_storage_uri = settings.redis_url.get_secret_value()
+try:
+    import redis
+
+    redis.from_url(_storage_uri).ping()
+except Exception:
+    _storage_uri = "memory://"
+
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=[settings.rate_limit_default],
-    storage_uri=settings.redis_url.get_secret_value(),
+    storage_uri=_storage_uri,
     enabled=settings.rate_limit_enabled,
 )
