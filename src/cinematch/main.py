@@ -318,6 +318,28 @@ def create_app() -> FastAPI:
             "lightweight_mode": settings.lightweight_mode,
         }
 
+    if settings.debug:
+
+        @app.get("/debug-embed")
+        async def debug_embed():
+            """Temporary debug endpoint to test embedding service."""
+            svc = getattr(app.state, "embedding_service", None)
+            if svc is None:
+                return {"error": "embedding_service is None"}
+            try:
+                result = svc.embed_text("test")
+                import asyncio
+
+                if asyncio.iscoroutine(result):
+                    result = await result
+                return {
+                    "ok": True,
+                    "shape": list(result.shape),
+                    "first_5": result[:5].tolist(),
+                }
+            except Exception as exc:
+                return {"error": f"{type(exc).__name__}: {exc}"}
+
     return app
 
 
