@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { discoverMovies, getHiddenGems, semanticSearchMovies } from "../api/movies";
+import { discoverMovies, getHiddenGems } from "../api/movies";
 import { getOnboardingStatus } from "../api/onboarding";
-import { getMoodRecommendations, getSurpriseMovies } from "../api/recommendations";
+import { getSurpriseMovies } from "../api/recommendations";
 import type { FeedResponse, MovieSummary, RewatchItem } from "../api/types";
 import { getUserFeed, getUserRewatch } from "../api/users";
 import AddToListModal from "../components/AddToListModal";
 import AutocompleteSearch from "../components/AutocompleteSearch";
 import BottomNav from "../components/BottomNav";
-import MoodCarousel from "../components/MoodCarousel";
-import MoodPills from "../components/MoodPills";
+// Mood components disabled — HF Inference API unavailable
 import MovieCard from "../components/MovieCard";
 import TopNav from "../components/TopNav";
-import type { MoodPreset } from "../constants/moods";
+// import type { MoodPreset } from "../constants/moods";
 import { useDismissed } from "../hooks/useDismissed";
 import { useRated } from "../hooks/useRated";
 import { useUserId } from "../hooks/useUserId";
@@ -32,13 +31,7 @@ export default function Home() {
   const { getMatchPercent, fetchMatchPercents } = useMatchPredictions();
   const [addToListMovieId, setAddToListMovieId] = useState<number | null>(null);
 
-  const [selectedMood, setSelectedMood] = useState<string | null>(null);
-  const [moodMovies, setMoodMovies] = useState<MovieSummary[]>([]);
-  const [moodLoading, setMoodLoading] = useState(false);
-  const [moodPersonalized, setMoodPersonalized] = useState(false);
-  const [customVibe, setCustomVibe] = useState("");
-  const moodAbort = useRef<AbortController | null>(null);
-  const moodFallback = useRef(false);
+  // Mood state disabled — HF Inference API unavailable
 
   const [surpriseMovies, setSurpriseMovies] = useState<MovieSummary[]>([]);
   const [surpriseLoading, setSurpriseLoading] = useState(false);
@@ -153,63 +146,8 @@ export default function Home() {
     navigate(`/for-you/recommendations?user=${userId}&strategy=${strategy}`);
   };
 
-  const fetchMoodMovies = (moodQuery: string, label: string) => {
-    moodAbort.current?.abort();
-    const controller = new AbortController();
-    moodAbort.current = controller;
-    setSelectedMood(label);
-    setMoodLoading(true);
-    setMoodPersonalized(false);
-
-    const applyResults = (movies: MovieSummary[], personalized: boolean) => {
-      if (controller.signal.aborted) return;
-      setMoodMovies(movies);
-      setMoodPersonalized(personalized);
-      const ids = movies.map((m) => m.id);
-      refreshForMovieIds(ids);
-      refreshDismissedForMovieIds(ids);
-      fetchMatchPercents(ids);
-    };
-
-    const fallbackToSemantic = () =>
-      semanticSearchMovies(moodQuery, 20).then((data) =>
-        applyResults(data.results.map((r) => r.movie), false)
-      );
-
-    const request = !moodFallback.current && userId
-      ? getMoodRecommendations({ mood: moodQuery, user_id: userId })
-          .then((data) => applyResults(data.results.map((r) => r.movie), data.is_personalized))
-          .catch(() => {
-            moodFallback.current = true;
-            return fallbackToSemantic();
-          })
-      : fallbackToSemantic();
-
-    request
-      .catch(() => {
-        if (!controller.signal.aborted) setMoodMovies([]);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setMoodLoading(false);
-      });
-  };
-
-  const handleMoodSelect = (mood: MoodPreset) => {
-    if (selectedMood === mood.label) {
-      setSelectedMood(null);
-      setMoodMovies([]);
-      setMoodPersonalized(false);
-      return;
-    }
-    fetchMoodMovies(mood.query, mood.label);
-  };
-
-  const handleCustomVibe = (e: React.FormEvent) => {
-    e.preventDefault();
-    const vibe = customVibe.trim();
-    if (!vibe) return;
-    fetchMoodMovies(vibe, vibe);
-  };
+  // Mood functions disabled — HF Inference API unavailable
+  // fetchMoodMovies, handleMoodSelect, handleCustomVibe removed
 
   const handleSurprise = () => {
     if (!userId) return;
@@ -279,31 +217,7 @@ export default function Home() {
               inputClassName="w-full h-16 pl-16 pr-6 bg-surface-container-lowest border-none rounded-xl text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint shadow-2xl transition-all duration-300 font-body text-lg"
               onNavigateToSearch={(q) => navigate(`/discover/browse?q=${encodeURIComponent(q)}`)}
             />
-            <MoodPills
-              onSelect={handleMoodSelect}
-              activeMood={selectedMood}
-              loading={moodLoading}
-            />
-            <form
-              onSubmit={handleCustomVibe}
-              className="w-full max-w-xl mx-auto mt-6 flex gap-3"
-            >
-              <input
-                value={customVibe}
-                onChange={(e) => setCustomVibe(e.target.value)}
-                className="flex-1 h-12 px-5 bg-surface-container-lowest border border-outline-variant/20 rounded-full text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint transition-all duration-300 font-body text-sm"
-                placeholder="Or describe your own vibe..."
-                type="text"
-                maxLength={200}
-              />
-              <button
-                type="submit"
-                disabled={!customVibe.trim() || moodLoading}
-                className="h-12 px-6 bg-primary text-on-primary rounded-full font-label font-bold text-sm tracking-wide hover:shadow-[0_0_20px_rgba(255,193,7,0.3)] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Discover
-              </button>
-            </form>
+            {/* Mood pills and custom vibe hidden — HF Inference API unavailable */}
             <button
               onClick={handleSurprise}
               disabled={surpriseLoading}
@@ -315,21 +229,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Mood Results */}
-        {(selectedMood || moodLoading) && (
-          <MoodCarousel
-            mood={selectedMood ?? ""}
-            movies={moodMovies}
-            loading={moodLoading}
-            isPersonalized={moodPersonalized}
-            isBookmarked={isInWatchlist}
-            onToggleBookmark={toggle}
-            isDismissed={isDismissed}
-            onDismiss={toggleDismiss}
-            getRating={getRating}
-            getMatchPercent={getMatchPercent}
-          />
-        )}
+        {/* Mood Results hidden — HF Inference API unavailable */}
 
         {/* Surprise Picks */}
         {surpriseMovies.length > 0 && (

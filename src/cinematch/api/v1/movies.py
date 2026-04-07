@@ -206,7 +206,7 @@ async def discover_movies(
     )
 
 
-@router.get("/semantic-search")
+@router.get("/semantic-search", response_model=SemanticSearchResponse)
 @limiter.limit(get_settings().rate_limit_search)
 async def semantic_search(
     request: Request,
@@ -216,40 +216,26 @@ async def semantic_search(
     movie_service: MovieService = Depends(get_movie_service),
     embedding_service: EmbeddingService | None = Depends(get_embedding_service),
 ):
-    from fastapi.responses import JSONResponse
+    if embedding_service is None:
+        raise ServiceUnavailableError("Embedding service")
 
-    try:
-        if embedding_service is None:
-            return JSONResponse(status_code=500, content={"debug": "embedding_service is None"})
+    result = embedding_service.embed_text(q)
+    if asyncio.iscoroutine(result):
+        result = await result
+    query_embedding = result.tolist()
+    results = await movie_service.semantic_search(query_embedding, db, limit=limit)
 
-        result = embedding_service.embed_text(q)
-        if asyncio.iscoroutine(result):
-            result = await result
-        query_embedding = result.tolist()
-        results = await movie_service.semantic_search(query_embedding, db, limit=limit)
-
-        return SemanticSearchResponse(
-            results=[
-                SemanticSearchResult(
-                    movie=MovieSummary.model_validate(movie),
-                    similarity=round(score, 4),
-                )
-                for movie, score in results
-            ],
-            total=len(results),
-            query=q,
-        )
-    except Exception as exc:
-        import traceback
-
-        return JSONResponse(
-            status_code=500,
-            content={
-                "debug_error": f"{type(exc).__name__}: {exc}",
-                "service_type": type(embedding_service).__name__ if embedding_service else "None",
-                "traceback": traceback.format_exc(),
-            },
-        )
+    return SemanticSearchResponse(
+        results=[
+            SemanticSearchResult(
+                movie=MovieSummary.model_validate(movie),
+                similarity=round(score, 4),
+            )
+            for movie, score in results
+        ],
+        total=len(results),
+        query=q,
+    )
 
 
 @router.get("/trending", response_model=TrendingResponse)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { discoverMovies, getGenres, getLanguages, searchMovies, semanticSearchMovies } from "../../api/movies";
+import { discoverMovies, getGenres, getLanguages, searchMovies } from "../../api/movies";
 import type { GenreCount, LanguageCount, MovieSummary } from "../../api/types";
 import { languageName } from "../../constants/languages";
 import ErrorPanel from "../../components/ErrorPanel";
@@ -114,14 +114,8 @@ export default function BrowseTab() {
     setError("");
 
     if (searchQuery.trim()) {
-      // Search mode: title search or semantic vibe search
-      const searchPromise =
-        searchMode === "vibe"
-          ? semanticSearchMovies(searchQuery.trim(), 40).then((data) => ({
-              results: data.results.map((r) => r.movie),
-              total: data.total,
-            }))
-          : searchMovies(searchQuery.trim(), 40);
+      // Search mode: title search only (vibe search disabled)
+      const searchPromise = searchMovies(searchQuery.trim(), 40);
 
       searchPromise
         .then((data) => {
@@ -200,7 +194,7 @@ export default function BrowseTab() {
           value={searchQuery}
           onChange={(e) => updateParams({ q: e.target.value, offset: null })}
           className="w-full h-14 pl-14 pr-12 bg-surface-container-lowest border-none rounded-xl text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-surface-tint shadow-lg transition-all duration-300 font-body text-base"
-          placeholder={searchMode === "vibe" ? "Describe a movie vibe..." : "Search by title..."}
+          placeholder="Search by title..."
           type="text"
         />
         {searchQuery && (
@@ -214,29 +208,7 @@ export default function BrowseTab() {
         )}
       </form>
 
-      {/* Search mode toggle */}
-      <div className="flex gap-2 mb-8">
-        <button
-          onClick={() => updateParams({ mode: null, offset: null })}
-          className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
-            searchMode === "title"
-              ? "bg-primary-container text-on-primary-container shadow-md"
-              : "bg-surface-container-highest text-on-surface-variant hover:bg-surface-container-high"
-          }`}
-        >
-          Search by title
-        </button>
-        <button
-          onClick={() => updateParams({ mode: "vibe", offset: null })}
-          className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
-            searchMode === "vibe"
-              ? "bg-primary-container text-on-primary-container shadow-md"
-              : "bg-surface-container-highest text-on-surface-variant hover:bg-surface-container-high"
-          }`}
-        >
-          Search by vibe
-        </button>
-      </div>
+      {/* Search mode toggle hidden — vibe search unavailable */}
 
       {/* Filters — hidden during search mode */}
       {!isSearchMode && (
@@ -423,7 +395,7 @@ export default function BrowseTab() {
           <p className="text-on-surface-variant text-sm mb-6">
             {isSearchMode ? (
               <>
-                Found <span className="font-bold text-on-surface">{total}</span> {searchMode === "vibe" ? "vibe match" : "result"}{total !== 1 ? (searchMode === "vibe" ? "es" : "s") : ""} for "<span className="italic text-primary">{searchQuery.trim()}</span>"
+                Found <span className="font-bold text-on-surface">{total}</span> result{total !== 1 ? "s" : ""} for "<span className="italic text-primary">{searchQuery.trim()}</span>"
               </>
             ) : (
               <>{total.toLocaleString()} movie{total !== 1 ? "s" : ""} found</>
