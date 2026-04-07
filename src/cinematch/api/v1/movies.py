@@ -219,10 +219,22 @@ async def semantic_search(
     if embedding_service is None:
         raise ServiceUnavailableError("Embedding service")
 
-    result = embedding_service.embed_text(q)
-    if asyncio.iscoroutine(result):
-        result = await result
-    query_embedding = result.tolist()
+    try:
+        result = embedding_service.embed_text(q)
+        if asyncio.iscoroutine(result):
+            result = await result
+        query_embedding = result.tolist()
+    except Exception as exc:
+        from cinematch.config import get_settings
+
+        if get_settings().debug:
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse(
+                status_code=500,
+                content={"debug_error": f"{type(exc).__name__}: {exc}", "service_type": type(embedding_service).__name__},
+            )
+        raise
     results = await movie_service.semantic_search(query_embedding, db, limit=limit)
 
     return SemanticSearchResponse(
