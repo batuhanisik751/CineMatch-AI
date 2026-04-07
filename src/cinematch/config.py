@@ -90,7 +90,11 @@ class Settings(BaseSettings):
     domain: str = "localhost"
 
     # CORS origins (JSON list; defaults work for local dev)
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://cinematch-frontend-jefm.onrender.com",
+    ]
     # CORS allowed methods (restrict in production; defaults cover all API verbs)
     cors_methods: list[str] = [
         "GET",
