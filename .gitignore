@@ -137,4 +137,14 @@ frontend/dist/
 # Caddy
 caddy_data/
 caddy_config/
+
+# Deployment
 .vercel
+.render
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/

@@ -2,7 +2,9 @@
 
 A hybrid movie recommendation engine that combines content-based filtering, collaborative filtering, and optional LLM re-ranking to deliver personalized movie discovery. Built with FastAPI, PostgreSQL + pgvector, and local ML models. Runs locally with full ML models or in lightweight mode for free-tier cloud deployment (Render, 512 MB RAM).
 
-> **29K movies | 162K users | 24.7M ratings | 384-dim embeddings | 85+ API endpoints**
+**[Live Demo](https://cinematch-frontend-jefm.onrender.com/)** (free-tier Render -- first load may take ~30s to wake)
+
+> **29K movies | 162K users | 24.7M ratings | 384-dim embeddings | 95 API endpoints**
 
 ---
 
@@ -18,6 +20,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 - [Frontend Pages](#frontend-pages)
 - [Project Structure](#project-structure)
 - [Evaluation](#evaluation)
+- [Deployment](#deployment)
 - [License](#license)
 
 ---
@@ -144,7 +147,7 @@ A hybrid movie recommendation engine that combines content-based filtering, coll
 | **Container Security** | Non-root containers (USER 1000), read-only root filesystems with tmpfs, `no-new-privileges` flag, capability dropping (`cap_drop: ALL` with targeted `cap_add`), multi-stage Docker builds, expanded `.dockerignore`, HEALTHCHECK directive. Frontend container security dashboard at Profile > Container Security |
 | **Dependency Vulnerability Scanning** | On-demand scanning via pip-audit (PyPI vulnerability database), bandit (Python static security analysis), and safety. Backend endpoint runs tools as subprocesses with timeout handling and graceful degradation. Frontend dashboard at Profile > Dep Scan. GitHub Actions CI workflow runs pip-audit and bandit on every PR |
 | **Automated Precomputation** | Weekly GitHub Actions workflow precomputes collaborative recommendations (ALS model on 7 GB runner), downloads model artifacts from GitHub Releases, writes to production database. Manual trigger available |
-| **Security Test Suite** | 218 dedicated security tests covering auth (JWT, password hashing, registration, login), authorization enforcement (401/403 on all protected endpoints, IDOR prevention), input validation (bulk ID caps, query length limits, pagination bounds), audit middleware, error response hardening (no info leakage), config security (SecretStr, safe defaults, CSP), and schema validation |
+| **Security Test Suite** | 300 dedicated security tests covering auth (JWT, password hashing, registration, login), authorization enforcement (401/403 on all protected endpoints, IDOR prevention), input validation (bulk ID caps, query length limits, pagination bounds), audit middleware, error response hardening (no info leakage), config security (SecretStr, safe defaults, CSP), and schema validation |
 
 ### Content Analysis (Per Movie)
 
@@ -206,7 +209,7 @@ User rates movies
 
 ```bash
 # 1. Clone and set up Python environment
-git clone https://github.com/your-username/CineMatch-AI.git
+git clone https://github.com/batuhanisik751/CineMatch-AI.git
 cd CineMatch-AI
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
@@ -343,13 +346,41 @@ To deploy: connect your repo in the Render dashboard via **New > Blueprint**, an
 
 #### GitHub Actions Precomputation
 
-A GitHub Actions workflow (`.github/workflows/precompute.yml`) runs the ALS precomputation every Sunday at 3 AM UTC. It downloads model artifacts from a GitHub Release, computes top-50 recommendations per user, and writes them to the `recommendations_cache` table. To set it up:
+The precompute workflow (`.github/workflows/precompute.yml`) runs weekly. To set it up:
 
 1. Upload model artifacts: `cd data/processed && tar -czf /tmp/als-artifacts.tar.gz als_model.pkl als_model.pkl.sha256 als_user_map.pkl als_user_map.pkl.sha256 als_item_map.pkl als_item_map.pkl.sha256 als_user_items.npz && gh release create als-model-v1 /tmp/als-artifacts.tar.gz --title "ALS Model Artifacts v1"`
 2. Add GitHub Secrets: `CINEMATCH_DATABASE_URL_SYNC`, `CINEMATCH_DATABASE_URL`, `CINEMATCH_REDIS_URL`, `CINEMATCH_SECRET_KEY`
 3. The workflow can also be triggered manually from the Actions tab.
 
-See `PLAN5.md` for the full deployment guide.
+---
+
+## Deployment
+
+### Live Demo
+
+The app is deployed on Render's free tier in lightweight mode:
+
+**[https://cinematch-frontend-jefm.onrender.com/](https://cinematch-frontend-jefm.onrender.com/)**
+
+| Service | Platform | Notes |
+|---------|----------|-------|
+| **Backend API** | Render (Web Service) | Lightweight mode, 512 MB RAM |
+| **Frontend** | Render (Static Site) | React build served via Render CDN |
+| **PostgreSQL** | Render (Managed DB) | pgvector extension enabled |
+| **Redis** | Render (Key-Value) | Session cache and rate limiting |
+
+Free-tier instances spin down after inactivity -- first request may take ~30 seconds to wake.
+
+### Self-Hosted Production
+
+The production stack runs everything in Docker behind a Caddy reverse proxy with automatic HTTPS. See [Running the App > Production Deployment](#production-deployment) for details.
+
+### GitHub Actions
+
+| Workflow | Trigger | Description |
+|----------|---------|-------------|
+| **Precompute** (`.github/workflows/precompute.yml`) | Weekly (Sun 3 AM UTC) + manual | Downloads ALS model artifacts from GitHub Releases, computes top-50 recommendations per user, writes to `recommendations_cache` |
+| **Security Scan** (`.github/workflows/security.yml`) | Every PR and push to `main` | Runs pip-audit (dependency CVEs) and bandit (static security analysis) |
 
 ---
 
@@ -379,7 +410,10 @@ Run the full pipeline: `PYTHONPATH=src python scripts/train_models.py`
 
 ## API Overview
 
-The REST API is organized into 10 endpoint groups with 85+ routes. Full interactive docs at `/docs` (requires `CINEMATCH_DEBUG=true`; disabled in production).
+The REST API is organized into 12 endpoint groups with 95 routes. Full interactive docs at `/docs` (requires `CINEMATCH_DEBUG=true`; disabled in production).
+
+### Auth (`/api/v1/auth`)
+Register, login, and token refresh. JWT Bearer authentication with bcrypt password hashing.
 
 ### Movies (`/api/v1/movies`)
 Search, browse, filter, and analyze movies. Includes title search, autocomplete, semantic search, discover with filters, trending, hidden gems, top charts, decades, directors, actors, cast combos, keywords, advanced multi-criteria search, thematic collections, movie DNA, rating stats, popularity timeline, connections, path finding, and side-by-side comparison.
@@ -408,6 +442,9 @@ Profile stats, film diary, personalized feed, surprise mode, completions, direct
 ### Challenges (`/api/v1/challenges`)
 Weekly rotating challenges (genre, decade, director).
 
+### Leaderboard (`/api/v1/leaderboard`)
+Tastemaker score leaderboard ranking users by rating quality and influence.
+
 ### Platform (`/api/v1`)
 Onboarding movies/status, global platform statistics, health check.
 
@@ -420,6 +457,7 @@ Onboarding movies/status, global platform statistics, health check.
 | Page | Description |
 |------|-------------|
 | **Home** | Personalized feed with mood carousel, trending, hidden gems, surprise me, rewatch suggestions |
+| **Login / Register** | JWT authentication with email + password |
 | **Onboarding** | New user flow -- rate popular movies to bootstrap taste |
 
 ### Search
@@ -427,6 +465,7 @@ Onboarding movies/status, global platform statistics, health check.
 | Page | Description |
 |------|-------------|
 | **Search** | Unified search with title, semantic vibe, and advanced filter modes |
+| **Advanced Search** | Multi-criteria filtering with genre, decade, rating, director, keyword, cast, language, runtime |
 
 ### Discover
 
@@ -444,13 +483,16 @@ Onboarding movies/status, global platform statistics, health check.
 
 | Page | Description |
 |------|-------------|
+| **Directors** | Search directors, view filmographies with your ratings overlaid |
 | **Actors** | Search actors, view filmographies, multi-select for cast combos |
+| **Keywords** | Tag cloud of crowd-sourced keywords with browsable movie results |
 
 ### For You
 
 | Page | Description |
 |------|-------------|
 | **Recommendations** | Hybrid/content/collab with diversity controls |
+| **Moods** | 9 preset moods + custom vibe input, blended with your taste |
 | **Blind Spots** | Popular movies you haven't seen |
 | **Rewatch** | Movies worth revisiting |
 
@@ -474,6 +516,7 @@ Onboarding movies/status, global platform statistics, health check.
 | **Pickle Safety** | ML artifact integrity dashboard — SHA-256 checksum verification status for all pickle files |
 | **Container Security** | Docker container runtime security posture — non-root check, read-only filesystem, capabilities, no-new-privileges, multi-stage build verification |
 | **Dep Scan** | Dependency vulnerability scanning — pip-audit CVEs, bandit static analysis findings, safety check, overall status with severity badges |
+| **Tastemaker Score** | Leaderboard ranking users by rating quality and influence |
 | **Achievements** | 12 badge collection with progress bars |
 | **Challenges** | Weekly rating challenges with progress tracking |
 | **Bingo** | Monthly 5x5 movie bingo card |
@@ -497,12 +540,14 @@ Onboarding movies/status, global platform statistics, health check.
 ```
 src/cinematch/
   api/v1/             REST endpoints (movies, ratings, recommendations, users,
-                      watchlist, dismissals, lists, predictions, challenges, stats)
-  services/           Business logic (25+ services -- recommendation engines,
+                      auth, watchlist, dismissals, lists, predictions,
+                      challenges, leaderboard, stats, security dashboards)
+  services/           Business logic (33 services -- recommendation engines,
                       lightweight mode adapters, discovery, analytics,
-                      gamification, import/export)
+                      gamification, leaderboard, import/export)
   models/             SQLAlchemy ORM (movies, users, ratings, watchlist,
-                      dismissals, user_lists, user_list_items)
+                      dismissals, user_lists, user_list_items,
+                      recommendations_cache, audit_log)
   schemas/            Pydantic v2 request/response validation
   pipeline/           Offline data processing (cleaner, embedder, FAISS, ALS)
   evaluation/         Recommendation quality metrics (Precision, Recall, NDCG, MAP)
@@ -522,8 +567,8 @@ scripts/              download_data.py, train_models.py, seed_db.py,
 docker/               Production Docker config (PostgreSQL SSL init, limited-privilege user)
 render.yaml           Render Blueprint (4 services: backend, frontend, PostgreSQL, Redis)
 entrypoint.sh         Docker entrypoint for Render (DATABASE_URL transform + migrations)
-tests/                pytest suite mirroring src/ structure (1000+ tests including
-                      218 dedicated security tests)
+tests/                pytest suite mirroring src/ structure (1050+ tests including
+                      300 dedicated security tests)
 ```
 
 ---
@@ -554,6 +599,7 @@ make download   # Download datasets
 make pipeline   # Run data pipeline
 make seed       # Load data into PostgreSQL
 make evaluate   # Run evaluation metrics
+make clean      # Remove processed data and artifacts
 make lint       # Lint with ruff
 make format     # Format with ruff
 make prod-build # Build frontend + production Docker images
