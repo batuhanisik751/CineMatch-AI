@@ -59,5 +59,10 @@ async def service_unavailable_handler(
 
 
 async def catch_all_handler(request: Request, exc: Exception) -> JSONResponse:
+    from cinematch.config import get_settings
+
     logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
-    return JSONResponse(status_code=500, content={"detail": "An unexpected error occurred."})
+    detail = "An unexpected error occurred."
+    if get_settings().debug:
+        detail = f"{type(exc).__name__}: {exc}"
+    return JSONResponse(status_code=500, content={"detail": detail})
