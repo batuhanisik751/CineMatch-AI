@@ -59,14 +59,5 @@ async def service_unavailable_handler(
 
 
 async def catch_all_handler(request: Request, exc: Exception) -> JSONResponse:
-    import traceback
-
     logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "detail": "An unexpected error occurred.",
-            "debug_error": str(exc),
-            "debug_traceback": traceback.format_exc(),
-        },
-    )
+    return JSONResponse(status_code=500, content={"detail": "An unexpected error occurred."})

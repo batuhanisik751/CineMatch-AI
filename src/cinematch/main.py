@@ -314,23 +314,6 @@ def create_app() -> FastAPI:
             "lightweight_mode": settings.lightweight_mode,
         }
 
-    @app.get("/debug/db-test")
-    async def db_test():
-        """Temporary endpoint to diagnose database connection issues."""
-        import traceback
-
-        from cinematch.db.session import async_session_factory
-
-        try:
-            async with async_session_factory() as session:
-                from sqlalchemy import text
-
-                result = await session.execute(text("SELECT count(*) FROM movies"))
-                count = result.scalar()
-                return {"status": "ok", "movie_count": count}
-        except Exception as e:
-            return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
-
     return app
 
 
