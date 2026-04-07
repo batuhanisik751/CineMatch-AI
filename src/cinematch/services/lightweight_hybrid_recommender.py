@@ -308,7 +308,7 @@ class LightweightHybridRecommender(HybridRecommender):
         top_k: int = 20,
     ) -> tuple[list[tuple[int, float]], bool]:
         """Mood-based recommendation using pgvector instead of FAISS."""
-        mood_vec = self._content._embedding_service.embed_text(mood_text)
+        mood_vec = await self._content._embedding_service.embed_text(mood_text)
 
         user_top = await self._get_user_top_rated_diverse(user_id, db, limit=10)
         if not user_top:

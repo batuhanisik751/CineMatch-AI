@@ -111,7 +111,7 @@ async def lifespan(app: FastAPI):
             inference_url=settings.hf_inference_url,
             api_token=(settings.hf_api_token.get_secret_value() if settings.hf_api_token else None),
         )
-        embedding_service.warm_up()
+        await embedding_service.warm_up()
 
         content_recommender = LightweightContentRecommender(embedding_service)
         collab_recommender = LightweightCollabRecommender()
@@ -270,7 +270,11 @@ async def lifespan(app: FastAPI):
         await app.state.cache_service.close()
     embedding_svc = getattr(app.state, "embedding_service", None)
     if embedding_svc is not None and hasattr(embedding_svc, "close"):
-        embedding_svc.close()
+        import asyncio
+
+        result = embedding_svc.close()
+        if asyncio.iscoroutine(result):
+            await result
 
 
 def create_app() -> FastAPI:

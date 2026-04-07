@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 from typing import TYPE_CHECKING
@@ -218,7 +219,10 @@ async def semantic_search(
     if embedding_service is None:
         raise ServiceUnavailableError("Embedding service")
 
-    query_embedding = embedding_service.embed_text(q).tolist()
+    result = embedding_service.embed_text(q)
+    if asyncio.iscoroutine(result):
+        result = await result
+    query_embedding = result.tolist()
     results = await movie_service.semantic_search(query_embedding, db, limit=limit)
 
     return SemanticSearchResponse(

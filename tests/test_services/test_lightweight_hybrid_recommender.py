@@ -25,7 +25,7 @@ def _make_normalized_vectors(n: int, seed: int = 42) -> np.ndarray:
 def mock_lw_embedding_service():
     svc = MagicMock()
     vec = _make_normalized_vectors(1)[0]
-    svc.embed_text.return_value = vec
+    svc.embed_text = AsyncMock(return_value=vec)
     return svc
 
 
@@ -53,7 +53,7 @@ def mock_lw_content():
         205: vecs[4],
     }
     content._embedding_service = MagicMock()
-    content._embedding_service.embed_text.return_value = _make_normalized_vectors(1)[0]
+    content._embedding_service.embed_text = AsyncMock(return_value=_make_normalized_vectors(1)[0])
     return content
 
 

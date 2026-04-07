@@ -43,6 +43,8 @@ services:
         value: "false"
       - key: CINEMATCH_RATE_LIMIT_ENABLED
         value: "true"
+      - key: CINEMATCH_HF_API_TOKEN
+        sync: false  # Set manually in Render dashboard
       - key: CINEMATCH_AUDIT_LOG_ENABLED
         value: "false"
       - key: CINEMATCH_HSTS_ENABLED
