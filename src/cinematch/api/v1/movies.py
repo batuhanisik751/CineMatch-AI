@@ -225,16 +225,12 @@ async def semantic_search(
             result = await result
         query_embedding = result.tolist()
     except Exception as exc:
-        from cinematch.config import get_settings
+        from fastapi.responses import JSONResponse
 
-        if get_settings().debug:
-            from fastapi.responses import JSONResponse
-
-            return JSONResponse(
-                status_code=500,
-                content={"debug_error": f"{type(exc).__name__}: {exc}", "service_type": type(embedding_service).__name__},
-            )
-        raise
+        return JSONResponse(
+            status_code=500,
+            content={"debug_error": f"{type(exc).__name__}: {exc}", "service_type": type(embedding_service).__name__},
+        )
     results = await movie_service.semantic_search(query_embedding, db, limit=limit)
 
     return SemanticSearchResponse(
